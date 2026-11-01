@@ -30,4 +30,3 @@ class JsonSchemaValidator:
             path = ".".join(str(p) for p in err.path) or "$"
             errors.append(f"{path}: {err.message}")
         return errors
-

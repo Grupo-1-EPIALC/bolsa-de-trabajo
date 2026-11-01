@@ -63,3 +63,15 @@ class Clock(Protocol):
     def today(self) -> str: ...
 
     def iso_now(self) -> str: ...
+
+
+class SkillRepository(Protocol):
+    def list_skills(self) -> list[JsonDict]: ...
+
+    def read_skill(
+        self,
+        skill_id: str,
+        file_path: str = "SKILL.md",
+        offset: int = 0,
+        session_id: str = "default",
+    ) -> JsonDict: ...

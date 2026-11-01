@@ -78,12 +78,17 @@ class CvParserService:
         truncated = total_chars > cv_cfg.max_text_chars
         text = extracted[: cv_cfg.max_text_chars] if truncated else extracted
 
+        resolved_name = filename or f"cv.{fmt}"
         return {
-            "filename": filename or f"cv.{fmt}",
+            "filename": resolved_name,
             "format": fmt,
             "chars": total_chars,
             "truncated": truncated,
             "text": text,
+            "archivo": resolved_name,
+            "tipo": fmt,
+            "truncado": truncated,
+            "texto": text,
         }
 
     @staticmethod

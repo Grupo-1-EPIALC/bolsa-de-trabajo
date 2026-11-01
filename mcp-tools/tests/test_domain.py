@@ -175,4 +175,3 @@ def test_model_router_reserve_cooldown_and_rpm() -> None:
     assert ok == {"ok": True}
     status = router.status()
     assert status["models"]["m1"]["strikes"] == 0
-

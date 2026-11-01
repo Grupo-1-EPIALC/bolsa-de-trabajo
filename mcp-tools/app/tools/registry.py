@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 
 from app.application.cv_parser import CvParserService
 from app.application.use_cases import (
@@ -14,10 +14,12 @@ from app.application.use_cases import (
     AgentSettingsService,
     RecruitmentToolsService,
     RouterService,
+    SkillCatalogService,
     VerificationService,
 )
 from app.domain.errors import DomainError
 from app.domain.ports import (
+    Clock,
     JobsGateway,
     JsonDict,
     MatchingGateway,
@@ -42,6 +44,7 @@ from app.infrastructure.gateways_mock import (
 from app.infrastructure.router_store import FileRouterStateStore, SystemClock
 from app.infrastructure.schemas_json import JsonSchemaValidator
 from app.infrastructure.settings_env import build_settings_provider
+from app.infrastructure.skills_fs import FileSystemSkillRepository
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,8 @@ class ServiceContainer:
     recruitment: RecruitmentToolsService
     verification: VerificationService
     router: RouterService
+    skills: SkillCatalogService
+    clock: Clock
 
 
 def _error_payload(err: DomainError) -> JsonDict:
@@ -78,6 +83,19 @@ def _run_sync(fn: Callable[[], Any]) -> JsonDict:
         return {"ok": True, "data": res} if not isinstance(res, dict) else {"ok": True, **res}
     except DomainError as err:
         return _error_payload(err)
+
+
+def _session_from_context(ctx: Context[Any, Any, Any] | None) -> str:
+    if ctx is None:
+        return "default"
+    try:
+        req: Any = ctx.request_context.request
+        if req is not None and hasattr(req, "query_params"):
+            val = req.query_params.get("sesion")
+            return str(val) if val else "default"
+    except (LookupError, ValueError, AttributeError):
+        return "default"
+    return "default"
 
 
 def build_container(env: Mapping[str, str] | None = None) -> ServiceContainer:
@@ -116,6 +134,9 @@ def build_container(env: Mapping[str, str] | None = None) -> ServiceContainer:
     state_path = Path(state_path_raw) if state_path_raw else None
     model_router = ModelRouter(store=FileRouterStateStore(state_path), clock=clock)
 
+    skills_dir_raw = source_env.get("SKILLS_DIR", "")
+    skills_dir = Path(skills_dir_raw) if skills_dir_raw else None
+
     return ServiceContainer(
         settings=AgentSettingsService(settings_provider),
         cv_parser=CvParserService(settings_provider, default_extractors()),
@@ -130,6 +151,8 @@ def build_container(env: Mapping[str, str] | None = None) -> ServiceContainer:
         ),
         verification=VerificationService(JsonSchemaValidator()),
         router=RouterService(model_router, settings_provider),
+        skills=SkillCatalogService(FileSystemSkillRepository(skills_dir)),
+        clock=clock,
     )
 
 
@@ -147,6 +170,40 @@ def register_tools(mcp: FastMCP, container: ServiceContainer) -> dict[str, Calla
         """Devuelve la configuración vigente de los agentes (modelos NVIDIA por rol, límites RPM,
         reintentos del verificador, topes de recomendaciones y formatos de CV)."""
         return await _run_async(lambda: container.settings.get_settings())
+
+    @_expose
+    def fecha_hora() -> JsonDict:
+        """Devuelve la fecha (`today`) y hora actual (`iso_now`) en UTC."""
+        return _run_sync(
+            lambda: {
+                "today": container.clock.today(),
+                "iso_now": container.clock.iso_now(),
+            }
+        )
+
+    @_expose
+    def list_skills() -> JsonDict:
+        """Lista las skills del proyecto disponibles para leer con `leer_skill`."""
+        return _run_sync(lambda: {"skills": container.skills.list_skills()})
+
+    @_expose
+    def leer_skill(
+        id: str,
+        archivo: str = "SKILL.md",
+        desde: int = 0,
+        ctx: Context[Any, Any, Any] | None = None,
+    ) -> JsonDict:
+        """Devuelve las instrucciones completas de una skill del proyecto (de tu lista
+        'Skills del proyecto'). Leé solo las 1 a 2 más relevantes, una vez cada una, y respondé."""
+        session_id = _session_from_context(ctx)
+        return _run_sync(
+            lambda: container.skills.read_skill(
+                skill_id=id,
+                file_path=archivo,
+                offset=desde,
+                session_id=session_id,
+            )
+        )
 
     @_expose
     async def parse_cv_file(
@@ -169,6 +226,18 @@ def register_tools(mcp: FastMCP, container: ServiceContainer) -> dict[str, Calla
         """Alias de `parse_cv_file` compatible con AGENTS.md §4.6: extrae texto plano de un CV."""
         return await _run_async(
             lambda: container.cv_parser.parse_base64(content_base64, filename, mime_type)
+        )
+
+    @_expose
+    async def leer_archivo(
+        contenido_base64: str,
+        nombre: str = "cv.pdf",
+        mime: str = "",
+    ) -> JsonDict:
+        """Alias compatible con el nodo MCP Client de n8n (`agentes`): convierte a texto un
+        archivo en base64 (PDF, DOCX, DOC o MD) y devuelve `{archivo, tipo, truncado, texto}`."""
+        return await _run_async(
+            lambda: container.cv_parser.parse_base64(contenido_base64, nombre, mime)
         )
 
     @_expose

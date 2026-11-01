@@ -19,8 +19,9 @@ from app.infrastructure.gateways_http import (
     HttpProfileGateway,
     HttpRecommendationStore,
 )
-from app.infrastructure.security import ServiceTokenMiddleware
+from app.infrastructure.security import MaskKeyLogFilter, ServiceTokenMiddleware
 from app.infrastructure.settings_env import EnvSettingsProvider, PanelSettingsProvider
+from app.infrastructure.skills_fs import FileSystemSkillRepository
 from app.tools.registry import build_container, register_tools
 
 
@@ -105,6 +106,29 @@ async def test_ut_mcp_01_all_tools_with_mocks() -> None:
 
     cv_alias = await tools["parse_cv_text"](cv_b64, "cv.md")
     assert cv_alias["ok"] is True
+
+    leer_arch = await tools["leer_archivo"](cv_b64, "cv.md")
+    assert leer_arch["ok"] is True
+    assert leer_arch["archivo"] == "cv.md"
+    assert "Python" in leer_arch["texto"]
+
+    fh_res = tools["fecha_hora"]()
+    assert fh_res["ok"] is True
+    assert "today" in fh_res
+
+    skills_list_res = tools["list_skills"]()
+    assert skills_list_res["ok"] is True
+    skill_ids = [s["id"] for s in skills_list_res["skills"]]
+    assert "extraccion-cv" in skill_ids
+    assert "orientacion-postulante" in skill_ids
+
+    skill_read = tools["leer_skill"]("extraccion-cv")
+    assert skill_read["ok"] is True
+    assert "cv_standard" in skill_read["content"]
+
+    skill_missing = tools["leer_skill"]("no-existe-skill")
+    assert skill_missing["ok"] is False
+    assert skill_missing["error"]["code"] == "not_found"
 
     r_res = await tools["router_reserve"](role="cv")
     assert r_res["ok"] is True
@@ -214,3 +238,29 @@ def test_service_token_middleware() -> None:
         == 200
     )
     assert client.get("/mcp?key=my-secret").status_code == 200
+
+
+def test_skill_repository_loop_protection_and_mask_filter() -> None:
+    import logging
+
+    repo = FileSystemSkillRepository(max_reads_per_session=2)
+    first = repo.read_skill("extraccion-cv", session_id="ses-1")
+    assert first["loop_stopped"] is False
+    # Releer la misma skill en la misma sesión corta el bucle
+    dup = repo.read_skill("extraccion-cv", session_id="ses-1")
+    assert dup["loop_stopped"] is True
+    assert "Ya leíste esta parte" in dup["content"]
+
+    second = repo.read_skill("orientacion-postulante", session_id="ses-1")
+    assert second["loop_stopped"] is False
+    # Tercera lectura supera max_reads_per_session=2
+    third = repo.read_skill("seleccion-candidatos", session_id="ses-1")
+    assert third["loop_stopped"] is True
+    assert "Ya leíste 2 skills" in third["content"]
+
+    rec = logging.LogRecord(
+        "uvicorn.access", logging.INFO, "", 1, "%s", ("GET /mcp?key=secret123&perfil=cv",), None
+    )
+    flt = MaskKeyLogFilter()
+    assert flt.filter(rec) is True
+    assert "key=***" in str(rec.args)

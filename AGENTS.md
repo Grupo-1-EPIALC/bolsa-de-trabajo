@@ -165,19 +165,20 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 
 ### 4.6 Agente `mcp-agent` — mcp-tools (MCP local Python)
 **Debe:**
-- Usar el SDK oficial MCP para Python (FastMCP). Transporte `stdio` en desarrollo y `streamable-http` en Docker (`MCP_TRANSPORT`).
+- Usar el SDK oficial MCP para Python (`ProfiledFastMCP(FastMCP)` con filtrado de herramientas por `?perfil=`). Transporte `stdio` en desarrollo y `streamable-http` en Docker (`MCP_TRANSPORT`).
 - Arquitectura por capas (`domain/`, `application/`, `infrastructure/`, `tools/`) con puertos `Protocol` e inyección de dependencias.
-- Herramientas en `app/tools/`: `get_agent_settings`, `parse_cv_file` (y alias `parse_cv_text`, soporta PDF/DOCX/DOC/MD), `get_profile`, `list_candidate_profiles`, `get_job`, `list_active_jobs`, `compute_match`, `missing_skills`, `search_courses`, `save_recommendation`, `validate_json_schema`, `check_grounding` y `router_*` (además de endpoints HTTP `/router/reserve`, `/router/failure`, `/router/success`, `/router/status`).
+- Herramientas en `app/tools/`: `get_agent_settings`, `fecha_hora`, `list_skills`, `leer_skill` (con protección anti-bucle por sesión), `parse_cv_file` (y alias `parse_cv_text` / `leer_archivo`, soporta PDF/DOCX/DOC/MD), `get_profile`, `list_candidate_profiles`, `get_job`, `list_active_jobs`, `compute_match`, `missing_skills`, `search_courses`, `save_recommendation`, `validate_json_schema`, `check_grounding` y `router_*` (además de endpoints HTTP `/router/reserve`/`/router/reservar`, `/router/failure`/`/router/fallo`, `/router/success`/`/router/exito`, `/router/status`/`/router/estado` y `/reglas`).
 - Soportar modo mock (`MCP_USE_MOCKS=true`) detrás de los mismos puertos (`ProfileGateway`, `JobsGateway`, `MatchingGateway`, `RecommendationStore`) mientras se completan los endpoints REST de negocio.
 - Cada herramienta: docstring clara (es lo que lee el LLM), tipos de entrada/salida, manejo de errores con mensaje legible.
-- Autenticarse ante los servicios y proteger `/mcp` y `/router` con `X-Service-Token`.
+- Autenticarse ante los servicios y proteger `/mcp` y `/router` con `X-Service-Token`, `X-API-Key`, `Bearer` o `?key=` (enmascarando `key=***` en logs).
 - Herramientas **de solo lectura** salvo `save_recommendation`.
 **Tests mínimos:** UT-MCP-01, UT-MCP-02 (cobertura ≥ 70 % en `domain/` y `application/`).
 
 ### 4.7 Agente `n8n-agent` — workflows
 **Debe:**
-- Un workflow por archivo JSON en `n8n/workflows/` con nombre `WF-0X-<nombre>.json` (generables de forma determinística con `python n8n/generate_workflows.py`); exportar sin credenciales.
-- `WF-0R` Sub-workflow Router NVIDIA (límite RPM, fallback y cooldown vía `mcp-tools`) · `WF-0V` Verificador (JSON Schema + grounding + integridad de score) · `WF-00` Orquestador (Captain, con reintento controlado) · `WF-01` Procesar CV (`POST /webhook/cv-extract`) · `WF-06` Recomendador postulantes/empresas (`POST /webhook/recommendations`) · `WF-02` a `WF-05` notificaciones y errores.
+- Catálogo declarativo de agentes en `n8n/agentes/*.json` + `n8n/agentes/_sistema.json` y un workflow por archivo JSON en `n8n/workflows/` con nombre `WF-0X-<nombre>.json` (generables de forma determinística con `python n8n/generate_workflows.py`); exportar sin credenciales.
+- Usar los nodos nativos de agente de n8n (`@n8n/n8n-nodes-langchain.agent`, `@n8n/n8n-nodes-langchain.lmChatOpenAi` conectado directo sin modelos locales Ollama, `@n8n/n8n-nodes-langchain.memoryBufferWindow`, `@n8n/n8n-nodes-langchain.mcpClientTool` con `?perfil=` y `@n8n/n8n-nodes-langchain.mcpClient` para lectura de archivos adjuntos/CVs).
+- `WF-0R` Agente especialista y Router NVIDIA · `WF-0V` Verificador (JSON Schema + grounding + integridad de score + agente `Doctor Strange`) · `WF-00` Orquestador (`Captain America`, con lectura de adjunto MCP y reintento controlado) · `WF-01` Procesar CV (`POST /webhook/cv-extract`, `Natasha Romanoff`) · `WF-06` Recomendador postulantes/empresas (`POST /webhook/recommendations`, `Professor X` / `Nick Fury`) · `WF-02` a `WF-05` notificaciones y errores.
 - Usar variables de entorno de n8n (`$env.MCP_URL`, `$env.SERVICE_TOKEN`, `$env.N8N_WEBHOOK_TOKEN`, etc., definidas en `docker-compose.yml`) y consultar parámetros dinámicos con `get_agent_settings`; nunca valores fijos.
 - Separar siempre el bloque `"rule_based"` (`origin: "RULES"`) del bloque `"ai_recommendations"` (`origin: "AI"`).
 - Idempotencia: no enviar mails duplicados (guardar `notification_key`).
@@ -266,7 +267,8 @@ Si un dato no aparece, dejalo vacío. No inventes.
 | P-001 | 2026-10-30 | Andres | Claude (planificación) | `docs/plan/v0.0.1-plan-inicial` | Generar plan de trabajo para MVP de bolsa de trabajo con SOLID, REST, microservicios, Docker, Django, FastAPI, n8n, MCP Python y React; 4 personas, 2 semanas; PDF con arquitectura, capas, tecnologías, roles, plan, RF/RNF, HU y tests; MD con reglas de agentes y registro de prompts | Se generó `Plan_MVP_Bolsa_de_Trabajo.pdf` (11 secciones: 7 servicios, 21 RF, 14 RNF, 18 HU ≈ 67 pts, 34 casos de test, plan día a día en 2 sprints, flujo Git) y este `AGENTS.md` con 10 agentes de desarrollo y 3 de runtime | aceptado (pendiente revisión del equipo) |
 | P-002 | 2026-10-31 | Andres | Claude Code (`devops-agent`) | `chore/infra/v0.0.1-contenedores-base` | Crear sólo los contenedores y archivos de configuración comunes; auth-service pasa a NestJS | Compose (dev/prod), gateway Nginx, Postgres con rol+schema por servicio, Dockerfiles multi-stage no root con healthcheck, esqueletos `/health` por servicio, CI por carpeta, config común de lint y plantilla de PR | pendiente de revisión |
 | P-003 | 2026-10-31 | Andres | Antigravity (`mcp-agent` + `n8n-agent`) | `feature/mcp-n8n/v0.1.0-agentes-nvidia` | Armar flujos de n8n y agentes (orquestador, verificador, extractor de CV PDF/DOC/DOCX/MD y recomendador postulantes/empresas) usando modelos remotos de NVIDIA, reutilizando router/lectura de `agentes`, migrando Postgres a 17 y dejando toda la configuración en `.env` vía `mcp-tools` (con soporte futuro para panel y mocks de endpoints pendientes) | Migración a PostgreSQL 17, `mcp-tools` v0.1.0 con arquitectura limpia (`domain`/`application`/`infrastructure`/`tools`), router NVIDIA, `parse_cv_file` (con `antiword`), validación JSON Schema + grounding, mocks configurables (`MCP_USE_MOCKS`), cobertura 90 % y workflows `WF-0R`, `WF-0V`, `WF-00`, `WF-01` y `WF-06` | aceptado |
-| P-004 | | | | | | | |
+| P-004 | 2026-11-01 | Andres | Antigravity (`mcp-agent` + `n8n-agent` + `devops-agent`) | `feature/mcp-n8n/v0.2.0-nodos-agente-y-skills` | Crear repo `Grupo-1-EPIALC/bolsa-de-trabajo` con reglas de publicación (PR + ramas por feature) y alinear la arquitectura de agentes con `C:\Users\Andres\proyectos\agentes` usando los nodos de Agente de n8n (`@n8n/n8n-nodes-langchain.agent`, `mcpClientTool`, `mcpClient`, `memoryBufferWindow`), perfiles MCP y skills (`leer_skill`), sin modelos locales Ollama | Repo creado y protegido en GitHub (`dev` y `main`), `mcp-tools` v0.2.0 con `ProfiledFastMCP` (`?perfil=`), `leer_skill` (con anti-bucle), `reglas.md`, skills de reclutamiento + ingeniería, catálogo `n8n/agentes/*.json` y workflows regenerados con nodos nativos de Agente de n8n conectados a NVIDIA NIM | aceptado |
+| P-005 | | | | | | | |
 
 ### 7.2 Detalle de entradas
 
@@ -304,7 +306,18 @@ Si un dato no aparece, dejalo vacío. No inventes.
 - **Archivos afectados:** `.env.example`, `docker-compose.yml`, `mcp-tools/`, `n8n/`, `services/ai-service/prompts/`, `contracts/`, `README.md`, `AGENTS.md`.
 - **Decisión:** aceptado.
 
-#### P-004 — (plantilla)
+#### P-004 — Nodos de Agente de n8n, Perfiles MCP, Skills (`leer_skill`) y Reglas de Repositorio GitHub
+- **Fecha:** 2026-11-01 · **Autor:** Andres · **Agente:** Antigravity (`mcp-agent` + `n8n-agent` + `devops-agent`) · **Rama:** `feature/mcp-n8n/v0.2.0-nodos-agente-y-skills` · **HU:** transversal (IA / MCP / n8n / DevOps)
+- **Prompt (resumido):**
+  > Crear el repositorio en `https://github.com/Grupo-1-EPIALC/bolsa-de-trabajo`, revisar `.gitignore`, armar el versionado, publicar en `dev` con reglas de publicación por ramas de feature y PR. Además, revisar cómo funcionan las herramientas, workflows y skills de `C:\Users\Andres\proyectos\agentes` para que acá funcionen de forma similar con los nodos de agente de n8n, pero sin los modelos locales.
+- **Resumen de la respuesta:**
+  - Creación y protección del repositorio `Grupo-1-EPIALC/bolsa-de-trabajo` (PR obligatorio + 1 aprobación + `CI Gate` + `Flujo Git y Versionado de Rama` en `dev` y `main`).
+  - Evolución de `mcp-tools` a `v0.2.0`: `ProfiledFastMCP` con filtrado de herramientas por `?perfil=` (`planificador`, `cv`, `postulante`, `empresa`, `verificador`, `adjuntos`), soporte de autenticación por `?key=` + `MaskKeyLogFilter`, `reglas.md` (`/reglas`), `FileSystemSkillRepository` con `leer_skill` (protección anti-bucle por sesión) y skills en `mcp-tools/app/data/skills/` (`extraccion-cv`, `orientacion-postulante`, `seleccion-candidatos`, `verificacion-grounding`, `analisis-funcional`, `calidad-iso-25010`, `principios-solid`, `codigo-limpio`).
+  - Catálogo de agentes en `n8n/agentes/{_sistema,cv_structurer,training_advisor,company_advisor}.json` y workflows `WF-0R`, `WF-0V`, `WF-00`, `WF-01` y `WF-06` regenerados usando `@n8n/n8n-nodes-langchain.agent`, `@n8n/n8n-nodes-langchain.lmChatOpenAi` (solo NVIDIA NIM, sin Ollama local), `@n8n/n8n-nodes-langchain.memoryBufferWindow`, `@n8n/n8n-nodes-langchain.mcpClientTool` y `@n8n/n8n-nodes-langchain.mcpClient`.
+- **Archivos afectados:** `.gitignore`, `.github/workflows/ci.yml`, `VERSION`, `mcp-tools/`, `n8n/agentes/`, `n8n/generate_workflows.py`, `n8n/workflows/`, `AGENTS.md`.
+- **Decisión:** aceptado.
+
+#### P-005 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

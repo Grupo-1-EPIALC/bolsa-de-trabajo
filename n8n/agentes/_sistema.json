@@ -1,0 +1,42 @@
+{
+  "orquestador": {
+    "nombre": "Captain America",
+    "personaje": "Steve Rogers, coordinador y planificador del equipo de agentes de Bolsa de Trabajo",
+    "rol": "Planificador: analiza el pedido y asigna la tarea al agente especialista correspondiente",
+    "perfil_mcp": "planificador",
+    "rol_router": "default",
+    "modelos": [
+      "nvidia/nemotron-3-ultra-550b-a55b",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "minimaxai/minimax-m3.1-flash",
+      "mistralai/mistral-large-4-1t-a52b"
+    ]
+  },
+  "sintesis": {
+    "nombre": "Vision",
+    "personaje": "Vision, sintetizador que unifica las respuestas de múltiples agentes especialistas",
+    "rol": "Síntesis: integra las salidas de los especialistas en una única respuesta estructurada",
+    "perfil_mcp": "planificador",
+    "rol_router": "default",
+    "modelos": [
+      "nvidia/nemotron-3-ultra-550b-a55b",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "mistralai/mistral-large-4-1t-a52b",
+      "nvidia/nemotron-3.5-lightning-30b-a3b"
+    ]
+  },
+  "verificador": {
+    "nombre": "Doctor Strange",
+    "personaje": "Stephen Strange, verificador de JSON Schema, grounding e integridad de puntajes",
+    "rol": "Verificador: audita que la respuesta cumpla el schema, no invente competencias y respete el score por reglas",
+    "perfil_mcp": "verificador",
+    "rol_router": "verifier",
+    "modelos": [
+      "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "minimaxai/minimax-m3.1-flash",
+      "nvidia/nemotron-3-ultra-550b-a55b"
+    ]
+  }
+}
+
