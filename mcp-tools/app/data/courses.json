@@ -1,0 +1,103 @@
+[
+  {
+    "id": "crs-001",
+    "title": "Desarrollo de APIs REST con FastAPI y Python 3.12",
+    "provider": "Academia Universitaria Abierta",
+    "skill": "FastAPI",
+    "tags": ["python", "fastapi", "rest", "api"],
+    "duration_hours": 24,
+    "level": "intermedio",
+    "url": "https://cursos.bolsa.local/fastapi-python"
+  },
+  {
+    "id": "crs-002",
+    "title": "Contenedores Docker y Docker Compose para Desarrolladores",
+    "provider": "Instituto Tecnológico Federal",
+    "skill": "Docker",
+    "tags": ["docker", "contenedores", "devops", "linux"],
+    "duration_hours": 18,
+    "level": "inicial-intermedio",
+    "url": "https://cursos.bolsa.local/docker-compose"
+  },
+  {
+    "id": "crs-003",
+    "title": "Consultas Avanzadas y Modelado en SQL / PostgreSQL",
+    "provider": "Academia Universitaria Abierta",
+    "skill": "SQL",
+    "tags": ["sql", "postgresql", "postgres", "base de datos"],
+    "duration_hours": 20,
+    "level": "intermedio",
+    "url": "https://cursos.bolsa.local/sql-postgresql"
+  },
+  {
+    "id": "crs-004",
+    "title": "Testing Automatizado en Python con pytest",
+    "provider": "Comunidad Python Argentina",
+    "skill": "Testing",
+    "tags": ["testing", "pytest", "python", "qa"],
+    "duration_hours": 16,
+    "level": "intermedio",
+    "url": "https://cursos.bolsa.local/pytest-testing"
+  },
+  {
+    "id": "crs-005",
+    "title": "React 18 y TypeScript Aplicado",
+    "provider": "Centro de Formación Digital",
+    "skill": "React",
+    "tags": ["react", "typescript", "frontend", "javascript"],
+    "duration_hours": 30,
+    "level": "intermedio",
+    "url": "https://cursos.bolsa.local/react-typescript"
+  },
+  {
+    "id": "crs-006",
+    "title": "TypeScript Estricto para Frontend y Backend (Node.js)",
+    "provider": "Centro de Formación Digital",
+    "skill": "TypeScript",
+    "tags": ["typescript", "node.js", "nodejs", "javascript"],
+    "duration_hours": 20,
+    "level": "intermedio",
+    "url": "https://cursos.bolsa.local/typescript-estricto"
+  },
+  {
+    "id": "crs-007",
+    "title": "Fundamentos de Administración Linux y Bash",
+    "provider": "Instituto Tecnológico Federal",
+    "skill": "Linux",
+    "tags": ["linux", "bash", "devops", "consola"],
+    "duration_hours": 15,
+    "level": "inicial",
+    "url": "https://cursos.bolsa.local/linux-bash"
+  },
+  {
+    "id": "crs-008",
+    "title": "Flujos de Trabajo en Equipo con Git y GitHub",
+    "provider": "Academia Universitaria Abierta",
+    "skill": "Git",
+    "tags": ["git", "github", "versionado"],
+    "duration_hours": 10,
+    "level": "inicial",
+    "url": "https://cursos.bolsa.local/git-flujos"
+  },
+  {
+    "id": "crs-009",
+    "title": "Inglés Técnico para Ingeniería de Software (B1 → B2)",
+    "provider": "Departamento de Idiomas Universitario",
+    "skill": "Inglés",
+    "tags": ["ingles", "english", "idiomas"],
+    "duration_hours": 40,
+    "level": "B2",
+    "url": "https://cursos.bolsa.local/ingles-tecnico-b2"
+  },
+  {
+    "id": "crs-010",
+    "title": "Programación Orientada a Objetos y SOLID en Python",
+    "provider": "Comunidad Python Argentina",
+    "skill": "Python",
+    "tags": ["python", "solid", "arquitectura"],
+    "duration_hours": 22,
+    "level": "intermedio",
+    "url": "https://cursos.bolsa.local/python-solid"
+  }
+]
+

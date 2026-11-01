@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bolsa.local/schemas/student_recommendations.schema.json",
+  "title": "Recomendaciones de Formación para Postulante (Training Advisor)",
+  "type": "object",
+  "required": ["items"],
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["type", "skill", "text", "priority"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string", "enum": ["course", "project", "profile_tip"] },
+          "skill": { "type": "string", "minLength": 1 },
+          "text": { "type": "string", "minLength": 5 },
+          "priority": { "type": "string", "enum": ["alta", "media", "baja"] }
+        }
+      }
+    }
+  }
+}

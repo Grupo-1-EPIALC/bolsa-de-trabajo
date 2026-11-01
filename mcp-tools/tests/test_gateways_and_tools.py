@@ -1,0 +1,216 @@
+"""Tests unitarios UT-MCP-01 y UT-MCP-02: herramientas MCP, gateways HTTP, mocks y auth."""
+
+import base64
+
+import httpx
+import pytest
+import respx
+from mcp.server.fastmcp import FastMCP
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from starlette.routing import Route
+from starlette.testclient import TestClient
+
+from app.domain.errors import NotFoundError, UpstreamError
+from app.infrastructure.gateways_http import (
+    HttpJobsGateway,
+    HttpMatchingGateway,
+    HttpProfileGateway,
+    HttpRecommendationStore,
+)
+from app.infrastructure.security import ServiceTokenMiddleware
+from app.infrastructure.settings_env import EnvSettingsProvider, PanelSettingsProvider
+from app.tools.registry import build_container, register_tools
+
+
+@pytest.mark.asyncio
+async def test_ut_mcp_01_all_tools_with_mocks() -> None:
+    """UT-MCP-01: Todas las herramientas MCP responden con el contrato esperado usando mocks."""
+    env = {
+        "MCP_USE_MOCKS": "true",
+        "AGENT_SETTINGS_SOURCE": "env",
+        "RECO_MAX_JOBS_PER_STUDENT": "5",
+        "RECO_MAX_PROFILES_PER_JOB": "10",
+        "RECO_MAX_ITEMS_PER_JOB": "3",
+    }
+    container = build_container(env)
+    server = FastMCP("test-mcp")
+    tools = register_tools(server, container)
+
+    settings_res = await tools["get_agent_settings"]()
+    assert settings_res["ok"] is True
+    assert settings_res["recommendations"]["max_items_per_job"] == 3
+
+    prof_res = await tools["get_profile"]("stu-001")
+    assert prof_res["ok"] is True
+    assert prof_res["full_name"] == "Valentina Gómez"
+
+    not_found_res = await tools["get_profile"]("stu-999")
+    assert not_found_res["ok"] is False
+    assert not_found_res["error"]["code"] == "not_found"
+
+    list_prof = await tools["list_candidate_profiles"](skills=["Python"], limit=5)
+    assert list_prof["ok"] is True
+    assert len(list_prof["data"]) == 2
+
+    job_res = await tools["get_job"]("job-001")
+    assert job_res["ok"] is True
+    assert job_res["title"] == "Desarrollador/a Backend Python Jr."
+
+    jobs_list = await tools["list_active_jobs"](limit=2)
+    assert jobs_list["ok"] is True
+    assert len(jobs_list["data"]) == 2
+
+    # compute_match siempre devuelve origin="RULES"
+    match_res = await tools["compute_match"]("stu-001", "job-001")
+    assert match_res["ok"] is True
+    assert match_res["origin"] == "RULES"
+    assert match_res["score"] > 70
+
+    # Regla excluyente: stu-002 no tiene Python (excluyente en job-003) -> score <= 40
+    excl_res = await tools["compute_match"]("stu-002", "job-003")
+    assert excl_res["ok"] is True
+    assert excl_res["score"] <= 40.0
+
+    gaps_res = await tools["missing_skills"]("stu-001", "job-001")
+    assert gaps_res["ok"] is True
+    skills_missing = [g["skill"] for g in gaps_res["data"]]
+    assert "Docker" in skills_missing
+
+    courses_res = tools["search_courses"](["Docker", "Testing"], limit=3)
+    assert courses_res["ok"] is True
+    assert len(courses_res["data"]) >= 2
+
+    # save_recommendation sella origin="AI" y recorta a max_items_per_job (3)
+    items = [
+        {"type": "course", "skill": "Docker", "text": "Hacer curso Docker", "priority": "alta"}
+        for _ in range(5)
+    ]
+    saved_res = await tools["save_recommendation"](
+        profile_id="stu-001",
+        job_id="job-001",
+        items=items,
+        model="deepseek-ai/deepseek-v4.1-flash",
+        prompt_version="1.0.0",
+    )
+    assert saved_res["ok"] is True
+    assert saved_res["origin"] == "AI"
+    assert len(saved_res["items"]) == 3
+
+    cv_b64 = base64.b64encode(b"# CV de prueba\nSkills: Python, SQL").decode("ascii")
+    cv_res = await tools["parse_cv_file"](cv_b64, "cv.md")
+    assert cv_res["ok"] is True
+    assert "Python" in cv_res["text"]
+
+    cv_alias = await tools["parse_cv_text"](cv_b64, "cv.md")
+    assert cv_alias["ok"] is True
+
+    r_res = await tools["router_reserve"](role="cv")
+    assert r_res["ok"] is True
+    assert r_res["action"] == "call"
+    chosen = r_res["model"]
+
+    f_res = tools["router_report_failure"](chosen, "429 rate limit")
+    assert f_res["ok"] is True
+    assert f_res["kind"] == "rate_limit"
+
+    s_res = tools["router_report_success"](chosen)
+    assert s_res["ok"] is True
+
+    st_res = tools["router_status"]()
+    assert st_res["ok"] is True
+    assert chosen in st_res["models"]
+
+
+@pytest.mark.asyncio
+async def test_ut_mcp_02_http_gateways_with_respx() -> None:
+    """UT-MCP-02: Los adaptadores HTTP envían X-Service-Token y traducen errores 404/5xx."""
+    svc_key = "test-service-header-value"
+    with respx.mock(assert_all_called=False) as mock:
+        prof_route = mock.get("http://profile-service:8000/api/v1/profiles/stu-10").mock(
+            return_value=httpx.Response(200, json={"id": "stu-10", "full_name": "Ana"})
+        )
+        mock.get("http://profile-service:8000/api/v1/profiles/missing").mock(
+            return_value=httpx.Response(404, json={"error": "not found"})
+        )
+        mock.get("http://jobs-service:8000/api/v1/jobs").mock(
+            return_value=httpx.Response(200, json={"items": [{"id": "job-10"}]})
+        )
+        mock.post("http://matching-service:8000/api/v1/matches").mock(
+            return_value=httpx.Response(
+                200,
+                json={"score": 88.0, "origin": "RULES", "engine_version": "1.0.0"},
+            )
+        )
+        mock.post("http://ai-service:8000/api/v1/ai/recommendations").mock(
+            return_value=httpx.Response(500, text="Internal Server Error")
+        )
+        mock.get("http://panel:8000/api/v1/settings").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "rpm_limit": 30,
+                    "recommendations": {"max_jobs_per_student": 4},
+                },
+            )
+        )
+
+        profiles = HttpProfileGateway("http://profile-service:8000", svc_key)
+        jobs = HttpJobsGateway("http://jobs-service:8000", svc_key)
+        matching = HttpMatchingGateway("http://matching-service:8000", svc_key)
+        recos = HttpRecommendationStore("http://ai-service:8000", svc_key)
+        panel = PanelSettingsProvider(
+            "http://panel:8000/api/v1/settings",
+            svc_key,
+            fallback=EnvSettingsProvider(),
+        )
+
+        p = await profiles.get_profile("stu-10")
+        assert p["id"] == "stu-10"
+        assert prof_route.calls.last.request.headers["X-Service-Token"] == svc_key
+
+        with pytest.raises(NotFoundError):
+            await profiles.get_profile("missing")
+
+        j_list = await jobs.list_active_jobs(limit=5)
+        assert j_list == [{"id": "job-10"}]
+
+        m = await matching.compute_match("stu-10", "job-10")
+        assert m["score"] == 88.0
+
+        with pytest.raises(UpstreamError):
+            await recos.save({"profile_id": "stu-10"})
+
+        cfg = await panel.get()
+        assert cfg.source == "panel"
+        assert cfg.rpm_limit == 30
+        assert cfg.recommendations.max_jobs_per_student == 4
+
+
+def test_service_token_middleware() -> None:
+    async def ok_endpoint(_: Request) -> JSONResponse:
+        return JSONResponse({"ok": True})
+
+    inner = Starlette(
+        routes=[
+            Route("/health", ok_endpoint),
+            Route("/mcp", ok_endpoint),
+            Route("/router/status", ok_endpoint),
+        ]
+    )
+    app = ServiceTokenMiddleware(inner, expected_token="my-secret")  # noqa: S106
+    client = TestClient(app)
+
+    # /health es público
+    assert client.get("/health").status_code == 200
+    # /mcp y /router exigen token
+    assert client.get("/mcp").status_code == 401
+    assert client.get("/router/status").status_code == 401
+    # Con X-Service-Token, Authorization Bearer o ?key= pasa
+    assert client.get("/mcp", headers={"X-Service-Token": "my-secret"}).status_code == 200
+    assert (
+        client.get("/router/status", headers={"Authorization": "Bearer my-secret"}).status_code
+        == 200
+    )
+    assert client.get("/mcp?key=my-secret").status_code == 200

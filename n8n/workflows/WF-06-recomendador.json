@@ -1,0 +1,125 @@
+{
+  "id": "BolsaWf06Recomendador",
+  "name": "WF-06 · Recomendador (Postulantes y Empresas)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recommendations",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "e268da21-1e59-55ad-abab-82c00c8ebc90",
+      "name": "Webhook Recommendations",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "5c0cfa75-2922-5dee-82c5-e92b235fdde8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\nconst incoming = $input.first().json;\nconst headers = incoming.headers || {};\nconst body = incoming.body || incoming;\n\nconst givenToken = headers['x-webhook-token'] || headers['x-api-key'] || headers['x-service-token'] || '';\nconst validWebhook = $env.N8N_WEBHOOK_TOKEN && givenToken === $env.N8N_WEBHOOK_TOKEN;\nconst validService = $env.SERVICE_TOKEN && givenToken === $env.SERVICE_TOKEN;\nif (!validWebhook && !validService) {\n  throw new Error('No autorizado: falta o es inválido X-Webhook-Token / X-Service-Token');\n}\n\nconst settings = await callMcpTool('get_agent_settings', {});\nconst mode = (body.mode || (body.job_id && !body.profile_id ? 'company' : 'student')).toLowerCase();\n\nif (mode === 'student') {\n  const profileId = String(body.profile_id || 'stu-001');\n  const profile = await callMcpTool('get_profile', { profile_id: profileId });\n  if (!profile.ok) {\n    return [{ json: { ok: false, status_code: 404, error: profile.error } }];\n  }\n  const jobsRes = await callMcpTool('list_active_jobs', {\n    limit: settings?.recommendations?.max_jobs_per_student || 5,\n  });\n  const jobs = jobsRes.data || [];\n  const minScore = Number(settings?.recommendations?.min_score || 0);\n\n  const evaluations = [];\n  for (const job of jobs) {\n    const match = await callMcpTool('compute_match', { profile_id: profileId, job_id: job.id });\n    if (Number(match.score) < minScore) continue;\n    const gapsRes = await callMcpTool('missing_skills', { profile_id: profileId, job_id: job.id });\n    const gaps = gapsRes.data || [];\n    const gapSkills = gaps.map(g => g.skill);\n    const coursesRes = gapSkills.length\n      ? await callMcpTool('search_courses', { skills: gapSkills, limit: 5 })\n      : { data: [] };\n    evaluations.push({\n      job,\n      rule_based: {\n        score: match.score,\n        breakdown: match.breakdown,\n        origin: 'RULES',\n        engine_version: match.engine_version || '1.0.0',\n      },\n      missing_skills: gaps,\n      available_courses: coursesRes.data || [],\n    });\n  }\n\n  evaluations.sort((a, b) => b.rule_based.score - a.rule_based.score);\n  const topEval = evaluations[0] || null;\n  const sourceTerms = [\n    ...(profile.skills || []).map(s => s.name),\n    ...(topEval?.missing_skills || []).map(g => g.skill),\n  ].join(', ');\n\n  return [{\n    json: {\n      ok: true,\n      mode: 'student',\n      profile,\n      evaluations,\n      task: 'recommend_student',\n      prompt_version: '1.0.0',\n      source_text: sourceTerms,\n      expected_score: topEval?.rule_based?.score ?? null,\n      payload: {\n        profile,\n        job: topEval?.job || {},\n        rule_based_match: topEval?.rule_based || {},\n        missing_skills: topEval?.missing_skills || [],\n        available_courses: topEval?.available_courses || [],\n        max_items_per_job: settings?.recommendations?.max_items_per_job || 5,\n      },\n    }\n  }];\n}\n\n// mode === 'company'\nconst jobId = String(body.job_id || 'job-001');\nconst job = await callMcpTool('get_job', { job_id: jobId });\nif (!job.ok) {\n  return [{ json: { ok: false, status_code: 404, error: job.error } }];\n}\n\nconst candidatesRes = await callMcpTool('list_candidate_profiles', {\n  skills: [],\n  limit: settings?.recommendations?.max_profiles_per_job || 10,\n});\nconst candidates = candidatesRes.data || [];\n\nconst ranked = [];\nfor (const cand of candidates) {\n  const match = await callMcpTool('compute_match', { profile_id: cand.id, job_id: jobId });\n  const gapsRes = await callMcpTool('missing_skills', { profile_id: cand.id, job_id: jobId });\n  ranked.push({\n    profile: cand,\n    rule_based: {\n      score: match.score,\n      breakdown: match.breakdown,\n      origin: 'RULES',\n      engine_version: match.engine_version || '1.0.0',\n    },\n    missing_skills: gapsRes.data || [],\n  });\n}\n\n// El ranking lo definen EXCLUSIVAMENTE las reglas (AGENTS.md §2.2)\nranked.sort((a, b) => b.rule_based.score - a.rule_based.score);\nconst topCandidate = ranked[0] || null;\n\nreturn [{\n  json: {\n    ok: true,\n    mode: 'company',\n    job,\n    ranked_candidates: ranked,\n    task: 'recommend_company',\n    prompt_version: '1.0.0',\n    source_text: JSON.stringify({ job, candidate: topCandidate }),\n    expected_score: topCandidate?.rule_based?.score ?? null,\n    payload: {\n      job,\n      profile: topCandidate?.profile || {},\n      rule_based_match: topCandidate?.rule_based || {},\n      missing_skills: topCandidate?.missing_skills || [],\n    },\n  }\n}];\n"
+      },
+      "id": "157bb5d2-5d20-5b1c-8520-50303fc36f2c",
+      "name": "Obtener contexto y matching por reglas (MCP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "BolsaWf00Orquestador0",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "5dd9161e-1d42-5b31-ac93-3d18abd0a5fd",
+      "name": "Invocar Orquestador (WF-00)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\nconst ctx = $('Obtener contexto y matching por reglas (MCP)').first().json;\nif (!ctx.ok) {\n  return [{ json: ctx }];\n}\n\nconst orq = $input.first().json;\nconst aiBlock = {\n  origin: 'AI',\n  model: orq.model || 'nvidia',\n  prompt_version: ctx.prompt_version || '1.0.0',\n  generated_at: new Date().toISOString(),\n  disclaimer: 'Recomendación orientativa generada por IA. El puntaje y el ranking provienen exclusivamente del motor de reglas.',\n  verified: !!orq.verified,\n};\n\nif (ctx.mode === 'student') {\n  const topEval = ctx.evaluations[0];\n  const items = orq.ok && Array.isArray(orq.data?.items) ? orq.data.items : [];\n  if (topEval && items.length > 0) {\n    await callMcpTool('save_recommendation', {\n      profile_id: ctx.profile.id,\n      job_id: topEval.job.id,\n      items,\n      model: aiBlock.model,\n      prompt_version: aiBlock.prompt_version,\n      disclaimer: aiBlock.disclaimer,\n    }).catch(() => null);\n  }\n  return [{\n    json: {\n      ok: true,\n      mode: 'student',\n      profile_id: ctx.profile.id,\n      matches: ctx.evaluations.map((ev, idx) => ({\n        job: ev.job,\n        rule_based: ev.rule_based,\n        missing_skills: ev.missing_skills,\n        ai_recommendations: idx === 0 ? { ...aiBlock, items } : null,\n      })),\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    mode: 'company',\n    job_id: ctx.job.id,\n    candidates: ctx.ranked_candidates.map((cand, idx) => ({\n      profile: cand.profile,\n      rule_based: cand.rule_based,\n      missing_skills: cand.missing_skills,\n      ai_recommendations: idx === 0 && orq.ok ? { ...aiBlock, ...orq.data } : null,\n    })),\n  }\n}];\n"
+      },
+      "id": "2b72e905-2b07-5c57-9055-961336dae9a9",
+      "name": "Separar bloques RULES vs AI y guardar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## WF-06 · Recomendador (`POST /webhook/recommendations`)\n- `mode=student` (`profile_id`): busca ofertas activas, calcula `compute_match` (`origin=\"RULES\"`), `missing_skills` y cursos (`search_courses`), genera consejos con `Training Advisor` y persiste con `save_recommendation`.\n- `mode=company` (`job_id`): rankea candidatos **exclusivamente por reglas (`compute_match`)** y el LLM sólo redacta la justificación.",
+        "width": 560,
+        "height": 260
+      },
+      "id": "71f36506-2e89-5ada-bd5c-2f15c6b09220",
+      "name": "Nota WF-06",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -280
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Obtener contexto y matching por reglas (MCP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener contexto y matching por reglas (MCP)": {
+      "main": [
+        [
+          {
+            "node": "Invocar Orquestador (WF-00)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invocar Orquestador (WF-00)": {
+      "main": [
+        [
+          {
+            "node": "Separar bloques RULES vs AI y guardar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
