@@ -1,0 +1,163 @@
+"""Proveedores de configuración (`SettingsProvider`): desde `.env` hoy, o panel HTTP mañana."""
+
+import os
+from collections.abc import Mapping
+from typing import Any
+
+import httpx
+
+from app.domain.errors import InvalidInputError, UpstreamError
+from app.domain.ports import SettingsProvider
+from app.domain.settings import AgentSettings, CvSettings, RecommendationSettings
+
+DEFAULT_MODELS = (
+    "nvidia/nemotron-3-ultra-550b-a55b",
+    "deepseek-ai/deepseek-v4.1-flash",
+    "minimaxai/minimax-m3.1-flash",
+)
+DEFAULT_MODELS_CV = (
+    "deepseek-ai/deepseek-v4.1-flash",
+    "minimaxai/minimax-m3.1-flash",
+    "nvidia/nemotron-3-ultra-550b-a55b",
+)
+DEFAULT_MODELS_VERIFIER = (
+    "deepseek-ai/deepseek-v4.1-flash",
+    "nvidia/nemotron-3-ultra-550b-a55b",
+)
+
+
+def _split_csv(raw: str | None, fallback: tuple[str, ...]) -> tuple[str, ...]:
+    if not raw or not raw.strip():
+        return fallback
+    items = tuple(
+        part.strip().lower() if "." not in part and "/" not in part else part.strip()
+        for part in raw.split(",")
+        if part.strip()
+    )
+    return items or fallback
+
+
+class EnvSettingsProvider:
+    """Construye `AgentSettings` leyendo variables de entorno en cada consulta."""
+
+    def __init__(self, env: Mapping[str, str] | None = None) -> None:
+        self._env = env if env is not None else os.environ
+
+    async def get(self) -> AgentSettings:
+        e = self._env
+        try:
+            reco = RecommendationSettings(
+                max_jobs_per_student=int(e.get("RECO_MAX_JOBS_PER_STUDENT", "5")),
+                max_profiles_per_job=int(e.get("RECO_MAX_PROFILES_PER_JOB", "10")),
+                max_items_per_job=int(e.get("RECO_MAX_ITEMS_PER_JOB", "5")),
+                min_score=float(e.get("RECO_MIN_SCORE", "0")),
+            )
+            cv = CvSettings(
+                max_size_mb=float(e.get("CV_MAX_SIZE_MB", "5")),
+                allowed_extensions=tuple(
+                    ext.strip().lower().lstrip(".")
+                    for ext in e.get("CV_ALLOWED_EXTENSIONS", "pdf,docx,doc,md").split(",")
+                    if ext.strip()
+                ),
+                max_text_chars=int(e.get("CV_MAX_TEXT_CHARS", "40000")),
+            )
+            models = {
+                "default": _split_csv(e.get("AGENT_MODELS"), DEFAULT_MODELS),
+                "cv": _split_csv(e.get("AGENT_MODELS_CV"), DEFAULT_MODELS_CV),
+                "verifier": _split_csv(e.get("AGENT_MODELS_VERIFIER"), DEFAULT_MODELS_VERIFIER),
+            }
+            return AgentSettings(
+                nvidia_base_url=e.get(
+                    "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"
+                ).rstrip("/"),
+                models=models,
+                rpm_limit=int(e.get("NVIDIA_RPM_LIMIT", "40")),
+                llm_timeout_seconds=int(e.get("AGENT_LLM_TIMEOUT_SECONDS", "60")),
+                temperature=float(e.get("AGENT_TEMPERATURE", "0.2")),
+                max_verify_retries=int(e.get("AGENT_MAX_VERIFY_RETRIES", "1")),
+                recommendations=reco,
+                cv=cv,
+                source="env",
+            )
+        except ValueError as exc:
+            raise InvalidInputError(f"Variable de entorno numérica inválida: {exc}") from exc
+
+
+class PanelSettingsProvider:
+    """Obtiene la configuración de agentes desde un panel HTTP con fallback opcional a env."""
+
+    def __init__(
+        self,
+        panel_url: str,
+        service_token: str,
+        fallback: SettingsProvider | None = None,
+        timeout: float = 5.0,
+    ) -> None:
+        self._url = panel_url.rstrip("/")
+        self._token = service_token
+        self._fallback = fallback
+        self._timeout = timeout
+
+    async def get(self) -> AgentSettings:
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.get(
+                    self._url,
+                    headers={"X-Service-Token": self._token},
+                )
+                resp.raise_for_status()
+                data: dict[str, Any] = resp.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            if self._fallback is not None:
+                return await self._fallback.get()
+            raise UpstreamError(f"No se pudo leer la configuración del panel: {exc}") from exc
+
+        reco_raw = data.get("recommendations") or {}
+        cv_raw = data.get("cv") or {}
+        models_raw = data.get("models") or {}
+        return AgentSettings(
+            nvidia_base_url=str(
+                data.get("nvidia_base_url", "https://integrate.api.nvidia.com/v1")
+            ).rstrip("/"),
+            models={
+                "default": tuple(models_raw.get("default") or DEFAULT_MODELS),
+                "cv": tuple(models_raw.get("cv") or DEFAULT_MODELS_CV),
+                "verifier": tuple(models_raw.get("verifier") or DEFAULT_MODELS_VERIFIER),
+            },
+            rpm_limit=int(data.get("rpm_limit", 40)),
+            llm_timeout_seconds=int(data.get("llm_timeout_seconds", 60)),
+            temperature=float(data.get("temperature", 0.2)),
+            max_verify_retries=int(data.get("max_verify_retries", 1)),
+            recommendations=RecommendationSettings(
+                max_jobs_per_student=int(reco_raw.get("max_jobs_per_student", 5)),
+                max_profiles_per_job=int(reco_raw.get("max_profiles_per_job", 10)),
+                max_items_per_job=int(reco_raw.get("max_items_per_job", 5)),
+                min_score=float(reco_raw.get("min_score", 0)),
+            ),
+            cv=CvSettings(
+                max_size_mb=float(cv_raw.get("max_size_mb", 5.0)),
+                allowed_extensions=tuple(
+                    cv_raw.get("allowed_extensions") or ("pdf", "docx", "doc", "md")
+                ),
+                max_text_chars=int(cv_raw.get("max_text_chars", 40000)),
+            ),
+            source="panel",
+        )
+
+
+def build_settings_provider(env: Mapping[str, str] | None = None) -> SettingsProvider:
+    source_env = env if env is not None else os.environ
+    env_provider = EnvSettingsProvider(source_env)
+    source = source_env.get("AGENT_SETTINGS_SOURCE", "env").strip().lower()
+    if source == "panel":
+        panel_url = source_env.get("AGENT_SETTINGS_PANEL_URL", "")
+        if not panel_url:
+            raise InvalidInputError(
+                "AGENT_SETTINGS_SOURCE=panel requiere definir AGENT_SETTINGS_PANEL_URL"
+            )
+        return PanelSettingsProvider(
+            panel_url=panel_url,
+            service_token=source_env.get("SERVICE_TOKEN", ""),
+            fallback=env_provider,
+        )
+    return env_provider

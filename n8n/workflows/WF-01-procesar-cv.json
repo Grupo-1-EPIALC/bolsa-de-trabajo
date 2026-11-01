@@ -1,0 +1,125 @@
+{
+  "id": "BolsaWf01ExtractorCv0",
+  "name": "WF-01 · Procesar CV (CV Structurer)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cv-extract",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "ab5dc3f3-a655-55d4-a8d0-8b1f4d2356eb",
+      "name": "Webhook CV Extract",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "bbd35aa2-7c97-5171-b9b5-fa0dac59a36f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\nconst incoming = $input.first().json;\nconst headers = incoming.headers || {};\nconst body = incoming.body || incoming;\n\nconst givenToken = headers['x-webhook-token'] || headers['x-api-key'] || headers['x-service-token'] || '';\nconst validWebhook = $env.N8N_WEBHOOK_TOKEN && givenToken === $env.N8N_WEBHOOK_TOKEN;\nconst validService = $env.SERVICE_TOKEN && givenToken === $env.SERVICE_TOKEN;\nif (!validWebhook && !validService) {\n  throw new Error('No autorizado: falta o es inválido X-Webhook-Token / X-Service-Token');\n}\n\nlet contentBase64 = body.content_base64 || body.base64 || '';\nlet filename = body.filename || body.nombre || 'cv.pdf';\nlet mimeType = body.mime_type || body.mime || '';\n\nconst binKeys = Object.keys($input.first().binary || {});\nif (!contentBase64 && binKeys.length > 0) {\n  const bKey = binKeys[0];\n  const binMeta = $input.first().binary[bKey];\n  const buf = await this.helpers.getBinaryDataBuffer(0, bKey);\n  contentBase64 = buf.toString('base64');\n  filename = binMeta.fileName || filename;\n  mimeType = binMeta.mimeType || mimeType;\n}\n\nconst parsed = await callMcpTool('parse_cv_file', {\n  content_base64: contentBase64,\n  filename,\n  mime_type: mimeType,\n});\n\nif (!parsed.ok) {\n  return [{\n    json: {\n      ok: false,\n      status_code: 422,\n      error: parsed.error || { code: 'CV_PARSE_ERROR', message: 'No se pudo leer el CV' },\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    task: 'cv_extract',\n    prompt_version: '1.0.0',\n    source_text: parsed.text,\n    cv_meta: {\n      filename: parsed.filename,\n      format: parsed.format,\n      chars: parsed.chars,\n      truncated: parsed.truncated,\n    },\n    payload: {\n      filename: parsed.filename,\n      format: parsed.format,\n      TEXTO_CV: parsed.text,\n    },\n  }\n}];\n"
+      },
+      "id": "0d6b516d-1d96-59f6-9ab6-beebb6ec366c",
+      "name": "Validar token y extraer texto CV (MCP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "BolsaWf00Orquestador0",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "5dd9161e-1d42-5b31-ac93-3d18abd0a5fd",
+      "name": "Invocar Orquestador (WF-00)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsedStep = $('Validar token y extraer texto CV (MCP)').first().json;\nif (!parsedStep.ok) {\n  return [{ json: parsedStep }];\n}\n\nconst orq = $input.first().json;\nif (!orq.ok) {\n  return [{\n    json: {\n      ok: false,\n      status_code: 503,\n      error: {\n        code: 'AI_EXTRACTION_FAILED',\n        message: 'El agente no pudo estructurar el CV cumpliendo las reglas de verificación',\n        details: orq.previous_verdict || {},\n      },\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    cv_meta: parsedStep.cv_meta,\n    cv_suggestions: orq.data,\n    verification: {\n      verified: orq.verified,\n      verifier_model: orq.verifier_model,\n    },\n  }\n}];"
+      },
+      "id": "c6e87db2-d995-582f-9b36-de9afd0800d8",
+      "name": "Armar respuesta estandarizada (origin=AI)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## WF-01 · Procesar CV (`POST /webhook/cv-extract`)\n- Acepta PDF, DOCX, DOC y MD (base64 o multipart) protegido con `X-Webhook-Token` / `X-Service-Token`.\n- Extrae el texto con la herramienta MCP `parse_cv_file`.\n- Llama a `WF-00 Orquestador` (`task: cv_extract`) + `WF-0V Verificador`.\n- Devuelve `cv_suggestions` con `origin: \"AI\"` sin sobrescribir el perfil del estudiante.",
+        "width": 500,
+        "height": 240
+      },
+      "id": "237522e6-7172-52a0-92bc-f207e3351c6c",
+      "name": "Nota WF-01",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -260
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook CV Extract": {
+      "main": [
+        [
+          {
+            "node": "Validar token y extraer texto CV (MCP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar token y extraer texto CV (MCP)": {
+      "main": [
+        [
+          {
+            "node": "Invocar Orquestador (WF-00)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invocar Orquestador (WF-00)": {
+      "main": [
+        [
+          {
+            "node": "Armar respuesta estandarizada (origin=AI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

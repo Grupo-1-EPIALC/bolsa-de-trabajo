@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bolsa.local/schemas/cv_standard.schema.json",
+  "title": "CV Estandarizado (Sugerencias extraídas por IA)",
+  "type": "object",
+  "required": [
+    "personal",
+    "summary",
+    "skills",
+    "experience",
+    "education",
+    "languages",
+    "certifications",
+    "links"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "personal": {
+      "type": "object",
+      "required": ["name", "email", "phone", "location"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "email": { "type": ["string", "null"] },
+        "phone": { "type": ["string", "null"] },
+        "location": { "type": ["string", "null"] }
+      }
+    },
+    "summary": { "type": "string" },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "level": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 }
+        }
+      }
+    },
+    "experience": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["company", "role", "start", "end", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "company": { "type": "string" },
+          "role": { "type": "string" },
+          "start": { "type": ["string", "null"] },
+          "end": { "type": ["string", "null"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "education": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["institution", "degree", "status", "start", "end"],
+        "additionalProperties": false,
+        "properties": {
+          "institution": { "type": "string" },
+          "degree": { "type": "string" },
+          "status": { "type": ["string", "null"] },
+          "start": { "type": ["string", "null"] },
+          "end": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "level": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "certifications": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "origin": { "type": "string", "const": "AI" },
+    "model": { "type": "string", "minLength": 1 },
+    "prompt_version": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "disclaimer": { "type": "string", "minLength": 1 }
+  }
+}
+

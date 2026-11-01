@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bolsa.local/schemas/company_recommendations.schema.json",
+  "title": "Justificación de Candidato para Empresa (sin modificar score de reglas)",
+  "type": "object",
+  "required": ["summary", "strengths", "gaps", "interview_questions"],
+  "additionalProperties": false,
+  "properties": {
+    "summary": { "type": "string", "minLength": 5 },
+    "strengths": {
+      "type": "array",
+      "maxItems": 5,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "gaps": {
+      "type": "array",
+      "maxItems": 5,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "interview_questions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

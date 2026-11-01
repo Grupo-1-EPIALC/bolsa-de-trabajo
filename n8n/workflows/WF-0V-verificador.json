@@ -1,0 +1,121 @@
+{
+  "id": "BolsaWf0VVerificador0",
+  "name": "WF-0V · Verificador de Agentes",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "ee47e898-0bba-5b70-a8ed-b8399741e75b",
+      "name": "Entrada Verificador",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\nconst VERIFIER_SYSTEM_PROMPT = \"Sos el agente **Verificador** del orquestador de Bolsa de Trabajo.\\nRevisás la salida JSON de un agente especialista antes de entregarla, junto con el resultado de las validaciones determinísticas de `mcp-tools` (`validate_json_schema` y `check_grounding`).\\n\\n## Criterios de aceptación\\n1. El JSON cumple el schema correspondiente (`schema_validation.valid == true`).\\n2. Ninguna competencia o dato fue inventado fuera del texto fuente/perfil (`grounding_check.grounded == true` y `grounding_check.ungrounded_terms` vacío).\\n3. El puntaje de compatibilidad por reglas no fue alterado (`grounding_check.score_tampered == false`).\\n4. No se incluyeron datos personales sensibles (DNI, dirección exacta, datos de salud).\\n\\nRespondé **exclusivamente con JSON válido**:\\n```json\\n{\\n  \\\"cumple\\\": true,\\n  \\\"faltantes\\\": [],\\n  \\\"instruccion\\\": \\\"\\\"\\n}\\n```\\nSi hay incumplimientos, devolvé `\\\"cumple\\\": false`, listá cada punto en `\\\"faltantes\\\"` e indicá en `\\\"instruccion\\\"` cómo corregirlo en el reintento.\";\n\nconst input = $input.first().json;\nconst schemaName = input.schema_name;\nconst candidateObj = input.candidate_json;\nconst sourceText = String(input.source_text || '');\nconst termsToCheck = Array.isArray(input.terms_to_check) ? input.terms_to_check : [];\nconst expectedScore = input.expected_score ?? null;\nconst reportedScore = input.reported_score ?? null;\n\nconst schemaRes = await callMcpTool('validate_json_schema', {\n  schema_name: schemaName,\n  payload_json: JSON.stringify(candidateObj),\n});\n\nconst groundingRes = await callMcpTool('check_grounding', {\n  terms: termsToCheck,\n  source_text: sourceText,\n  expected_score: expectedScore,\n  reported_score: reportedScore,\n});\n\nconst faltantes = [];\nif (!schemaRes.valid) {\n  for (const err of (schemaRes.errors || [])) {\n    faltantes.push(`Schema (${schemaName}): ${err}`);\n  }\n}\nif (!groundingRes.grounded) {\n  if ((groundingRes.ungrounded_terms || []).length) {\n    faltantes.push(`Competencias no respaldadas en el texto fuente: ${groundingRes.ungrounded_terms.join(', ')}`);\n  }\n  if (groundingRes.score_tampered) {\n    faltantes.push(`El puntaje de reglas (${expectedScore}) fue alterado (${reportedScore})`);\n  }\n}\n\nreturn [{\n  json: {\n    deterministic_passed: faltantes.length === 0,\n    faltantes,\n    schema_validation: schemaRes,\n    grounding_check: groundingRes,\n    role: 'verifier',\n    system_prompt: VERIFIER_SYSTEM_PROMPT,\n    user_prompt: JSON.stringify({\n      schema_name: schemaName,\n      schema_validation: schemaRes,\n      grounding_check: groundingRes,\n      candidate_output: candidateObj,\n    }),\n  }\n}];\n"
+      },
+      "id": "29b18cef-b2e1-5347-a8a4-ba67b393606d",
+      "name": "Validación determinística (MCP)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "BolsaWf0RRouterNvidia",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "85f7df25-ef9e-59fb-bc75-793b2dd89d75",
+      "name": "Ejecutar Router NVIDIA (rol verifier)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\nconst det = $('Validación determinística (MCP)').first().json;\nif (!det.deterministic_passed) {\n  return [{\n    json: {\n      cumple: false,\n      faltantes: det.faltantes,\n      instruccion: 'Corregí los errores de schema y eliminá cualquier término que no aparezca en el texto fuente.',\n      verifier_model: 'deterministic-mcp',\n      schema_validation: det.schema_validation,\n      grounding_check: det.grounding_check,\n    }\n  }];\n}\n\nconst llm = $input.first().json;\nif (!llm.ok || !llm.text) {\n  return [{\n    json: {\n      cumple: true,\n      faltantes: [],\n      instruccion: '',\n      verifier_model: 'deterministic-mcp-fallback',\n      schema_validation: det.schema_validation,\n      grounding_check: det.grounding_check,\n    }\n  }];\n}\n\ntry {\n  const verdict = extractJsonObject(llm.text);\n  const falt = Array.isArray(verdict.faltantes) ? verdict.faltantes.map(String) : [];\n  return [{\n    json: {\n      cumple: verdict.cumple !== false && falt.length === 0,\n      faltantes: falt,\n      instruccion: String(verdict.instruccion || ''),\n      verifier_model: llm.model || 'verifier',\n      schema_validation: det.schema_validation,\n      grounding_check: det.grounding_check,\n    }\n  }];\n} catch (_) {\n  return [{\n    json: {\n      cumple: true,\n      faltantes: [],\n      instruccion: '',\n      verifier_model: llm.model || 'deterministic-mcp',\n      schema_validation: det.schema_validation,\n      grounding_check: det.grounding_check,\n    }\n  }];\n}\n"
+      },
+      "id": "2c114836-429a-5c16-90c0-afd584b760d1",
+      "name": "Emitir veredicto final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## WF-0V · Verificador\n1. Ejecuta `validate_json_schema` y `check_grounding` en `mcp-tools`.\n2. Verifica que ninguna competencia haya sido inventada y que el `score` por reglas esté intacto.\n3. Consulta al modelo `verifier` vía `WF-0R` y devuelve `{cumple, faltantes, instruccion}`.",
+        "width": 500,
+        "height": 240
+      },
+      "id": "f8b4efed-13d4-5cb3-a14e-f5fbf65f5819",
+      "name": "Nota Verificador",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -260
+      ]
+    }
+  ],
+  "connections": {
+    "Entrada Verificador": {
+      "main": [
+        [
+          {
+            "node": "Validación determinística (MCP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validación determinística (MCP)": {
+      "main": [
+        [
+          {
+            "node": "Ejecutar Router NVIDIA (rol verifier)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ejecutar Router NVIDIA (rol verifier)": {
+      "main": [
+        [
+          {
+            "node": "Emitir veredicto final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

@@ -1,0 +1,117 @@
+openapi: 3.1.0
+info:
+  title: Bolsa de Trabajo · Contratos Internos (Mocks de Integración MCP)
+  version: 0.1.0
+  x-status: mock
+  description: >
+    Contratos que consume `mcp-tools` mediante `X-Service-Token`. Mientras los
+    servicios de negocio están en desarrollo, `mcp-tools` los simula con
+    `MCP_USE_MOCKS=true` detrás de los mismos puertos (`ProfileGateway`,
+    `JobsGateway`, `MatchingGateway`, `RecommendationStore`).
+paths:
+  /api/v1/profiles:
+    get:
+      summary: Lista paginada de perfiles de estudiantes para servicio
+      x-status: mock
+      parameters:
+        - in: query
+          name: skills
+          schema: { type: string }
+          description: Competencias separadas por coma
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: Lista de perfiles
+  /api/v1/profiles/{profile_id}:
+    get:
+      summary: Detalle de perfil de estudiante
+      x-status: mock
+      parameters:
+        - in: path
+          name: profile_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Perfil encontrado
+        "404":
+          description: Perfil no encontrado
+  /api/v1/jobs:
+    get:
+      summary: Lista de ofertas activas
+      x-status: mock
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, default: active }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 5 }
+      responses:
+        "200":
+          description: Ofertas activas
+  /api/v1/jobs/{job_id}:
+    get:
+      summary: Detalle de una oferta laboral
+      x-status: mock
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Oferta encontrada
+        "404":
+          description: Oferta no encontrada
+  /api/v1/matches:
+    post:
+      summary: Calcula el puntaje de compatibilidad por reglas (origin=RULES)
+      x-status: mock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile_id, job_id]
+              properties:
+                profile_id: { type: string }
+                job_id: { type: string }
+      responses:
+        "200":
+          description: Resultado con `score`, `breakdown`, `origin="RULES"`, `engine_version`
+  /api/v1/matches/missing-skills:
+    post:
+      summary: Devuelve competencias faltantes y brecha de nivel ordenadas por prioridad
+      x-status: mock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile_id, job_id]
+              properties:
+                profile_id: { type: string }
+                job_id: { type: string }
+      responses:
+        "200":
+          description: Lista de `{skill, kind, required_level, current_level, gap, priority}`
+  /api/v1/ai/recommendations:
+    post:
+      summary: Persiste una recomendación generada por IA (origin=AI)
+      x-status: mock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile_id, job_id, items, origin, model, prompt_version, generated_at, disclaimer]
+      responses:
+        "201":
+          description: Recomendación guardada
+

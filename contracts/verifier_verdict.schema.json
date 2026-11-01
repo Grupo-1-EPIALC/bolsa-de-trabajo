@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bolsa.local/schemas/verifier_verdict.schema.json",
+  "title": "Veredicto del Agente Verificador",
+  "type": "object",
+  "required": ["cumple", "faltantes", "instruccion"],
+  "additionalProperties": false,
+  "properties": {
+    "cumple": { "type": "boolean" },
+    "faltantes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "instruccion": { "type": "string" }
+  }
+}

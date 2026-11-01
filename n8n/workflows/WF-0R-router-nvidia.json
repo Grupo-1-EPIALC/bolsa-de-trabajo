@@ -1,0 +1,129 @@
+{
+  "id": "BolsaWf0RRouterNvidia",
+  "name": "WF-0R · Sub-workflow Router NVIDIA",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "2acdfabd-0ff8-5b18-b763-e929de7a7667",
+      "name": "Entrada Subworkflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\n\nconst item = $input.first().json;\nconst role = item.role || 'default';\nconst systemPrompt = item.system_prompt || '';\nconst userPrompt = item.user_prompt || '';\nconst maxAttempts = 4;\n\nlet tried = Array.isArray(item.tried) ? [...item.tried] : [];\nlet lastError = null;\n\nfor (let attempt = 0; attempt < maxAttempts; attempt++) {\n  const res = await callRouterHttp('reserve', { role, tried });\n  if (res.action === 'wait') {\n    const waitMs = Math.min(Number(res.wait_ms) || 2000, 15000);\n    await new Promise(r => setTimeout(r, waitMs));\n    continue;\n  }\n  if (res.action !== 'call' || !res.model) {\n    lastError = 'Sin modelos NVIDIA disponibles (en cooldown o límite RPM alcanzado)';\n    break;\n  }\n  const chosenModel = res.model;\n  tried.push(chosenModel);\n  return [{\n    json: {\n      ok: true,\n      action: 'call',\n      role,\n      model: chosenModel,\n      nvidia_base_url: res.nvidia_base_url || 'https://integrate.api.nvidia.com/v1',\n      temperature: res.temperature ?? 0.2,\n      timeout_ms: (Number(res.timeout_seconds) || 60) * 1000,\n      system_prompt: systemPrompt,\n      user_prompt: userPrompt,\n      tried,\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: false,\n    action: 'exhausted',\n    role,\n    model: null,\n    tried,\n    error: lastError || 'Agotados los intentos de reserva de modelo NVIDIA',\n  }\n}];\n"
+      },
+      "id": "49ef8583-02d1-5228-9463-d6d8bbbc841e",
+      "name": "Reservar modelo NVIDIA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.nvidia_base_url + '/chat/completions' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.model, temperature: $json.temperature, max_tokens: 4096, messages: [{ role: 'system', content: $json.system_prompt }, { role: 'user', content: $json.user_prompt }] }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "aeb17600-0899-54c9-82c6-c22850302d9b",
+      "name": "Llamar API NVIDIA (OpenAI Compatible)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        0
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "PnIocs172tEX8ebB",
+          "name": "OpenAI account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\n\nconst prep = $('Reservar modelo NVIDIA').first().json;\nif (!prep.ok || prep.action !== 'call') {\n  return [{ json: prep }];\n}\n\nconst llmItem = $input.first().json;\nconst content = llmItem?.choices?.[0]?.message?.content\n  || llmItem?.message?.content\n  || llmItem?.text\n  || '';\nconst cleaned = String(content || '').replace(/<\\/?think>/g, '').trim();\n\nif (!cleaned || llmItem.error) {\n  const errMsg = llmItem?.error?.message || JSON.stringify(llmItem?.error || 'Respuesta vacía del modelo');\n  await callRouterHttp('failure', { model: prep.model, error: errMsg }).catch(() => null);\n  return [{\n    json: {\n      ok: false,\n      role: prep.role,\n      model: prep.model,\n      tried: prep.tried,\n      error: errMsg,\n    }\n  }];\n}\n\nawait callRouterHttp('success', { model: prep.model }).catch(() => null);\nreturn [{\n  json: {\n    ok: true,\n    role: prep.role,\n    model: prep.model,\n    tried: prep.tried,\n    text: cleaned,\n  }\n}];\n"
+      },
+      "id": "276ee5e7-4eef-5060-a0c1-7200b9180eca",
+      "name": "Registrar resultado en Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## WF-0R · Sub-workflow Router NVIDIA\n- Consulta a `mcp-tools` (`/router/reserve`) qué modelo corresponde según el rol (`default`, `cv`, `verifier`).\n- Llama a NVIDIA usando la credencial cifrada `OpenAI account` de n8n.\n- Registra éxito (`/router/success`) o fallo con cooldown exponencial (`/router/failure`).",
+        "width": 500,
+        "height": 240
+      },
+      "id": "e6d6c6b2-7d48-5105-a84b-9779aa0e509d",
+      "name": "Nota Router",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -260
+      ]
+    }
+  ],
+  "connections": {
+    "Entrada Subworkflow": {
+      "main": [
+        [
+          {
+            "node": "Reservar modelo NVIDIA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reservar modelo NVIDIA": {
+      "main": [
+        [
+          {
+            "node": "Llamar API NVIDIA (OpenAI Compatible)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar API NVIDIA (OpenAI Compatible)": {
+      "main": [
+        [
+          {
+            "node": "Registrar resultado en Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
