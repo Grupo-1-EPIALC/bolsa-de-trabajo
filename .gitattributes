@@ -1,0 +1,7 @@
+# Normalizar finales de línea: LF en el repo (los contenedores son Linux)
+* text=auto eol=lf
+*.sh text eol=lf
+*.pdf binary
+*.png binary
+*.jpg binary
+*.docx binary

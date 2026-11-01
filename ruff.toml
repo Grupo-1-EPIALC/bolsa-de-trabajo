@@ -1,0 +1,11 @@
+# Configuración común de Ruff para todos los servicios Python.
+# Cada pyproject.toml la hereda con:  [tool.ruff] extend = "../../ruff.toml"
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "S", "SIM", "RUF"]
+ignore = []
+
+[lint.per-file-ignores]
+"**/tests/**" = ["S101"]   # assert en tests

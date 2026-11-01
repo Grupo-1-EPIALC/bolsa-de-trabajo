@@ -1,0 +1,56 @@
+# =============================================================================
+# Overrides de DESARROLLO (docker compose lo aplica automáticamente).
+# - Hot reload montando el código fuente.
+# - Postgres expuesto al host para clientes SQL.
+# Polling activado porque los bind mounts desde Windows no propagan inotify.
+# =============================================================================
+
+x-py-dev: &py-dev
+  command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+  environment:
+    WATCHFILES_FORCE_POLLING: "true"
+
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+
+  auth-service:
+    build: { target: dev }
+    volumes:
+      - ./services/auth-service/src:/app/src
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+
+  profile-service:
+    <<: *py-dev
+    volumes:
+      - ./services/profile-service/app:/app/app
+      - cv_storage:/data/cvs
+
+  jobs-service:
+    <<: *py-dev
+    volumes:
+      - ./services/jobs-service/app:/app/app
+
+  matching-service:
+    <<: *py-dev
+    volumes:
+      - ./services/matching-service/app:/app/app
+
+  ai-service:
+    <<: *py-dev
+    volumes:
+      - ./services/ai-service/app:/app/app
+
+  mcp-tools:
+    volumes:
+      - ./mcp-tools/app:/app/app
+
+  frontend:
+    build: { target: dev }
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
