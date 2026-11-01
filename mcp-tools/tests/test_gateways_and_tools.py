@@ -167,7 +167,7 @@ async def test_ut_mcp_02_http_gateways_with_respx() -> None:
                 json={"score": 88.0, "origin": "RULES", "engine_version": "1.0.0"},
             )
         )
-        mock.post("http://ai-service:8000/api/v1/ai/recommendations").mock(
+        mock.post("http://matching-service:8000/api/v1/matches/recommendations").mock(
             return_value=httpx.Response(500, text="Internal Server Error")
         )
         mock.get("http://panel:8000/api/v1/settings").mock(
@@ -183,7 +183,7 @@ async def test_ut_mcp_02_http_gateways_with_respx() -> None:
         profiles = HttpProfileGateway("http://profile-service:8000", svc_key)
         jobs = HttpJobsGateway("http://jobs-service:8000", svc_key)
         matching = HttpMatchingGateway("http://matching-service:8000", svc_key)
-        recos = HttpRecommendationStore("http://ai-service:8000", svc_key)
+        recos = HttpRecommendationStore("http://matching-service:8000", svc_key)
         panel = PanelSettingsProvider(
             "http://panel:8000/api/v1/settings",
             svc_key,

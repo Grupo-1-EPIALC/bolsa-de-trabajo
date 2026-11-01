@@ -61,7 +61,6 @@ jobs:
             profile-service: ['services/profile-service/**', 'ruff.toml']
             jobs-service: ['services/jobs-service/**', 'ruff.toml']
             matching-service: ['services/matching-service/**', 'ruff.toml']
-            ai-service: ['services/ai-service/**', 'ruff.toml']
             mcp-tools: ['mcp-tools/**', 'ruff.toml']
             auth: ['services/auth-service/**']
             frontend: ['frontend/**']

@@ -99,7 +99,7 @@ class HttpRecommendationStore(_BaseHttpGateway):
     async def save(self, recommendation: JsonDict) -> JsonDict:
         data = await self._request(
             "POST",
-            "/api/v1/ai/recommendations",
+            "/api/v1/matches/recommendations",
             json_body=recommendation,
         )
         return dict(data)

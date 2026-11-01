@@ -1,7 +1,8 @@
 # Bolsa de Trabajo · MVP
 
-Matching estudiante–oferta con microservicios REST, scoring por reglas y recomendaciones de IA separadas.
-Reglas del proyecto y de los agentes: [AGENTS.md](AGENTS.md).
+Matching estudiante–oferta con microservicios REST, scoring por reglas y agentes de IA orquestados en `n8n`.
+- Reglas de arquitectura y agentes: [AGENTS.md](AGENTS.md).
+- Historial de prompts de desarrollo: [PROMPTS.md](PROMPTS.md).
 
 ## Requisitos
 
@@ -30,38 +31,39 @@ Apagar: `docker compose down` · Borrar también datos (base, n8n, CVs): `docker
 | Qué | URL |
 |---|---|
 | App + API (gateway) | http://localhost:8080 · API en `/api/v1/*` |
-| n8n | http://localhost:5678 |
+| Formulario de prueba CV (`profile-service → n8n`) | http://localhost:8080/api/v1/profiles/cv-test |
+| n8n | http://localhost:5678 (o el `N8N_PORT` definido en `.env`) |
 | Mailpit (correos de prueba) | http://localhost:8025 |
 | PostgreSQL (solo dev) | `localhost:5432` · base `bolsa` |
 
 Si algún puerto está ocupado en tu máquina, cambialo en `.env` (`GATEWAY_PORT`, `N8N_PORT`, `MAIL_UI_PORT`, `POSTGRES_HOST_PORT`).
 
-## Servicios
+## Servicios y Arquitectura
 
-| Servicio | Stack | Puerto interno | Ruta en el gateway | Schema DB |
-|---|---|---|---|---|
-| auth-service | NestJS (Node 22) | 3000 | `/api/v1/auth/` | `auth` |
-| profile-service | FastAPI | 8000 | `/api/v1/profiles/` | `profile` |
-| jobs-service | FastAPI | 8000 | `/api/v1/jobs/`, `/api/v1/companies/` | `jobs` |
-| matching-service | FastAPI | 8000 | `/api/v1/matches/` | `matching` |
-| ai-service | FastAPI | 8000 | `/api/v1/ai/` | `ai` |
-| mcp-tools | FastMCP (streamable-http) | 8000 (`/mcp`, `/router/status`) | interno | — |
-| frontend | React 18 + Vite | 8080 | `/` | — |
-| n8n | n8n | 5678 | — | base propia `n8n` |
+| Servicio | Stack | Puerto interno | Ruta en el gateway Nginx | Red / Acceso | Schema DB |
+|---|---|---|---|---|---|
+| `auth-service` | NestJS (Node 22) | 3000 | `/api/v1/auth/` | `backend` (vía `gateway`) | `auth` |
+| `profile-service` | FastAPI | 8000 | `/api/v1/profiles/` | `backend` (vía `gateway`) | `profile` |
+| `jobs-service` | FastAPI | 8000 | `/api/v1/jobs/`, `/api/v1/companies/` | `backend` (vía `gateway`) | `jobs` |
+| `matching-service` | FastAPI | 8000 | `/api/v1/matches/` | `backend` (vía `gateway`) | `matching` |
+| `frontend` | React 18 + Vite | 8080 | `/` | `edge` (vía `gateway`) | — |
+| `n8n` | n8n + Agentes IA | 5678 | — (webhooks internos) | `backend`, `mcp_internal` | base propia `n8n` |
+| `mcp-tools` | FastMCP (`streamable-http`) | 8000 (`/mcp`, `/router/*`) | **No pasa por Nginx** | `mcp_internal` (**directo con `n8n`**) + `backend` | — |
 
-Cada servicio tiene `GET /health` (interno) usado por el healthcheck de Docker.
-Los microservicios de negocio hoy son **esqueletos** (sólo exponen `/health`); `mcp-tools` (v0.1.0) y los workflows de IA en `n8n` ya están implementados y operan con pasarelas mock (`MCP_USE_MOCKS=true`) hasta que cada dueño implemente sus endpoints reales (ver `contracts/mock_endpoints.yaml`).
+### Decisiones clave de arquitectura (IA y MCP)
+1. **Sin `ai-service` intermedio**: toda la orquestación y ejecución de agentes de IA (estructuración de CVs, recomendaciones para estudiantes y empresas, selección de modelos en NVIDIA NIM y verificación anti-alucinación) se ejecuta directamente en **`n8n`**.
+2. **Comunicación directa `n8n ↔ mcp-tools` sin pasar por Nginx**: `n8n` es el único consumidor de `mcp-tools` y se conecta directamente a `http://mcp-tools:8000/mcp` a través de la red interna `mcp_internal`, sin exponer ni enrutar `mcp-tools` en el API Gateway (`gateway/nginx.conf`).
 
-### Agentes IA, MCP Tools y Workflows n8n
+### Agentes IA (`n8n`) y Servidor MCP (`mcp-tools`)
 
-- **mcp-tools (`v0.1.0`)**: expone herramientas MCP y endpoints HTTP internos protegidos por `X-Service-Token`:
-  - Configuración dinámica (`get_agent_settings`), extracción de CV en PDF/DOCX/DOC/MD (`parse_cv_file`), consulta de perfiles y ofertas (`get_profile`, `get_job`, `list_active_jobs`, `list_candidates_for_job`), scoring determinístico por reglas (`compute_match`, `missing_skills`), catálogo de cursos (`search_courses`), persistencia (`save_cv_suggestions`, `save_recommendation`) y verificación anti-alucinación + JSON Schema (`verify_agent_output`).
-  - **Router NVIDIA**: selección inteligente de modelos con circuit-breaker, cuota diaria y telemetría en `GET /router/status` (`select_nvidia_model`, `report_nvidia_outcome`).
-- **Workflows n8n (`n8n/workflows/`)**:
-  - `WF-0R-router-nvidia.json`: sub-workflow router de modelos NVIDIA.
-  - `WF-0V-verificador.json`: sub-workflow verificador (reglas determinísticas + juez LLM).
-  - `WF-00-orquestador.json`: webhook `POST /webhook/orchestrator/run` con reintento automático guiado por feedback del verificador.
-  - `WF-01-procesar-cv.json`: webhook `POST /webhook/cv-uploaded` (`CV Structurer`).
+- **`mcp-tools` (`v0.2.0`)**: expone herramientas MCP filtradas por perfil (`?perfil=planificador|cv|postulante|empresa|verificador|adjuntos`) y endpoints HTTP internos protegidos por `X-Service-Token`:
+  - Configuración dinámica (`get_agent_settings`), lectura de skills (`list_skills`, `leer_skill` con protección anti-bucle), extracción de CV en PDF/DOCX/DOC/MD (`parse_cv_file`), consulta de perfiles y ofertas (`get_profile`, `list_candidate_profiles`, `get_job`, `list_active_jobs`), scoring determinístico por reglas (`compute_match`, `missing_skills`), catálogo de cursos (`search_courses`), persistencia (`save_recommendation`) y verificación (`validate_json_schema`, `check_grounding`).
+  - **Router NVIDIA**: selección inteligente de modelos con circuit-breaker, cuota por minuto y telemetría en `/router/status`.
+- **Workflows n8n (`n8n/workflows/`, generados desde `n8n/agentes/` y `n8n/prompts/`)**:
+  - `WF-0R-router-nvidia.json`: sub-workflow especialista y router de modelos NVIDIA NIM.
+  - `WF-0V-verificador.json`: sub-workflow verificador (validación determinística JSON Schema + grounding + agente verificador).
+  - `WF-00-orquestador.json`: sub-workflow orquestador con lectura de adjunto vía MCP y reintento guiado.
+  - `WF-01-procesar-cv.json`: webhook `POST /webhook/cv-extract` (`CV Structurer`).
   - `WF-06-recomendador.json`: webhook `POST /webhook/recommendations` (`Training Advisor` para postulantes y `Company Advisor` para empresas).
 
 Para regenerar e importar los workflows en el contenedor `n8n`:
@@ -73,14 +75,14 @@ docker exec bolsa-n8n-1 n8n import:workflow --separate --input=/workflows
 
 ### Base de datos
 
-Una instancia PostgreSQL 17 con un **rol y un schema por servicio** (`infra/postgres/init/01-schemas.sh`).
-Cada rol sólo puede usar su schema, así ningún servicio lee los datos de otro. n8n usa una base aparte porque gestiona su propio esquema.
+Una instancia PostgreSQL 17 con un **rol y un schema por microservicio REST** (`infra/postgres/init/01-schemas.sh`: `auth`, `profile`, `jobs`, `matching`).
+Cada rol sólo puede usar su schema, así ningún servicio lee los datos de otro. `n8n` usa una base aparte porque gestiona su propio esquema.
 El script corre solo al crear el volumen; si lo cambiás: `docker compose down -v && docker compose up -d`.
 
 ### Almacenamiento y correo
 
-- CVs: volumen Docker `cv_storage` montado en profile-service (`/data/cvs`).
-- Correo: Mailpit (reemplazo mantenido de MailHog, mismos puertos SMTP 1025 / UI 8025).
+- CVs: volumen Docker `cv_storage` montado en `profile-service` (`/data/cvs`).
+- Correo: Mailpit (puertos SMTP 1025 / UI 8025).
 
 ## Estructura
 
@@ -89,15 +91,23 @@ El script corre solo al crear el volumen; si lo cambiás: `docker compose down -
 ├── docker-compose.yml            # stack completo
 ├── docker-compose.override.yml   # dev: hot reload, Postgres expuesto
 ├── .env.example                  # todas las variables (copiar a .env)
-├── gateway/nginx.conf            # API Gateway
-├── infra/postgres/init/          # roles + schemas por servicio
+├── AGENTS.md                     # reglas de arquitectura y de agentes
+├── PROMPTS.md                    # historial de prompts y decisiones (separado)
+├── gateway/nginx.conf            # API Gateway (solo frontend + microservicios REST)
+├── infra/postgres/init/          # roles + schemas por microservicio
 ├── services/
 │   ├── auth-service/             # NestJS
-│   └── <x>-service/app/{api,application,domain,infrastructure}/   # FastAPI por capas
-├── mcp-tools/                    # servidor MCP
+│   ├── profile-service/          # FastAPI por capas (api, application, domain, infrastructure)
+│   ├── jobs-service/             # FastAPI por capas
+│   └── matching-service/         # FastAPI por capas
+├── mcp-tools/                    # servidor MCP (consumido directo por n8n)
+├── n8n/
+│   ├── agentes/                  # catálogo declarativo de agentes
+│   ├── prompts/                  # plantillas versionadas de prompts IA
+│   ├── workflows/                # WF-0X-<nombre>.json (sin credenciales)
+│   └── generate_workflows.py     # generador determinístico de workflows
 ├── frontend/                     # React + Vite
-├── n8n/workflows/                # WF-0X-<nombre>.json (sin credenciales)
-├── contracts/                    # OpenAPI por servicio
+├── contracts/                    # esquemas JSON y contratos OpenAPI
 ├── ruff.toml · .prettierrc.json · .editorconfig   # estilo común
 └── .github/                      # CI + plantilla de PR
 ```
@@ -111,7 +121,7 @@ pip install -e ".[dev]"
 ruff check . && black --check . && mypy app && pytest
 ```
 
-Node (auth-service / frontend):
+Node (`auth-service` / `frontend`):
 
 ```bash
 npm ci && npm run format:check && npm run typecheck && npm test
@@ -121,4 +131,4 @@ El CI (`.github/workflows/ci.yml`) corre sólo los servicios cuyas carpetas camb
 
 ## Flujo Git
 
-Ramas `<tipo>/<servicio>/v<semver>-<desc>` → PR a `dev` → release a `main`. Ver [AGENTS.md §3](AGENTS.md).
+Ramas `<tipo>/<servicio>/v<semver>-<desc>` → PR a `dev` → release a `main`. Ver [AGENTS.md §3](AGENTS.md) y registrar los prompts en [PROMPTS.md](PROMPTS.md).

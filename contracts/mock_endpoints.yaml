@@ -100,9 +100,9 @@ paths:
       responses:
         "200":
           description: Lista de `{skill, kind, required_level, current_level, gap, priority}`
-  /api/v1/ai/recommendations:
+  /api/v1/matches/recommendations:
     post:
-      summary: Persiste una recomendación generada por IA (origin=AI)
+      summary: Persiste una recomendación generada por IA en n8n (origin=AI)
       x-status: mock
       requestBody:
         required: true
