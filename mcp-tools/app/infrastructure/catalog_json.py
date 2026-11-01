@@ -35,4 +35,3 @@ class JsonCourseCatalog:
 
         scored.sort(key=lambda pair: -pair[0])
         return [copy.deepcopy(c) for _, c in scored[:limit]]
-

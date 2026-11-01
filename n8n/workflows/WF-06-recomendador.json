@@ -1,6 +1,6 @@
 {
   "id": "BolsaWf06Recomendador",
-  "name": "WF-06 · Recomendador (Postulantes y Empresas)",
+  "name": "WF-06 · Recomendador Postulantes y Empresas",
   "nodes": [
     {
       "parameters": {
@@ -9,7 +9,7 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "e268da21-1e59-55ad-abab-82c00c8ebc90",
+      "id": "bbd0468b-9eec-521a-83b4-7d0e1549362f",
       "name": "Webhook Recommendations",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -17,18 +17,52 @@
         0,
         0
       ],
-      "webhookId": "5c0cfa75-2922-5dee-82c5-e92b235fdde8"
+      "webhookId": "b8558f4a-1557-56c5-aaa1-4b31391c9a0e"
     },
     {
       "parameters": {
-        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\nconst incoming = $input.first().json;\nconst headers = incoming.headers || {};\nconst body = incoming.body || incoming;\n\nconst givenToken = headers['x-webhook-token'] || headers['x-api-key'] || headers['x-service-token'] || '';\nconst validWebhook = $env.N8N_WEBHOOK_TOKEN && givenToken === $env.N8N_WEBHOOK_TOKEN;\nconst validService = $env.SERVICE_TOKEN && givenToken === $env.SERVICE_TOKEN;\nif (!validWebhook && !validService) {\n  throw new Error('No autorizado: falta o es inválido X-Webhook-Token / X-Service-Token');\n}\n\nconst settings = await callMcpTool('get_agent_settings', {});\nconst mode = (body.mode || (body.job_id && !body.profile_id ? 'company' : 'student')).toLowerCase();\n\nif (mode === 'student') {\n  const profileId = String(body.profile_id || 'stu-001');\n  const profile = await callMcpTool('get_profile', { profile_id: profileId });\n  if (!profile.ok) {\n    return [{ json: { ok: false, status_code: 404, error: profile.error } }];\n  }\n  const jobsRes = await callMcpTool('list_active_jobs', {\n    limit: settings?.recommendations?.max_jobs_per_student || 5,\n  });\n  const jobs = jobsRes.data || [];\n  const minScore = Number(settings?.recommendations?.min_score || 0);\n\n  const evaluations = [];\n  for (const job of jobs) {\n    const match = await callMcpTool('compute_match', { profile_id: profileId, job_id: job.id });\n    if (Number(match.score) < minScore) continue;\n    const gapsRes = await callMcpTool('missing_skills', { profile_id: profileId, job_id: job.id });\n    const gaps = gapsRes.data || [];\n    const gapSkills = gaps.map(g => g.skill);\n    const coursesRes = gapSkills.length\n      ? await callMcpTool('search_courses', { skills: gapSkills, limit: 5 })\n      : { data: [] };\n    evaluations.push({\n      job,\n      rule_based: {\n        score: match.score,\n        breakdown: match.breakdown,\n        origin: 'RULES',\n        engine_version: match.engine_version || '1.0.0',\n      },\n      missing_skills: gaps,\n      available_courses: coursesRes.data || [],\n    });\n  }\n\n  evaluations.sort((a, b) => b.rule_based.score - a.rule_based.score);\n  const topEval = evaluations[0] || null;\n  const sourceTerms = [\n    ...(profile.skills || []).map(s => s.name),\n    ...(topEval?.missing_skills || []).map(g => g.skill),\n  ].join(', ');\n\n  return [{\n    json: {\n      ok: true,\n      mode: 'student',\n      profile,\n      evaluations,\n      task: 'recommend_student',\n      prompt_version: '1.0.0',\n      source_text: sourceTerms,\n      expected_score: topEval?.rule_based?.score ?? null,\n      payload: {\n        profile,\n        job: topEval?.job || {},\n        rule_based_match: topEval?.rule_based || {},\n        missing_skills: topEval?.missing_skills || [],\n        available_courses: topEval?.available_courses || [],\n        max_items_per_job: settings?.recommendations?.max_items_per_job || 5,\n      },\n    }\n  }];\n}\n\n// mode === 'company'\nconst jobId = String(body.job_id || 'job-001');\nconst job = await callMcpTool('get_job', { job_id: jobId });\nif (!job.ok) {\n  return [{ json: { ok: false, status_code: 404, error: job.error } }];\n}\n\nconst candidatesRes = await callMcpTool('list_candidate_profiles', {\n  skills: [],\n  limit: settings?.recommendations?.max_profiles_per_job || 10,\n});\nconst candidates = candidatesRes.data || [];\n\nconst ranked = [];\nfor (const cand of candidates) {\n  const match = await callMcpTool('compute_match', { profile_id: cand.id, job_id: jobId });\n  const gapsRes = await callMcpTool('missing_skills', { profile_id: cand.id, job_id: jobId });\n  ranked.push({\n    profile: cand,\n    rule_based: {\n      score: match.score,\n      breakdown: match.breakdown,\n      origin: 'RULES',\n      engine_version: match.engine_version || '1.0.0',\n    },\n    missing_skills: gapsRes.data || [],\n  });\n}\n\n// El ranking lo definen EXCLUSIVAMENTE las reglas (AGENTS.md §2.2)\nranked.sort((a, b) => b.rule_based.score - a.rule_based.score);\nconst topCandidate = ranked[0] || null;\n\nreturn [{\n  json: {\n    ok: true,\n    mode: 'company',\n    job,\n    ranked_candidates: ranked,\n    task: 'recommend_company',\n    prompt_version: '1.0.0',\n    source_text: JSON.stringify({ job, candidate: topCandidate }),\n    expected_score: topCandidate?.rule_based?.score ?? null,\n    payload: {\n      job,\n      profile: topCandidate?.profile || {},\n      rule_based_match: topCandidate?.rule_based || {},\n      missing_skills: topCandidate?.missing_skills || [],\n    },\n  }\n}];\n"
+        "jsCode": "\nconst MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst SERVICE_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const raw = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/mcp`,\n    headers: {\n      'Accept': 'application/json, text/event-stream',\n      'Content-Type': 'application/json',\n      'X-Service-Token': SERVICE_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n    json: true,\n    timeout: 60000,\n  });\n  const payload = typeof raw === 'string'\n    ? JSON.parse((raw.split('\\n').find(l => l.startsWith('data:')) || 'data: {}').replace(/^data:\\s*/, ''))\n    : raw;\n  const sc = payload?.result?.structuredContent;\n  if (sc && typeof sc === 'object') return sc.result || sc;\n  const txt = payload?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (e) { return { ok: true, text: txt }; }\n  }\n  return payload?.result || payload || {};\n};\n\nconst callRouterHttp = async (path, body = null, method = 'POST') => {\n  const opts = {\n    method,\n    url: `${MCP_BASE}/router/${path}`,\n    headers: { 'X-Service-Token': SERVICE_TOKEN },\n    json: true,\n    timeout: 10000,\n  };\n  if (body !== null && method !== 'GET') opts.body = body;\n  return await this.helpers.httpRequest(opts);\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<think>[\\s\\S]*?<\\/think>/g, '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON válido');\n  return JSON.parse(match[0]);\n};\n\nconst incoming = $input.first().json;\nconst headers = Object.fromEntries(\n  Object.entries(incoming.headers || {}).map(([k, v]) => [k.toLowerCase(), v])\n);\nconst body = incoming.body || incoming;\n\nconst givenToken = headers['x-webhook-token'] || headers['x-api-key'] || headers['x-service-token'] || '';\nconst validWebhook = $env.N8N_WEBHOOK_TOKEN && givenToken === $env.N8N_WEBHOOK_TOKEN;\nconst validService = $env.SERVICE_TOKEN && givenToken === $env.SERVICE_TOKEN;\nif (!validWebhook && !validService) {\n  return [{\n    json: {\n      valid: false,\n      status_code: 401,\n      error: { code: 'UNAUTHORIZED', message: 'Token de webhook ausente o inválido', details: {} },\n    },\n  }];\n}\n\nconst mode = String(body.mode || (body.job_id && !body.profile_id ? 'company' : 'student')).toLowerCase();\nconst cfgRes = await callMcpTool('get_agent_settings');\nconst cfg = cfgRes.data || cfgRes || {};\nconst recoCfg = cfg.recommendations || {};\n\nif (mode === 'student') {\n  const profileId = String(body.profile_id || '');\n  if (!profileId) {\n    return [{\n      json: {\n        valid: false,\n        status_code: 400,\n        error: { code: 'INVALID_INPUT', message: 'profile_id es obligatorio para mode=student', details: {} },\n      },\n    }];\n  }\n\n  const profileRes = await callMcpTool('get_profile', { profile_id: profileId });\n  if (!profileRes.ok) {\n    return [{ json: { valid: false, status_code: 404, error: profileRes.error } }];\n  }\n\n  let jobs = [];\n  if (body.job_id) {\n    const singleJob = await callMcpTool('get_job', { job_id: String(body.job_id) });\n    if (!singleJob.ok) return [{ json: { valid: false, status_code: 404, error: singleJob.error } }];\n    jobs = [singleJob];\n  } else {\n    const jobsRes = await callMcpTool('list_active_jobs', { limit: Number(recoCfg.max_jobs_per_student || 5) });\n    jobs = jobsRes.data || [];\n  }\n\n  const ruleMatches = [];\n  const allMissingNames = new Set();\n  for (const job of jobs) {\n    const jid = job.id || job.job_id;\n    const matchRes = await callMcpTool('compute_match', { profile_id: profileId, job_id: jid });\n    const missRes = await callMcpTool('missing_skills', { profile_id: profileId, job_id: jid });\n    const missingList = missRes.data || [];\n    for (const m of missingList) {\n      if (m.skill) allMissingNames.add(m.skill);\n    }\n    ruleMatches.push({\n      job_id: jid,\n      title: job.title,\n      score: matchRes.score,\n      excluding_failed: matchRes.excluding_failed || [],\n      criteria_breakdown: matchRes.criteria_breakdown || {},\n      missing_skills: missingList,\n      origin: 'RULES',\n      engine_version: matchRes.engine_version || '1.0.0',\n    });\n  }\n\n  ruleMatches.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));\n  const topMatch = ruleMatches[0] || null;\n  const coursesRes = await callMcpTool('search_courses', {\n    skills: Array.from(allMissingNames),\n    limit: Number(recoCfg.max_items_per_job || 5),\n  });\n  const courses = coursesRes.data || [];\n\n  const sourcePayload = {\n    profile: profileRes,\n    jobs,\n    rule_based_matches: ruleMatches,\n    available_courses: courses,\n  };\n  const sourceText = JSON.stringify(sourcePayload, null, 2);\n\n  return [{\n    json: {\n      valid: true,\n      mode: 'student',\n      profile_id: profileId,\n      primary_job_id: topMatch ? topMatch.job_id : 'job-general',\n      rule_based: {\n        origin: 'RULES',\n        engine_version: '1.0.0',\n        matches: ruleMatches,\n      },\n      task: 'recommend_student',\n      agent: 'training_advisor',\n      role: 'default',\n      perfil_mcp: 'postulante',\n      schema_name: 'student_recommendations',\n      source_text: sourceText,\n      expected_score: topMatch ? topMatch.score : null,\n      reported_score: topMatch ? topMatch.score : null,\n      prompt_version: '1.0.0',\n      user_prompt: `Generá hasta ${recoCfg.max_items_per_job || 5} recomendaciones accionables en JSON ({\"items\":[...]}) para el estudiante ${profileId} a partir de estos resultados calculados por reglas y cursos disponibles:\\n\\n${sourceText}`,\n    },\n  }];\n}\n\nif (mode === 'company') {\n  const jobId = String(body.job_id || '');\n  if (!jobId) {\n    return [{\n      json: {\n        valid: false,\n        status_code: 400,\n        error: { code: 'INVALID_INPUT', message: 'job_id es obligatorio para mode=company', details: {} },\n      },\n    }];\n  }\n\n  const jobRes = await callMcpTool('get_job', { job_id: jobId });\n  if (!jobRes.ok) {\n    return [{ json: { valid: false, status_code: 404, error: jobRes.error } }];\n  }\n\n  const profilesRes = await callMcpTool('list_candidate_profiles', {\n    limit: Number(recoCfg.max_profiles_per_job || 5),\n  });\n  const profiles = profilesRes.data || [];\n\n  const rankedCandidates = [];\n  for (const prof of profiles) {\n    const pid = prof.id || prof.profile_id;\n    const matchRes = await callMcpTool('compute_match', { profile_id: pid, job_id: jobId });\n    const missRes = await callMcpTool('missing_skills', { profile_id: pid, job_id: jobId });\n    rankedCandidates.push({\n      profile_id: pid,\n      full_name: prof.full_name,\n      skills: prof.skills || [],\n      experience_years: prof.experience_years || 0,\n      score: matchRes.score,\n      excluding_failed: matchRes.excluding_failed || [],\n      missing_skills: missRes.data || [],\n      origin: 'RULES',\n      engine_version: matchRes.engine_version || '1.0.0',\n    });\n  }\n\n  rankedCandidates.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));\n  const topCandidate = rankedCandidates[0] || null;\n\n  const sourcePayload = {\n    job: jobRes,\n    ranked_candidates_by_rules: rankedCandidates,\n  };\n  const sourceText = JSON.stringify(sourcePayload, null, 2);\n\n  return [{\n    json: {\n      valid: true,\n      mode: 'company',\n      job_id: jobId,\n      primary_profile_id: topCandidate ? topCandidate.profile_id : 'prof-none',\n      rule_based: {\n        origin: 'RULES',\n        engine_version: '1.0.0',\n        job_id: jobId,\n        candidates: rankedCandidates,\n      },\n      task: 'recommend_company',\n      agent: 'company_advisor',\n      role: 'default',\n      perfil_mcp: 'empresa',\n      schema_name: 'company_recommendations',\n      source_text: sourceText,\n      expected_score: topCandidate ? topCandidate.score : null,\n      reported_score: topCandidate ? topCandidate.score : null,\n      prompt_version: '1.0.0',\n      user_prompt: `Generá el resumen ejecutivo y justificación por candidato en JSON ({\"summary\":\"...\",\"candidates\":[...]}) respetando el score exacto calculado por reglas para la oferta ${jobId}:\\n\\n${sourceText}`,\n    },\n  }];\n}\n\nreturn [{\n  json: {\n    valid: false,\n    status_code: 400,\n    error: { code: 'INVALID_INPUT', message: \"mode debe ser 'student' o 'company'\", details: { mode } },\n  },\n}];\n"
       },
-      "id": "157bb5d2-5d20-5b1c-8520-50303fc36f2c",
-      "name": "Obtener contexto y matching por reglas (MCP)",
+      "id": "08267b40-774b-5d45-86d7-4071fca74007",
+      "name": "Obtener Contexto por Reglas (MCP)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        280,
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "838831be-8726-5708-bffc-4f8508ad8430",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "680bdfd9-c4e6-5dd0-b061-562b1f525847",
+      "name": "¿Contexto Válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
         0
       ]
     },
@@ -39,46 +73,45 @@
           "value": "BolsaWf00Orquestador0",
           "mode": "id"
         },
-        "mode": "once",
         "options": {
           "waitForSubWorkflow": true
         }
       },
-      "id": "5dd9161e-1d42-5b31-ac93-3d18abd0a5fd",
-      "name": "Invocar Orquestador (WF-00)",
+      "id": "275534d0-e703-5678-9b65-4c986ac16cf3",
+      "name": "Invocar WF-00 Orquestador",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        560,
-        0
+        720,
+        -100
       ]
     },
     {
       "parameters": {
-        "jsCode": "const MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst MCP_ENDPOINT = $env.MCP_URL || 'http://mcp-tools:8000/mcp';\nconst SVC_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const resp = await this.helpers.httpRequest({\n    method: 'POST',\n    url: MCP_ENDPOINT,\n    json: true,\n    timeout: 30000,\n    headers: {\n      'Content-Type': 'application/json',\n      'Accept': 'application/json, text/event-stream',\n      'X-Service-Token': SVC_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n  });\n  const sc = resp?.result?.structuredContent;\n  if (sc) return sc.result || sc;\n  const txt = resp?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (_) { return { ok: true, text: txt }; }\n  }\n  return resp;\n};\n\nconst callRouterHttp = async (path, body) => {\n  return await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/router/${path}`,\n    json: true,\n    timeout: 10000,\n    headers: { 'X-Service-Token': SVC_TOKEN },\n    body,\n  });\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON');\n  return JSON.parse(match[0]);\n};\nconst ctx = $('Obtener contexto y matching por reglas (MCP)').first().json;\nif (!ctx.ok) {\n  return [{ json: ctx }];\n}\n\nconst orq = $input.first().json;\nconst aiBlock = {\n  origin: 'AI',\n  model: orq.model || 'nvidia',\n  prompt_version: ctx.prompt_version || '1.0.0',\n  generated_at: new Date().toISOString(),\n  disclaimer: 'Recomendación orientativa generada por IA. El puntaje y el ranking provienen exclusivamente del motor de reglas.',\n  verified: !!orq.verified,\n};\n\nif (ctx.mode === 'student') {\n  const topEval = ctx.evaluations[0];\n  const items = orq.ok && Array.isArray(orq.data?.items) ? orq.data.items : [];\n  if (topEval && items.length > 0) {\n    await callMcpTool('save_recommendation', {\n      profile_id: ctx.profile.id,\n      job_id: topEval.job.id,\n      items,\n      model: aiBlock.model,\n      prompt_version: aiBlock.prompt_version,\n      disclaimer: aiBlock.disclaimer,\n    }).catch(() => null);\n  }\n  return [{\n    json: {\n      ok: true,\n      mode: 'student',\n      profile_id: ctx.profile.id,\n      matches: ctx.evaluations.map((ev, idx) => ({\n        job: ev.job,\n        rule_based: ev.rule_based,\n        missing_skills: ev.missing_skills,\n        ai_recommendations: idx === 0 ? { ...aiBlock, items } : null,\n      })),\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    mode: 'company',\n    job_id: ctx.job.id,\n    candidates: ctx.ranked_candidates.map((cand, idx) => ({\n      profile: cand.profile,\n      rule_based: cand.rule_based,\n      missing_skills: cand.missing_skills,\n      ai_recommendations: idx === 0 && orq.ok ? { ...aiBlock, ...orq.data } : null,\n    })),\n  }\n}];\n"
+        "jsCode": "\nconst MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst SERVICE_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const raw = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/mcp`,\n    headers: {\n      'Accept': 'application/json, text/event-stream',\n      'Content-Type': 'application/json',\n      'X-Service-Token': SERVICE_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n    json: true,\n    timeout: 60000,\n  });\n  const payload = typeof raw === 'string'\n    ? JSON.parse((raw.split('\\n').find(l => l.startsWith('data:')) || 'data: {}').replace(/^data:\\s*/, ''))\n    : raw;\n  const sc = payload?.result?.structuredContent;\n  if (sc && typeof sc === 'object') return sc.result || sc;\n  const txt = payload?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (e) { return { ok: true, text: txt }; }\n  }\n  return payload?.result || payload || {};\n};\n\nconst callRouterHttp = async (path, body = null, method = 'POST') => {\n  const opts = {\n    method,\n    url: `${MCP_BASE}/router/${path}`,\n    headers: { 'X-Service-Token': SERVICE_TOKEN },\n    json: true,\n    timeout: 10000,\n  };\n  if (body !== null && method !== 'GET') opts.body = body;\n  return await this.helpers.httpRequest(opts);\n};\n\nconst extractJsonObject = (rawText) => {\n  const cleaned = String(rawText || '').replace(/<think>[\\s\\S]*?<\\/think>/g, '').replace(/<\\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();\n  const match = cleaned.match(/\\{[\\s\\S]*\\}/);\n  if (!match) throw new Error('El modelo no devolvió un bloque JSON válido');\n  return JSON.parse(match[0]);\n};\n\nconst ctx = $('Obtener Contexto por Reglas (MCP)').first().json;\nif (!ctx.valid) {\n  return [{ json: { error: ctx.error, status_code: ctx.status_code } }];\n}\n\nconst orq = $input.first().json;\nif (!orq.ok) {\n  return [{\n    json: {\n      status_code: orq.status_code || 503,\n      mode: ctx.mode,\n      rule_based: ctx.rule_based,\n      error: orq.error || { code: 'AI_ADVISOR_FAILED', message: 'No se pudo generar la recomendación IA' },\n    },\n  }];\n}\n\nconst aiData = orq.data || {};\nlet itemsToSave = [];\nif (ctx.mode === 'student') {\n  itemsToSave = Array.isArray(aiData.items) ? aiData.items : [];\n  await callMcpTool('save_recommendation', {\n    profile_id: ctx.profile_id,\n    job_id: ctx.primary_job_id,\n    items: itemsToSave,\n    model: orq.model || 'nvidia',\n    prompt_version: ctx.prompt_version || '1.0.0',\n  }).catch(() => null);\n} else {\n  const cands = Array.isArray(aiData.candidates) ? aiData.candidates : [];\n  itemsToSave = cands.map(c => ({\n    type: 'candidate_review',\n    skill: (c.strengths && c.strengths[0]) || 'general',\n    text: `${c.profile_id} (score=${c.score}): ${c.justification}`,\n    priority: c.priority || 'media',\n  }));\n  await callMcpTool('save_recommendation', {\n    profile_id: ctx.primary_profile_id,\n    job_id: ctx.job_id,\n    items: itemsToSave,\n    model: orq.model || 'nvidia',\n    prompt_version: ctx.prompt_version || '1.0.0',\n  }).catch(() => null);\n}\n\nreturn [{\n  json: {\n    status_code: 200,\n    mode: ctx.mode,\n    rule_based: ctx.rule_based,\n    ai_recommendations: {\n      ...aiData,\n      origin: 'AI',\n      model: orq.model,\n      prompt_version: ctx.prompt_version || '1.0.0',\n      generated_at: new Date().toISOString(),\n      disclaimer: 'Recomendación orientativa generada por IA. El puntaje y el ranking provienen exclusivamente del motor de reglas.',\n      verified: Boolean(orq.verified),\n    },\n  },\n}];\n"
       },
-      "id": "2b72e905-2b07-5c57-9055-961336dae9a9",
-      "name": "Separar bloques RULES vs AI y guardar",
+      "id": "7270fcc3-e607-5401-911b-ec17f58b3f7b",
+      "name": "Persistir y Formatear Bloques",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        840,
+        980,
         0
       ]
     },
     {
       "parameters": {
-        "content": "## WF-06 · Recomendador (`POST /webhook/recommendations`)\n- `mode=student` (`profile_id`): busca ofertas activas, calcula `compute_match` (`origin=\"RULES\"`), `missing_skills` y cursos (`search_courses`), genera consejos con `Training Advisor` y persiste con `save_recommendation`.\n- `mode=company` (`job_id`): rankea candidatos **exclusivamente por reglas (`compute_match`)** y el LLM sólo redacta la justificación.",
-        "width": 560,
-        "height": 260
+        "content": "## WF-06 · Recomendador (`POST /webhook/recommendations`)\n- `mode=student` (`profile_id`): ejecuta al agente `training_advisor` (Professor X, con `Herramientas (MCP)` en `perfil=postulante` y skill `orientacion-postulante`).\n- `mode=company` (`job_id`): ejecuta al agente `company_advisor` (Nick Fury, con `Herramientas (MCP)` en `perfil=empresa` y skill `seleccion-candidatos`).\n- Separa estrictamente `rule_based` (`origin: \"RULES\"`) de `ai_recommendations` (`origin: \"AI\"`).",
+        "width": 520,
+        "height": 280
       },
-      "id": "71f36506-2e89-5ada-bd5c-2f15c6b09220",
+      "id": "a84f51b6-2727-50cc-b749-6303cc1b32fa",
       "name": "Nota WF-06",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         0,
-        -280
+        -260
       ]
     }
   ],
@@ -87,29 +120,47 @@
       "main": [
         [
           {
-            "node": "Obtener contexto y matching por reglas (MCP)",
+            "node": "Obtener Contexto por Reglas (MCP)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Obtener contexto y matching por reglas (MCP)": {
+    "Obtener Contexto por Reglas (MCP)": {
       "main": [
         [
           {
-            "node": "Invocar Orquestador (WF-00)",
+            "node": "¿Contexto Válido?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Invocar Orquestador (WF-00)": {
+    "¿Contexto Válido?": {
       "main": [
         [
           {
-            "node": "Separar bloques RULES vs AI y guardar",
+            "node": "Invocar WF-00 Orquestador",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Persistir y Formatear Bloques",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invocar WF-00 Orquestador": {
+      "main": [
+        [
+          {
+            "node": "Persistir y Formatear Bloques",
             "type": "main",
             "index": 0
           }
@@ -117,9 +168,9 @@
       ]
     }
   },
-  "active": false,
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
-  }
+  },
+  "active": false
 }

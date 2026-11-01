@@ -1,5 +1,7 @@
-"""Middleware ASGI de autenticación para `/mcp` y `/router` (`X-Service-Token` / `Bearer`)."""
+"""Middleware ASGI de autenticación para `/mcp` y `/router` (`X-Service-Token`/`?key=`)."""
 
+import logging
+import re
 import secrets
 import urllib.parse
 
@@ -8,7 +10,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 class ServiceTokenMiddleware:
-    """Protege `/mcp` y `/router` con token compartido; deja `/health` libre."""
+    """Protege `/mcp` y `/router` con token compartido; deja `/health` y `/reglas` libres."""
 
     def __init__(self, app: ASGIApp, expected_token: str) -> None:
         self._app = app
@@ -52,3 +54,15 @@ class ServiceTokenMiddleware:
         params = urllib.parse.parse_qs(query_raw)
         key_vals = params.get("key") or params.get("token") or []
         return key_vals[0].strip() if key_vals else ""
+
+
+class MaskKeyLogFilter(logging.Filter):
+    """Oculta la clave (`?key=...`) en los logs de acceso de Uvicorn."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            record.args = tuple(
+                re.sub(r'key=[^&\s"]+', "key=***", arg) if isinstance(arg, str) else arg
+                for arg in record.args
+            )
+        return True

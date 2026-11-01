@@ -103,4 +103,3 @@ class HttpRecommendationStore(_BaseHttpGateway):
             json_body=recommendation,
         )
         return dict(data)
-

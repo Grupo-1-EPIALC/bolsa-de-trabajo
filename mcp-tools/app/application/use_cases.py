@@ -14,6 +14,7 @@ from app.domain.ports import (
     RecommendationStore,
     SchemaValidator,
     SettingsProvider,
+    SkillRepository,
 )
 from app.domain.router import ModelRouter
 
@@ -217,3 +218,27 @@ class RouterService:
 
     def status(self) -> JsonDict:
         return self._router.status()
+
+
+class SkillCatalogService:
+    """Lectura de skills del proyecto (`leer_skill`) con anti-bucle por sesión."""
+
+    def __init__(self, repo: SkillRepository) -> None:
+        self._repo = repo
+
+    def list_skills(self) -> list[JsonDict]:
+        return self._repo.list_skills()
+
+    def read_skill(
+        self,
+        skill_id: str,
+        file_path: str = "SKILL.md",
+        offset: int = 0,
+        session_id: str = "default",
+    ) -> JsonDict:
+        return self._repo.read_skill(
+            skill_id=skill_id,
+            file_path=file_path,
+            offset=offset,
+            session_id=session_id,
+        )
