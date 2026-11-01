@@ -268,7 +268,8 @@ Si un dato no aparece, dejalo vacío. No inventes.
 | P-002 | 2026-10-31 | Andres | Claude Code (`devops-agent`) | `chore/infra/v0.0.1-contenedores-base` | Crear sólo los contenedores y archivos de configuración comunes; auth-service pasa a NestJS | Compose (dev/prod), gateway Nginx, Postgres con rol+schema por servicio, Dockerfiles multi-stage no root con healthcheck, esqueletos `/health` por servicio, CI por carpeta, config común de lint y plantilla de PR | pendiente de revisión |
 | P-003 | 2026-10-31 | Andres | Antigravity (`mcp-agent` + `n8n-agent`) | `feature/mcp-n8n/v0.1.0-agentes-nvidia` | Armar flujos de n8n y agentes (orquestador, verificador, extractor de CV PDF/DOC/DOCX/MD y recomendador postulantes/empresas) usando modelos remotos de NVIDIA, reutilizando router/lectura de `agentes`, migrando Postgres a 17 y dejando toda la configuración en `.env` vía `mcp-tools` (con soporte futuro para panel y mocks de endpoints pendientes) | Migración a PostgreSQL 17, `mcp-tools` v0.1.0 con arquitectura limpia (`domain`/`application`/`infrastructure`/`tools`), router NVIDIA, `parse_cv_file` (con `antiword`), validación JSON Schema + grounding, mocks configurables (`MCP_USE_MOCKS`), cobertura 90 % y workflows `WF-0R`, `WF-0V`, `WF-00`, `WF-01` y `WF-06` | aceptado |
 | P-004 | 2026-11-01 | Andres | Antigravity (`mcp-agent` + `n8n-agent` + `devops-agent`) | `feature/mcp-n8n/v0.2.0-nodos-agente-y-skills` | Crear repo `Grupo-1-EPIALC/bolsa-de-trabajo` con reglas de publicación (PR + ramas por feature) y alinear la arquitectura de agentes con `C:\Users\Andres\proyectos\agentes` usando los nodos de Agente de n8n (`@n8n/n8n-nodes-langchain.agent`, `mcpClientTool`, `mcpClient`, `memoryBufferWindow`), perfiles MCP y skills (`leer_skill`), sin modelos locales Ollama | Repo creado y protegido en GitHub (`dev` y `main`), `mcp-tools` v0.2.0 con `ProfiledFastMCP` (`?perfil=`), `leer_skill` (con anti-bucle), `reglas.md`, skills de reclutamiento + ingeniería, catálogo `n8n/agentes/*.json` y workflows regenerados con nodos nativos de Agente de n8n conectados a NVIDIA NIM | aceptado |
-| P-005 | | | | | | | |
+| P-005 | 2026-11-01 | Andres | Antigravity (`profile-agent` + `n8n-agent`) | `feature/profile/v0.1.0-cv-webhook-async` | Armar formulario de prueba en `profile-service` para enviar un CV al webhook de n8n (`WF-01`) con espera asíncrona e indicador de progreso, tarjetas verticales en columnas de ancho fijo con Bootstrap 5 y salto de línea en el JSON, optimizando la verificación y reemplazando campos ausentes por `COMPLETAR_MANUALMENTE` / `[]` (sin `null`) | Endpoints `/api/v1/profiles/cv-test`, `/cv-extract/async` y `/cv-extract/jobs/{job_id}` por capas en `profile-service` con UI Bootstrap 5 vertical y wrap de JSON, normalizador de campos análogos (`COMPLETAR_MANUALMENTE` + `pending_manual_fields`), `maxTokens: 8192` + reparador de JSON en `WF-00`/`WF-0R` y verificación instantánea determinística en `WF-0V` | aceptado |
+| P-006 | | | | | | | |
 
 ### 7.2 Detalle de entradas
 
@@ -317,7 +318,18 @@ Si un dato no aparece, dejalo vacío. No inventes.
 - **Archivos afectados:** `.gitignore`, `.github/workflows/ci.yml`, `VERSION`, `mcp-tools/`, `n8n/agentes/`, `n8n/generate_workflows.py`, `n8n/workflows/`, `AGENTS.md`.
 - **Decisión:** aceptado.
 
-#### P-005 — (plantilla)
+#### P-005 — Formulario de prueba asíncrono en `profile-service` (Bootstrap 5) y normalización de CV sin `null`
+- **Fecha:** 2026-11-01 · **Autor:** Andres · **Agente:** Antigravity (`profile-agent` + `n8n-agent`) · **Rama:** `feature/profile/v0.1.0-cv-webhook-async` · **HU:** HU-04 / HU-05 (Carga y estructuración de CV)
+- **Prompt (resumido):**
+  > Armar una interfaz de prueba en `profile-service` para enviar un CV al webhook de n8n y devolver el JSON con el perfil. Corregir la demora agregando un indicador de progreso y espera asíncrona del resultado, reconocer campos presentes o análogos devolviendo vacíos los faltantes sin usar `null` (con un indicador para completar manualmente), reparar la extracción en CVs PDF extensos y organizar las tarjetas de forma vertical con ancho fijo en columnas Bootstrap y salto de línea en las respuestas (incluido el JSON).
+- **Resumen de la respuesta:**
+  - Implementación por capas en `services/profile-service` (`domain/`, `application/`, `infrastructure/`, `api/`): almacenamiento en `CV_STORAGE_PATH`, cola en memoria `CvExtractionJobStore`, endpoints `POST /api/v1/profiles/cv-extract/async`, `GET /api/v1/profiles/cv-extract/jobs/{job_id}` y formulario `GET /api/v1/profiles/cv-test` maquetado con Bootstrap 5.3.3 (`cv-fixed-col` vertical + `json-pre` con `pre-wrap`/`overflow-wrap: anywhere`).
+  - Normalización tolerante (`normalize_cv_suggestions` y `normalizeCvCandidate`): mapea claves análogas en español/inglés, reemplaza escalares ausentes por `"COMPLETAR_MANUALMENTE"` y listas vacías por `[]` (cero `null`), y genera `pending_manual_fields`.
+  - Optimización de `WF-0R`, `WF-00` y `WF-0V`: `maxTokens: 8192` en NVIDIA NIM para evitar truncamiento tras `<think>`, reparador `extractJsonObject`/`repairJsonString` y fast-path determinístico en `WF-0V`.
+- **Archivos afectados:** `services/profile-service/`, `n8n/agentes/cv_structurer.json`, `n8n/generate_workflows.py`, `n8n/workflows/`, `mcp-tools/app/data/schemas/cv_standard.schema.json`, `contracts/cv_standard.schema.json`, `services/ai-service/prompts/cv_structurer.md`, `gateway/nginx.conf`, `.env.example`, `AGENTS.md`.
+- **Decisión:** aceptado.
+
+#### P-006 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

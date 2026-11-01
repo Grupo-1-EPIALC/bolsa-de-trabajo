@@ -119,7 +119,7 @@ def test_verification_service_schemas_and_grounding() -> None:
         "personal": {
             "name": "Valentina Gómez",
             "email": "valentina@example.com",
-            "phone": None,
+            "phone": "COMPLETAR_MANUALMENTE",
             "location": "CABA",
         },
         "summary": "Estudiante de Ingeniería",
@@ -129,6 +129,7 @@ def test_verification_service_schemas_and_grounding() -> None:
         "languages": [{"name": "Inglés", "level": "B2"}],
         "certifications": [],
         "links": [],
+        "pending_manual_fields": ["personal.phone"],
         "origin": "AI",
         "model": "deepseek-ai/deepseek-v4.1-flash",
         "prompt_version": "1.0.0",

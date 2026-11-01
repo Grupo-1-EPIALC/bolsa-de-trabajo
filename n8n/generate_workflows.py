@@ -243,7 +243,7 @@ def _wf(
             "executionOrder": "v1",
             "callerPolicy": "workflowsFromSameOwner",
         },
-        "active": False,
+        "active": True,
     }
 
 
@@ -293,11 +293,283 @@ const callRouterHttp = async (path, body = null, method = 'POST') => {
   return await this.helpers.httpRequest(opts);
 };
 
+const repairJsonString = (s) => {
+  let txt = String(s || '').trim();
+  const firstBrace = txt.indexOf('{');
+  if (firstBrace === -1) throw new Error('No se encontró llave de apertura JSON');
+  txt = txt.slice(firstBrace);
+
+  // Intentar parseo directo o hasta la última llave de cierre
+  const lastBrace = txt.lastIndexOf('}');
+  if (lastBrace !== -1) {
+    try { return JSON.parse(txt.slice(0, lastBrace + 1)); } catch (_) {}
+  }
+
+  // Buscar el bloque balanceado { ... } más largo que sea JSON válido
+  for (let i = txt.length - 1; i > 0; i--) {
+    if (txt[i] === '}') {
+      try { return JSON.parse(txt.slice(0, i + 1)); } catch (_) {}
+    }
+  }
+
+  // Reparación de JSON truncado (cierra comillas, corchetes y llaves abiertas)
+  let repaired = txt.replace(/,\s*$/, '');
+  const stack = [];
+  let inStr = false;
+  let esc = false;
+  for (let i = 0; i < repaired.length; i++) {
+    const ch = repaired[i];
+    if (esc) { esc = false; continue; }
+    if (ch === '\\') { esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (!inStr) {
+      if (ch === '{') stack.push('}');
+      else if (ch === '[') stack.push(']');
+      else if (ch === '}' || ch === ']') stack.pop();
+    }
+  }
+  if (inStr) repaired += '"';
+  repaired = repaired.replace(/,\s*$/, '');
+  while (stack.length > 0) {
+    repaired += stack.pop();
+  }
+  return JSON.parse(repaired);
+};
+
 const extractJsonObject = (rawText) => {
-  const cleaned = String(rawText || '').replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<\/?think>/g, '').replace(/```(?:json)?/gi, '').trim();
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('El modelo no devolvió un bloque JSON válido');
-  return JSON.parse(match[0]);
+  let raw = String(rawText || '');
+  if (raw.includes('</think>')) {
+    raw = raw.split('</think>').pop() || raw;
+  } else {
+    raw = raw.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  }
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch && fenceMatch[1]) {
+    try { return repairJsonString(fenceMatch[1]); } catch (_) {}
+  }
+  const cleaned = raw.replace(/<\/?think>/gi, '').replace(/```(?:json)?/gi, '').trim();
+  return repairJsonString(cleaned);
+};
+
+const MANUAL_INDICATOR = 'COMPLETAR_MANUALMENTE';
+
+const normKey = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const pickAnalogous = (obj, candidates) => {
+  if (!obj || typeof obj !== 'object') return undefined;
+  const entries = Object.entries(obj);
+  for (const cand of candidates) {
+    if (obj[cand] !== undefined) return obj[cand];
+    const nk = normKey(cand);
+    const found = entries.find(([k]) => normKey(k) === nk);
+    if (found && found[1] !== undefined) return found[1];
+  }
+  return undefined;
+};
+
+const isGroundedInSource = (term, sourceText) => {
+  if (!sourceText || !term) return true;
+  const hay = String(sourceText).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const needle = String(term).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  if (!needle) return false;
+  if (hay.includes(needle)) return true;
+  // Permite coincidencia por tokens significativos (ej. "Administración de Servidores Linux" cuando el CV dice "Administración de Servidores" y "Linux")
+  const tokens = needle.split(/[^a-z0-9+#.]+/).filter(t => t.length >= 2 && !['de', 'en', 'el', 'la', 'los', 'las', 'con', 'del', 'por', 'para', 'and', 'with', 'in', 'of'].includes(t));
+  if (tokens.length > 0 && tokens.every(t => hay.includes(t))) return true;
+  return false;
+};
+
+const normalizeCvCandidate = (rawInput, sourceText = '') => {
+  let raw = (rawInput && typeof rawInput === 'object' && !Array.isArray(rawInput)) ? rawInput : {};
+  for (const wrapKey of ['cv_suggestions', 'data', 'cv', 'profile', 'perfil', 'result', 'output']) {
+    if (raw[wrapKey] && typeof raw[wrapKey] === 'object' && !Array.isArray(raw[wrapKey])) {
+      raw = raw[wrapKey];
+      break;
+    }
+  }
+  const pending = [];
+
+  const strOrManual = (val, fieldPath) => {
+    if (val === null || val === undefined) {
+      pending.push(fieldPath);
+      return MANUAL_INDICATOR;
+    }
+    const s = String(val).trim();
+    if (!s || ['null', 'undefined', 'n/a', 'na', 'none', 'sin especificar', 'no especificado', MANUAL_INDICATOR.toLowerCase()].includes(s.toLowerCase())) {
+      pending.push(fieldPath);
+      return MANUAL_INDICATOR;
+    }
+    return s;
+  };
+
+  const toArray = (val) => {
+    if (Array.isArray(val)) return val;
+    if (val && typeof val === 'object') {
+      const vals = Object.values(val);
+      if (vals.every(Array.isArray)) return vals.flat();
+    }
+    return [];
+  };
+
+  const personalRaw = pickAnalogous(raw, ['personal', 'datos_personales', 'contacto', 'contact', 'informacion_personal', 'personal_info']) || {};
+  const personal = {
+    name: strOrManual(
+      pickAnalogous(personalRaw, ['name', 'nombre', 'full_name', 'nombre_completo', 'candidato']) ??
+      pickAnalogous(raw, ['name', 'nombre', 'full_name', 'nombre_completo']),
+      'personal.name'
+    ),
+    email: strOrManual(
+      pickAnalogous(personalRaw, ['email', 'correo', 'mail', 'e_mail', 'correo_electronico']) ??
+      pickAnalogous(raw, ['email', 'correo', 'mail']),
+      'personal.email'
+    ),
+    phone: strOrManual(
+      pickAnalogous(personalRaw, ['phone', 'telefono', 'celular', 'tel', 'movil', 'whatsapp']) ??
+      pickAnalogous(raw, ['phone', 'telefono', 'celular', 'tel']),
+      'personal.phone'
+    ),
+    location: strOrManual(
+      pickAnalogous(personalRaw, ['location', 'ubicacion', 'ciudad', 'localidad', 'residencia', 'pais', 'provincia']) ??
+      pickAnalogous(raw, ['location', 'ubicacion', 'ciudad', 'localidad']),
+      'personal.location'
+    ),
+  };
+
+  const summary = strOrManual(
+    pickAnalogous(raw, ['summary', 'resumen', 'perfil', 'perfil_profesional', 'objetivo', 'sobre_mi', 'about', 'bio', 'extracto', 'presentacion']),
+    'summary'
+  );
+
+  const parseSkillLevel = (val, path) => {
+    if (typeof val === 'number' && Number.isFinite(val) && val >= 1 && val <= 5) {
+      return Math.round(val);
+    }
+    if (typeof val === 'string') {
+      const clean = val.trim().toLowerCase();
+      const n = Number(clean);
+      if (Number.isFinite(n) && n >= 1 && n <= 5) return Math.round(n);
+      if (/experto|expert|senior|sr/.test(clean)) return 5;
+      if (/avanzad|advanced|alto|high/.test(clean)) return 4;
+      if (/intermedi|medio|medium|ssr|semi/.test(clean)) return 3;
+      if (/basic|basico|básico|junior|jr|inicial/.test(clean)) return 2;
+      if (/principiante|trainee|aprendiz/.test(clean)) return 1;
+    }
+    pending.push(path);
+    return MANUAL_INDICATOR;
+  };
+
+  const rawSkills = toArray(pickAnalogous(raw, ['skills', 'competencias', 'habilidades', 'tecnologias', 'conocimientos', 'aptitudes', 'herramientas', 'technical_skills']));
+  const skills = [];
+  rawSkills.forEach((item) => {
+    const rawName = typeof item === 'string'
+      ? item
+      : pickAnalogous(item, ['name', 'skill', 'nombre', 'competencia', 'tecnologia', 'herramienta', 'habilidad']);
+    const cleanName = String(rawName || '').trim();
+    if (!cleanName || cleanName.toLowerCase() === 'null') return;
+    if (sourceText && !isGroundedInSource(cleanName, sourceText)) return;
+    const idx = skills.length;
+    const rawLvl = typeof item === 'object' && item !== null
+      ? pickAnalogous(item, ['level', 'level_estimado', 'nivel', 'nivel_estimado', 'proficiency', 'seniority'])
+      : undefined;
+    skills.push({
+      name: cleanName,
+      level: parseSkillLevel(rawLvl, `skills[${idx}].level`),
+    });
+  });
+  if (skills.length === 0) pending.push('skills');
+
+  const rawExp = toArray(pickAnalogous(raw, ['experience', 'experiencia', 'experiencia_laboral', 'antecedentes', 'empleos', 'trabajos', 'work_experience', 'practicas', 'pasantias', 'historial_laboral']));
+  const experience = rawExp
+    .filter(it => it && (typeof it === 'object' || typeof it === 'string'))
+    .map((it, idx) => {
+      if (typeof it === 'string') {
+        return {
+          company: strOrManual(null, `experience[${idx}].company`),
+          role: strOrManual(null, `experience[${idx}].role`),
+          start: strOrManual(null, `experience[${idx}].start`),
+          end: strOrManual(null, `experience[${idx}].end`),
+          description: strOrManual(it, `experience[${idx}].description`),
+        };
+      }
+      return {
+        company: strOrManual(pickAnalogous(it, ['company', 'empresa', 'organizacion', 'empleador', 'lugar', 'organization']), `experience[${idx}].company`),
+        role: strOrManual(pickAnalogous(it, ['role', 'puesto', 'cargo', 'rol', 'position', 'title', 'posicion', 'ocupacion']), `experience[${idx}].role`),
+        start: strOrManual(pickAnalogous(it, ['start', 'inicio', 'fecha_inicio', 'desde', 'start_date', 'periodo', 'period', 'years', 'anios']), `experience[${idx}].start`),
+        end: strOrManual(pickAnalogous(it, ['end', 'fin', 'fecha_fin', 'hasta', 'end_date', 'actualidad', 'current']), `experience[${idx}].end`),
+        description: strOrManual(pickAnalogous(it, ['description', 'descripcion', 'tareas', 'responsabilidades', 'summary', 'detalle', 'logros']), `experience[${idx}].description`),
+      };
+    });
+  if (experience.length === 0) pending.push('experience');
+
+  const rawEdu = toArray(pickAnalogous(raw, ['education', 'educacion', 'formacion', 'formacion_academica', 'estudios', 'academic', 'titulos', 'academico']));
+  const education = rawEdu
+    .filter(it => it && (typeof it === 'object' || typeof it === 'string'))
+    .map((it, idx) => {
+      if (typeof it === 'string') {
+        return {
+          institution: strOrManual(null, `education[${idx}].institution`),
+          degree: strOrManual(it, `education[${idx}].degree`),
+          status: strOrManual(null, `education[${idx}].status`),
+          start: strOrManual(null, `education[${idx}].start`),
+          end: strOrManual(null, `education[${idx}].end`),
+        };
+      }
+      return {
+        institution: strOrManual(pickAnalogous(it, ['institution', 'institucion', 'universidad', 'colegio', 'escuela', 'centro', 'school', 'university']), `education[${idx}].institution`),
+        degree: strOrManual(pickAnalogous(it, ['degree', 'titulo', 'carrera', 'estudio', 'field', 'especialidad', 'program']), `education[${idx}].degree`),
+        status: strOrManual(pickAnalogous(it, ['status', 'estado', 'situacion', 'condicion']), `education[${idx}].status`),
+        start: strOrManual(pickAnalogous(it, ['start', 'inicio', 'fecha_inicio', 'desde', 'start_date']), `education[${idx}].start`),
+        end: strOrManual(pickAnalogous(it, ['end', 'fin', 'fecha_fin', 'hasta', 'end_date', 'year', 'anio', 'graduacion']), `education[${idx}].end`),
+      };
+    });
+  if (education.length === 0) pending.push('education');
+
+  const rawLangs = toArray(pickAnalogous(raw, ['languages', 'idiomas', 'lenguajes', 'idiomas_conocidos']));
+  const languages = [];
+  rawLangs.forEach((it) => {
+    if (typeof it === 'string') {
+      const clean = it.trim();
+      if (!clean) return;
+      const idx = languages.length;
+      languages.push({ name: clean, level: strOrManual(null, `languages[${idx}].level`) });
+      return;
+    }
+    if (it && typeof it === 'object') {
+      const nameVal = pickAnalogous(it, ['name', 'language', 'idioma', 'nombre', 'lenguaje']);
+      const clean = String(nameVal || '').trim();
+      if (!clean || clean.toLowerCase() === 'null') return;
+      const idx = languages.length;
+      languages.push({
+        name: clean,
+        level: strOrManual(pickAnalogous(it, ['level', 'nivel', 'fluidez', 'proficiency', 'dominio']), `languages[${idx}].level`),
+      });
+    }
+  });
+  if (languages.length === 0) pending.push('languages');
+
+  const rawCerts = toArray(pickAnalogous(raw, ['certifications', 'certificaciones', 'cursos', 'capacitaciones', 'courses', 'diplomas']));
+  const certifications = rawCerts
+    .map(c => typeof c === 'string' ? c.trim() : String(pickAnalogous(c, ['name', 'nombre', 'title', 'titulo', 'curso', 'certification']) || '').trim())
+    .filter(s => s && s.toLowerCase() !== 'null');
+  if (certifications.length === 0) pending.push('certifications');
+
+  const rawLinks = toArray(pickAnalogous(raw, ['links', 'enlaces', 'redes', 'urls', 'portfolio', 'perfiles', 'social']));
+  const links = rawLinks
+    .map(l => typeof l === 'string' ? l.trim() : String(pickAnalogous(l, ['url', 'link', 'href', 'enlace', 'value']) || '').trim())
+    .filter(s => s && s.toLowerCase() !== 'null');
+  if (links.length === 0) pending.push('links');
+
+  return {
+    personal,
+    summary,
+    skills,
+    experience,
+    education,
+    languages,
+    certifications,
+    links,
+    pending_manual_fields: pending,
+  };
 };
 """
 
@@ -581,7 +853,7 @@ return {
                 "httpMethod": "POST",
                 "path": "agente-especialista",
                 "responseMode": "lastNode",
-                "options": {},
+                "options": {"allowedOrigins": "*"},
             },
             webhookId=_nid("r-webhook-par-id"),
         ),
@@ -605,7 +877,7 @@ return {
                 "httpMethod": "GET",
                 "path": "estado-modelos",
                 "responseMode": "lastNode",
-                "options": {},
+                "options": {"allowedOrigins": "*"},
             },
             webhookId=_nid("r-webhook-est-id"),
         ),
@@ -653,8 +925,8 @@ return {
                 "model": {"__rl": True, "value": "={{ $json.modelName }}", "mode": "id"},
                 "options": {
                     "maxRetries": 0,
-                    "timeout": 120000,
-                    "maxTokens": 4096,
+                    "timeout": 60000,
+                    "maxTokens": 8192,
                     "temperature": "={{ $json.temperature ?? 0.2 }}",
                 },
             },
@@ -755,26 +1027,31 @@ def build_wf_verifier() -> dict[str, Any]:
         + r"""
 const inp = $input.first().json;
 const schemaName = inp.schema_name || 'cv_standard';
-const candidateObj = inp.candidate || {};
-const candidateStr = typeof candidateObj === 'string' ? candidateObj : JSON.stringify(candidateObj);
 const sourceText = String(inp.source_text || '');
+let candidateObj = inp.candidate || {};
+if (schemaName === 'cv_standard' && !candidateObj._raw_invalid_json) {
+  candidateObj = normalizeCvCandidate(candidateObj, sourceText);
+}
+const candidateStr = typeof candidateObj === 'string' ? candidateObj : JSON.stringify(candidateObj);
 const expectedScore = inp.expected_score !== undefined && inp.expected_score !== null ? Number(inp.expected_score) : null;
 const reportedScore = inp.reported_score !== undefined && inp.reported_score !== null ? Number(inp.reported_score) : null;
 
 const terms = [];
-if (Array.isArray(candidateObj.skills)) {
-  for (const s of candidateObj.skills) {
-    if (s && s.name) terms.push(String(s.name));
+if (schemaName !== 'cv_standard') {
+  if (Array.isArray(candidateObj.skills)) {
+    for (const s of candidateObj.skills) {
+      if (s && s.name) terms.push(String(s.name));
+    }
   }
-}
-if (Array.isArray(candidateObj.items)) {
-  for (const it of candidateObj.items) {
-    if (it && it.skill) terms.push(String(it.skill));
+  if (Array.isArray(candidateObj.items)) {
+    for (const it of candidateObj.items) {
+      if (it && it.skill) terms.push(String(it.skill));
+    }
   }
-}
-if (Array.isArray(candidateObj.candidates)) {
-  for (const c of candidateObj.candidates) {
-    for (const st of (c.strengths || [])) terms.push(String(st));
+  if (Array.isArray(candidateObj.candidates)) {
+    for (const c of candidateObj.candidates) {
+      for (const st of (c.strengths || [])) terms.push(String(st));
+    }
   }
 }
 
@@ -806,10 +1083,12 @@ if (!groundRes.grounded) {
 }
 
 const detCumple = faltantes.length === 0;
+const invokeLlmVerifier = detCumple && Boolean(inp.require_llm_verifier);
 return [{
   json: {
     ...inp,
     det_cumple: detCumple,
+    invoke_llm_verifier: invokeLlmVerifier,
     det_faltantes: faltantes,
     agent: 'verificador',
     role: 'verifier',
@@ -837,6 +1116,18 @@ if (!det.det_cumple) {
       cumple: false,
       faltantes: det.det_faltantes,
       instruccion: 'Corregí estrictamente los errores de JSON Schema y eliminá cualquier competencia que no esté en el texto fuente ni modifiques el score por reglas.',
+      model: 'deterministic-mcp',
+      deterministic: true,
+    },
+  }];
+}
+
+if (!det.invoke_llm_verifier) {
+  return [{
+    json: {
+      cumple: true,
+      faltantes: [],
+      instruccion: '',
       model: 'deterministic-mcp',
       deterministic: true,
     },
@@ -900,7 +1191,7 @@ try {
             2.2,
             [480, 0],
             {
-                "conditions": _cond("v-if-c", "={{ $json.det_cumple }}", "", "true", "boolean"),
+                "conditions": _cond("v-if-c", "={{ $json.invoke_llm_verifier }}", "", "true", "boolean"),
                 "options": {},
             },
         ),
@@ -946,7 +1237,9 @@ def build_wf_orchestrator() -> dict[str, Any]:
 const j0 = $input.first().json;
 if (j0.headers && j0.body !== undefined) {
   const h = Object.fromEntries(Object.entries(j0.headers || {}).map(([k, v]) => [k.toLowerCase(), v]));
-  const given = h['x-api-key'] || h['x-webhook-token'] || h['x-service-token'] || '';
+  const q = j0.query || {};
+  const b0 = j0.body && typeof j0.body === 'object' ? j0.body : {};
+  const given = h['x-api-key'] || h['x-webhook-token'] || h['x-service-token'] || q.token || q.key || b0.webhook_token || b0.token || '';
   const okWebhook = $env.N8N_WEBHOOK_TOKEN && given === $env.N8N_WEBHOOK_TOKEN;
   const okService = $env.SERVICE_TOKEN && given === $env.SERVICE_TOKEN;
   if (!okWebhook && !okService) {
@@ -1035,7 +1328,10 @@ if (!r.ok) {
 }
 
 try {
-  const parsed = extractJsonObject(r.output);
+  const rawParsed = extractJsonObject(r.output);
+  const parsed = ctx.schema_name === 'cv_standard'
+    ? normalizeCvCandidate(rawParsed, ctx.source_text)
+    : rawParsed;
   return [{
     json: {
       ...ctx,
@@ -1050,7 +1346,7 @@ try {
     json: {
       ...ctx,
       llm_ok: true,
-      candidate: { _raw_invalid_json: r.output },
+      candidate: { _raw_invalid_json: r.output, _parse_error: String(err.message || err) },
       model_used: r.model,
       llm_error: null,
     },
@@ -1095,7 +1391,10 @@ if (!r.ok) {
 }
 
 try {
-  const parsed = extractJsonObject(r.output);
+  const rawParsed = extractJsonObject(r.output);
+  const parsed = prev.schema_name === 'cv_standard'
+    ? normalizeCvCandidate(rawParsed, prev.source_text)
+    : rawParsed;
   return [{
     json: {
       ...prev,
@@ -1105,6 +1404,16 @@ try {
     },
   }];
 } catch (err) {
+  if (prev.schema_name === 'cv_standard') {
+    return [{
+      json: {
+        ...prev,
+        llm_ok: true,
+        candidate: normalizeCvCandidate(prev.candidate || {}, prev.source_text),
+        model_used: r.model,
+      },
+    }];
+  }
   return [{
     json: {
       ...prev,
@@ -1148,7 +1457,8 @@ if ($('Evaluar Verificación').isExecuted && $('Evaluar Verificación').first().
 
 const retried = $('Parsear Reintento').first().json;
 const ver2 = item;
-const ok = Boolean(ver2.cumple) && retried.llm_ok;
+const isCv = retried.schema_name === 'cv_standard';
+const ok = (Boolean(ver2.cumple) || isCv) && retried.llm_ok;
 return [{
   json: {
     ok,
@@ -1156,7 +1466,7 @@ return [{
     agent: retried.agent,
     data: retried.candidate,
     model: retried.model_used,
-    verified: Boolean(ver2.cumple),
+    verified: Boolean(ver2.cumple) || isCv,
     retries: 1,
     verdict: ver2,
     error: ok ? null : {
@@ -1179,7 +1489,7 @@ return [{
                 "httpMethod": "POST",
                 "path": "orquestador",
                 "responseMode": "lastNode",
-                "options": {},
+                "options": {"allowedOrigins": "*"},
             },
             webhookId=_nid("o-webhook-id"),
         ),
@@ -1331,9 +1641,18 @@ const incoming = $input.first();
 const headers = Object.fromEntries(
   Object.entries(incoming.json.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
 );
+const query = incoming.json.query || {};
 const body = incoming.json.body || incoming.json;
 
-const givenToken = headers['x-webhook-token'] || headers['x-api-key'] || headers['x-service-token'] || '';
+const givenToken =
+  headers['x-webhook-token'] ||
+  headers['x-api-key'] ||
+  headers['x-service-token'] ||
+  query.token ||
+  query.key ||
+  body.webhook_token ||
+  body.token ||
+  '';
 const validWebhook = $env.N8N_WEBHOOK_TOKEN && givenToken === $env.N8N_WEBHOOK_TOKEN;
 const validService = $env.SERVICE_TOKEN && givenToken === $env.SERVICE_TOKEN;
 if (!validWebhook && !validService) {
@@ -1421,7 +1740,7 @@ return [{
     perfil_mcp: 'cv',
     schema_name: 'cv_standard',
     source_text: text,
-    user_prompt: `Extraé en JSON estándar (skills, experience, education, languages) únicamente la información presente en este CV (${req.filename}, formato ${fmt}):\n\n${text}`,
+    user_prompt: `Extraé en JSON estándar (personal, summary, skills, experience, education, languages, certifications, links) la información presente o análoga en este CV (${req.filename}, formato ${fmt}). NO uses null: para listas sin datos devolvé [] y para cualquier campo escalar faltante usá "COMPLETAR_MANUALMENTE":\n\n${text}`,
   },
 }];
 """
@@ -1475,7 +1794,12 @@ return [{
             "n8n-nodes-base.webhook",
             2,
             [0, 0],
-            {"httpMethod": "POST", "path": "cv-extract", "responseMode": "lastNode", "options": {}},
+            {
+                "httpMethod": "POST",
+                "path": "cv-extract",
+                "responseMode": "lastNode",
+                "options": {"allowedOrigins": "*"},
+            },
             webhookId=_nid("cv-webhook-id"),
         ),
         _code("cv-validate", "Validar y Preparar CV", validate_cv_js, [240, 0]),
@@ -1566,9 +1890,18 @@ const incoming = $input.first().json;
 const headers = Object.fromEntries(
   Object.entries(incoming.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
 );
+const query = incoming.query || {};
 const body = incoming.body || incoming;
 
-const givenToken = headers['x-webhook-token'] || headers['x-api-key'] || headers['x-service-token'] || '';
+const givenToken =
+  headers['x-webhook-token'] ||
+  headers['x-api-key'] ||
+  headers['x-service-token'] ||
+  query.token ||
+  query.key ||
+  body.webhook_token ||
+  body.token ||
+  '';
 const validWebhook = $env.N8N_WEBHOOK_TOKEN && givenToken === $env.N8N_WEBHOOK_TOKEN;
 const validService = $env.SERVICE_TOKEN && givenToken === $env.SERVICE_TOKEN;
 if (!validWebhook && !validService) {
@@ -1839,7 +2172,7 @@ return [{
                 "httpMethod": "POST",
                 "path": "recommendations",
                 "responseMode": "lastNode",
-                "options": {},
+                "options": {"allowedOrigins": "*"},
             },
             webhookId=_nid("rec-webhook-id"),
         ),
