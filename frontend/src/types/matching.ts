@@ -1,45 +1,52 @@
-// Contrato estricto del TP2 para Scoring por Reglas (Determinístico)
+export type Priority = 'alta' | 'media' | 'baja';
+export type RequirementKind = 'required' | 'desired' | 'excluding';
+
+export interface Breakdown {
+  required_skills: number;
+  desired_skills: number;
+  skill_levels: number;
+  experience: number;
+  education: number;
+  languages: number;
+}
+
 export interface MissingSkill {
   skill: string;
   required_level: number;
   current_level: number;
+  gap: number;
+  priority: Priority;
+  kind?: RequirementKind;
 }
 
 export interface RuleBasedResult {
   origin: 'RULES';
   engine_version: string;
   score: number;
-  breakdown: {
-    required_skills: number;
-    desired_skills: number;
-    levels: number;
-    experience: number;
-    education: number;
-    languages: number;
-  };
+  excluding_cap_applied: boolean;
+  breakdown: Breakdown;
   missing_skills: MissingSkill[];
 }
 
-// Contrato estricto del TP2 para Recomendaciones por IA (Orientativo)
 export interface AIRecommendationItem {
   type: string;
-  skill: string;
+  skill?: string;
   text: string;
-  priority: 'alta' | 'media' | 'baja';
+  priority: Priority;
 }
 
-export interface AIRecommendationResult {
+export interface AIRecommendations {
   origin: 'AI';
   model: string;
   generated_at: string;
+  prompt_version?: string;
   disclaimer: string;
   items: AIRecommendationItem[];
 }
 
-// Respuesta combinada que entrega la API o el Gateway
 export interface MatchResponse {
-  profile_id?: number;
-  job_id?: number;
+  profile_id: string;
+  job_id: string;
   rule_based: RuleBasedResult;
-  ai_recommendations: AIRecommendationResult;
+  ai_recommendations: AIRecommendations;
 }
