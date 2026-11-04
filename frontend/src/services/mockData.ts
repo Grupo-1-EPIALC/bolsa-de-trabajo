@@ -1,6 +1,5 @@
 import { StudentProfile } from '../types/profile';
 import { JobOpportunity } from '../types/jobs';
-import { MatchResponse } from '../types/matching';
 
 export const MOCK_STUDENT_PROFILE: StudentProfile = {
   id: 'prof-estudiante-01',
