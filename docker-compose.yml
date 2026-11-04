@@ -43,7 +43,6 @@ services:
       PROFILE_DB_PASSWORD: ${PROFILE_DB_PASSWORD}
       JOBS_DB_PASSWORD: ${JOBS_DB_PASSWORD}
       MATCHING_DB_PASSWORD: ${MATCHING_DB_PASSWORD}
-      AI_DB_PASSWORD: ${AI_DB_PASSWORD}
       N8N_DB_PASSWORD: ${N8N_DB_PASSWORD}
     volumes:
       - pg_data:/var/lib/postgresql/data
@@ -84,13 +83,14 @@ services:
       PROFILE_SERVICE_URL: http://profile-service:8000
       JOBS_SERVICE_URL: http://jobs-service:8000
       MATCHING_SERVICE_URL: http://matching-service:8000
-      AI_SERVICE_URL: http://ai-service:8000
       SERVICE_TOKEN: ${SERVICE_TOKEN}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_FROM: ${SMTP_FROM}
+      # Comunicación directa n8n -> mcp-tools por red interna (nunca pasa por Nginx)
       MCP_URL: http://mcp-tools:8000/mcp
       N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN}
+    networks: [backend, mcp_internal]
     volumes:
       - n8n_data:/home/node/.n8n
       - ./n8n/workflows:/workflows
@@ -163,6 +163,7 @@ services:
   mcp-tools:
     <<: *common
     build: ./mcp-tools
+    networks: [backend, mcp_internal]
     environment:
       PYTHONUNBUFFERED: "1"
       LOG_LEVEL: ${LOG_LEVEL}
@@ -173,7 +174,6 @@ services:
       PROFILE_SERVICE_URL: http://profile-service:8000
       JOBS_SERVICE_URL: http://jobs-service:8000
       MATCHING_SERVICE_URL: http://matching-service:8000
-      AI_SERVICE_URL: http://ai-service:8000
       # Configuración de agentes (fuente única; luego vendrá del panel)
       AGENT_SETTINGS_SOURCE: ${AGENT_SETTINGS_SOURCE}
       NVIDIA_BASE_URL: ${NVIDIA_BASE_URL}
@@ -192,22 +192,6 @@ services:
       CV_ALLOWED_EXTENSIONS: ${CV_ALLOWED_EXTENSIONS}
       CV_MAX_TEXT_CHARS: ${CV_MAX_TEXT_CHARS}
       MCP_USE_MOCKS: ${MCP_USE_MOCKS}
-
-  ai-service:
-    <<: *common
-    build: ./services/ai-service
-    depends_on:
-      <<: *depends-db
-      mcp-tools:
-        condition: service_started
-    environment:
-      <<: *python-env
-      DATABASE_URL: postgresql://ai_svc:${AI_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      MCP_SERVER_URL: http://mcp-tools:8000/mcp
-      LLM_PROVIDER: ${LLM_PROVIDER}
-      LLM_MODEL: ${LLM_MODEL}
-      LLM_API_KEY: ${LLM_API_KEY}
-      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS}
 
   # ------------------------------------------------------------- frontend ----
   frontend:
@@ -231,8 +215,9 @@ services:
       retries: 3
 
 networks:
-  edge:      # gateway ↔ frontend
-  backend:   # gateway ↔ APIs ↔ infra (sin exposición al host salvo puertos declarados)
+  edge:          # gateway ↔ frontend
+  backend:       # gateway ↔ APIs REST de negocio ↔ infra
+  mcp_internal:  # canal directo y exclusivo n8n ↔ mcp-tools (sin pasar por gateway Nginx)
 
 volumes:
   pg_data:

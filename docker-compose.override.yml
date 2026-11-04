@@ -38,11 +38,6 @@ services:
     volumes:
       - ./services/matching-service/app:/app/app
 
-  ai-service:
-    <<: *py-dev
-    volumes:
-      - ./services/ai-service/app:/app/app
-
   mcp-tools:
     volumes:
       - ./mcp-tools/app:/app/app
