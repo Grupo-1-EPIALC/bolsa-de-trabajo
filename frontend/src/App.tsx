@@ -10,7 +10,7 @@ export const APP_TITLE = 'Bolsa de Trabajo';
 export function App() {
   const [activeTab, setActiveTab] = useState<'auth' | 'profile' | 'matching'>('matching');
 
-  // Estado completo con los datos de prueba
+  // Estado con datos de prueba estructurados
   const [matchData] = useState<MatchResponse>({
     rule_based: {
       origin: 'RULES',
@@ -90,6 +90,7 @@ export function App() {
           </section>
         )}
 
+        {/* Renderizado de los nuevos componentes integrados */}
         {activeTab === 'profile' && <StudentProfile />}
         {activeTab === 'auth' && <AuthForm />}
       </main>
