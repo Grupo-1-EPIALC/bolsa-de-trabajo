@@ -28,7 +28,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 AGENTES_DIR = ROOT / "n8n" / "agentes"
-PROMPTS_DIR = ROOT / "services" / "ai-service" / "prompts"
+PROMPTS_DIR = ROOT / "n8n" / "prompts"
 MCP_DATA_DIR = ROOT / "mcp-tools" / "app" / "data"
 SKILLS_DIR = MCP_DATA_DIR / "skills"
 OUT_DIR = ROOT / "n8n" / "workflows"

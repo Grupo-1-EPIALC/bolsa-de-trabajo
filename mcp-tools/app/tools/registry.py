@@ -126,7 +126,7 @@ def build_container(env: Mapping[str, str] | None = None) -> ServiceContainer:
             token,
         )
         recommendations = HttpRecommendationStore(
-            source_env.get("AI_SERVICE_URL", "http://ai-service:8000"),
+            source_env.get("MATCHING_SERVICE_URL", "http://matching-service:8000"),
             token,
         )
 

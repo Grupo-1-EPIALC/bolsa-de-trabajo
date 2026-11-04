@@ -1,0 +1,106 @@
+# PROMPTS.md — Registro de prompts y resumen de respuestas · MVP Bolsa de Trabajo
+
+> Archivo dedicado exclusivamente al historial de prompts relevantes utilizados con asistentes de IA de código durante el desarrollo del MVP (según [AGENTS.md §2.4 y §7](AGENTS.md)).
+
+## Reglas del registro
+
+- Una fila/entrada por prompt relevante (que generó código, diseño o decisiones arquitectónicas). Los triviales no hace falta registrarlos.
+- ID correlativo `P-NNN`. Se referencia en la descripción de cada Pull Request hacia `dev`.
+- El resumen de respuesta es de 1–3 líneas, escrito por la persona (no copiar la respuesta entera).
+- Columna **Decisión**: `aceptado`, `aceptado con cambios`, `descartado` (+ motivo).
+- Agregar entradas al final; no editar las anteriores (salvo corregir errores de tipeo).
+
+---
+
+## 1. Tabla resumen
+
+| ID | Fecha | Autor | Agente / herramienta | Rama | Prompt (resumen) | Resumen de la respuesta | Decisión |
+|---|---|---|---|---|---|---|---|
+| P-001 | 2026-10-30 | Andres | Claude (planificación) | `docs/plan/v0.0.1-plan-inicial` | Generar plan de trabajo para MVP de bolsa de trabajo con SOLID, REST, microservicios, Docker, Django, FastAPI, n8n, MCP Python y React; 4 personas, 2 semanas; PDF con arquitectura, capas, tecnologías, roles, plan, RF/RNF, HU y tests; MD con reglas de agentes y registro de prompts | Se generó `Plan_MVP_Bolsa_de_Trabajo.pdf` (11 secciones: servicios, 21 RF, 14 RNF, 18 HU ≈ 67 pts, 34 casos de test, plan día a día en 2 sprints, flujo Git) y `AGENTS.md` con agentes de desarrollo y de runtime | aceptado (pendiente revisión del equipo) |
+| P-002 | 2026-10-31 | Andres | Claude Code (`devops-agent`) | `chore/infra/v0.0.1-contenedores-base` | Crear sólo los contenedores y archivos de configuración comunes; auth-service pasa a NestJS | Compose (dev/prod), gateway Nginx, Postgres con rol+schema por servicio, Dockerfiles multi-stage no root con healthcheck, esqueletos `/health` por servicio, CI por carpeta, config común de lint y plantilla de PR | pendiente de revisión |
+| P-003 | 2026-10-31 | Andres | Antigravity (`mcp-agent` + `n8n-agent`) | `feature/mcp-n8n/v0.1.0-agentes-nvidia` | Armar flujos de n8n y agentes (orquestador, verificador, extractor de CV PDF/DOC/DOCX/MD y recomendador postulantes/empresas) usando modelos remotos de NVIDIA, reutilizando router/lectura de `agentes`, migrando Postgres a 17 y dejando toda la configuración en `.env` vía `mcp-tools` (con soporte futuro para panel y mocks de endpoints pendientes) | Migración a PostgreSQL 17, `mcp-tools` v0.1.0 con arquitectura limpia (`domain`/`application`/`infrastructure`/`tools`), router NVIDIA, `parse_cv_file` (con `antiword`), validación JSON Schema + grounding, mocks configurables (`MCP_USE_MOCKS`), cobertura 90 % y workflows `WF-0R`, `WF-0V`, `WF-00`, `WF-01` y `WF-06` | aceptado |
+| P-004 | 2026-11-01 | Andres | Antigravity (`mcp-agent` + `n8n-agent` + `devops-agent`) | `feature/mcp-n8n/v0.2.0-nodos-agente-y-skills` | Crear repo `Grupo-1-EPIALC/bolsa-de-trabajo` con reglas de publicación (PR + ramas por feature) y alinear la arquitectura de agentes con `C:\Users\Andres\proyectos\agentes` usando los nodos de Agente de n8n (`@n8n/n8n-nodes-langchain.agent`, `mcpClientTool`, `mcpClient`, `memoryBufferWindow`), perfiles MCP y skills (`leer_skill`), sin modelos locales Ollama | Repo creado y protegido en GitHub (`dev` y `main`), `mcp-tools` v0.2.0 con `ProfiledFastMCP` (`?perfil=`), `leer_skill` (con anti-bucle), `reglas.md`, skills de reclutamiento + ingeniería, catálogo `n8n/agentes/*.json` y workflows regenerados con nodos nativos de Agente de n8n conectados a NVIDIA NIM | aceptado |
+| P-005 | 2026-11-01 | Andres | Antigravity (`profile-agent` + `n8n-agent`) | `feature/profile/v0.1.0-cv-webhook-async` | Armar formulario de prueba en `profile-service` para enviar un CV al webhook de n8n (`WF-01`) con espera asíncrona e indicador de progreso, tarjetas verticales en columnas de ancho fijo con Bootstrap 5 y salto de línea en el JSON, optimizando la verificación y reemplazando campos ausentes por `COMPLETAR_MANUALMENTE` / `[]` (sin `null`) | Endpoints `/api/v1/profiles/cv-test`, `/cv-extract/async` y `/cv-extract/jobs/{job_id}` por capas en `profile-service` con UI Bootstrap 5 vertical y wrap de JSON, normalizador de campos análogos (`COMPLETAR_MANUALMENTE` + `pending_manual_fields`), `maxTokens: 8192` + reparador de JSON en `WF-00`/`WF-0R` y verificación instantánea determinística en `WF-0V` | aceptado |
+| P-006 | 2026-11-01 | Andres | Antigravity (`devops-agent` + `n8n-agent` + `mcp-agent`) | `refactor/infra/v0.2.0-sin-ai-service-y-prompts-md` | Simplificar arquitectura eliminando `ai-service` (ya que toda la IA corre en `n8n`), asegurar que `mcp-tools` se comunique directo con `n8n` sin pasar por Nginx (`gateway`), y separar el historial de prompts en un archivo independiente (`PROMPTS.md`) fuera de `README.md` y `AGENTS.md` | Eliminación de `services/ai-service` (plantillas movidas a `n8n/prompts/`), red interna `mcp_internal` directa entre `n8n` y `mcp-tools` sin exposición en `gateway/nginx.conf`, actualización de `docker-compose*.yml`, `.env.example`, `01-schemas.sh`, `ci.yml`, `README.md`, `AGENTS.md` y extracción del historial a `PROMPTS.md` | aceptado |
+| P-007 | | | | | | | |
+
+---
+
+## 2. Detalle de entradas
+
+### P-001 — Plan inicial del MVP
+- **Fecha:** 2026-10-30 · **Autor:** Andres · **Agente:** Claude · **Rama:** `docs/plan/v0.0.1-plan-inicial`
+- **Prompt (textual):**
+  > quiero generar un plan de trabajo para armar un mvp de una bolsa de trabajo. Quiero que se utilicen los principios solid y la arquitectura rest. usa los principios solid, arquitectura de microservicios, docker, python, django para la configuracion y autenticacion, fastapi, n8n como orquestador de agentes, un mcp local en python para las herramientas, y react para el frontend. […] somos 4 personas y tenemos 2 semanas. Funcionalidades: cargar empleos; recomendar candidatos; cargar CV en doc o pdf y que lo reconozca e integre al sistema, permitir editar o agregar información al perfil; login con mail y clave, cambiar clave/email, recuperar contraseña por mail; descargar CV generado en PDF; empresas con CUIT, actividad y búsquedas activas. Además: perfiles de estudiantes con competencias, ofertas con requisitos, comparación, scoring con criterios explícitos, competencias faltantes, recomendaciones de IA, automatización con n8n, distinguir resultados por reglas de recomendaciones IA. […] Armá en un PDF la arquitectura, capas, tecnologías, roles del equipo, plan de trabajo, requisitos funcionales y no funcionales, historias de usuario y test unitarios. Armá un md con las instrucciones y reglas para cada agente que incluya un registro de los prompts y un resumen de las respuestas. Versionado en GitHub con ramas separadas y versionadas por cada cambio, mergeando a dev.
+- **Resumen de la respuesta:**
+  - Arquitectura inicial de microservicios + gateway + n8n + mcp-tools en Python, JWT emitido por el servicio de autenticación y validado localmente por FastAPI.
+  - Scoring por reglas con 6 criterios y pesos explícitos (50/15/15/10/5/5) + regla excluyente; contrato JSON con bloques `rule_based` (`origin=RULES`) y `ai_recommendations` (`origin=AI`).
+  - Roles: TL/DevOps, QA Lead, Integraciones/n8n, SM/PO/Front; plan de 10 días con releases `v0.1.0`, `v0.9.0`, `v1.0.0`.
+  - Ramas `<tipo>/<servicio>/v<semver>-<desc>` → PR a `dev` → release a `main`.
+- **Decisión:** aceptado; el equipo valida la asignación de roles y el proveedor de LLM.
+
+### P-002 — Contenedores y configuración común
+- **Fecha:** 2026-10-31 · **Autor:** Andres · **Agente:** Claude Code (`devops-agent`) · **Rama:** `chore/infra/v0.0.1-contenedores-base` · **HU:** —
+- **Prompt (textual):**
+  > De estas instrucciones quiero solo crear los contenedores y archivos de configuracion comunes para todo el proyecto. El auth service se va a hacer finalmente con nesjs
+- **Resumen de la respuesta:**
+  - `docker-compose.yml` + `docker-compose.override.yml` (dev con hot reload), gateway Nginx con rutas por recurso, rate limit en login/reset y errores JSON; Postgres con rol + schema por servicio (n8n en base propia).
+  - Dockerfiles multi-stage, usuario no root y healthcheck; esqueleto mínimo con `/health` y un test por servicio (auth en NestJS 11).
+  - Cambios respecto del plan: auth en NestJS; Mailpit en lugar de MailHog; volumen Docker en lugar de MinIO para CVs.
+  - CI con detección de carpetas modificadas; `ruff.toml`, `.prettierrc.json`, `.editorconfig`, `.gitattributes`, plantilla de PR.
+- **Archivos afectados:** raíz, `gateway/`, `infra/`, `.github/`, `services/*`, `mcp-tools/`, `frontend/`, `AGENTS.md`.
+- **Decisión:** pendiente de revisión del equipo.
+
+### P-003 — Herramientas MCP, Router NVIDIA y Workflows n8n (Orquestador, Verificador, CV y Recomendador)
+- **Fecha:** 2026-10-31 · **Autor:** Andres · **Agente:** Antigravity (`mcp-agent` + `n8n-agent`) · **Rama:** `feature/mcp-n8n/v0.1.0-agentes-nvidia` · **HU:** transversal (IA / MCP / n8n)
+- **Prompt (resumido):**
+  > Armar los flujos de n8n y los agentes (orquestador, verificador, extractor de CV en PDF/MD/DOC/DOCX por webhook que devuelva JSON estandarizado, y recomendador por webhook para postulantes y empresas) usando modelos remotos de NVIDIA y reutilizando componentes de `C:\Users\Andres\proyectos\agentes`. Migrar Postgres a 17 sin dejar deuda técnica. No hardcodear cantidades ni modelos: tomarlos de `.env` a través de `mcp-tools` para que más adelante puedan venir de un panel de configuración, y mockear los endpoints que aún no existen.
+- **Resumen de la respuesta:**
+  - Migración de PostgreSQL 16 → 17 con dump/restore e importación de la credencial `OpenAI account` (NVIDIA) en `bolsa-n8n-1`.
+  - Implementación completa de `mcp-tools` v0.1.0 por capas SOLID (`domain`, `application`, `infrastructure`, `tools`), con `SettingsProvider` (`env` hoy, `panel` mañana), `ModelRouter` NVIDIA, `CvParserService` (PDF/DOCX/DOC con `antiword`/MD), `VerificationService` (JSON Schema + grounding + integridad de score), adaptadores HTTP y Mock (`MCP_USE_MOCKS=true`), middleware `X-Service-Token` y 90 % de cobertura en `pytest`.
+  - Generador `n8n/generate_workflows.py` y workflows `WF-0R`, `WF-0V`, `WF-00`, `WF-01` y `WF-06` en `n8n/workflows/`, más plantillas de prompts y schemas en `contracts/`.
+- **Archivos afectados:** `.env.example`, `docker-compose.yml`, `mcp-tools/`, `n8n/`, `contracts/`, `README.md`, `AGENTS.md`.
+- **Decisión:** aceptado.
+
+### P-004 — Nodos de Agente de n8n, Perfiles MCP, Skills (`leer_skill`) y Reglas de Repositorio GitHub
+- **Fecha:** 2026-11-01 · **Autor:** Andres · **Agente:** Antigravity (`mcp-agent` + `n8n-agent` + `devops-agent`) · **Rama:** `feature/mcp-n8n/v0.2.0-nodos-agente-y-skills` · **HU:** transversal (IA / MCP / n8n / DevOps)
+- **Prompt (resumido):**
+  > Crear el repositorio en `https://github.com/Grupo-1-EPIALC/bolsa-de-trabajo`, revisar `.gitignore`, armar el versionado, publicar en `dev` con reglas de publicación por ramas de feature y PR. Además, revisar cómo funcionan las herramientas, workflows y skills de `C:\Users\Andres\proyectos\agentes` para que acá funcionen de forma similar con los nodos de agente de n8n, pero sin los modelos locales.
+- **Resumen de la respuesta:**
+  - Creación y protección del repositorio `Grupo-1-EPIALC/bolsa-de-trabajo` (PR obligatorio + 1 aprobación + `CI Gate` + `Flujo Git y Versionado de Rama` en `dev` y `main`).
+  - Evolución de `mcp-tools` a `v0.2.0`: `ProfiledFastMCP` con filtrado de herramientas por `?perfil=` (`planificador`, `cv`, `postulante`, `empresa`, `verificador`, `adjuntos`), soporte de autenticación por `?key=` + `MaskKeyLogFilter`, `reglas.md` (`/reglas`), `FileSystemSkillRepository` con `leer_skill` (protección anti-bucle por sesión) y skills en `mcp-tools/app/data/skills/`.
+  - Catálogo de agentes en `n8n/agentes/{_sistema,cv_structurer,training_advisor,company_advisor}.json` y workflows `WF-0R`, `WF-0V`, `WF-00`, `WF-01` y `WF-06` regenerados usando `@n8n/n8n-nodes-langchain.agent`, `@n8n/n8n-nodes-langchain.lmChatOpenAi` (solo NVIDIA NIM, sin Ollama local), `@n8n/n8n-nodes-langchain.memoryBufferWindow`, `@n8n/n8n-nodes-langchain.mcpClientTool` y `@n8n/n8n-nodes-langchain.mcpClient`.
+- **Archivos afectados:** `.gitignore`, `.github/workflows/ci.yml`, `VERSION`, `mcp-tools/`, `n8n/agentes/`, `n8n/generate_workflows.py`, `n8n/workflows/`, `AGENTS.md`.
+- **Decisión:** aceptado.
+
+### P-005 — Formulario de prueba asíncrono en `profile-service` (Bootstrap 5) y normalización de CV sin `null`
+- **Fecha:** 2026-11-01 · **Autor:** Andres · **Agente:** Antigravity (`profile-agent` + `n8n-agent`) · **Rama:** `feature/profile/v0.1.0-cv-webhook-async` · **HU:** HU-04 / HU-05 (Carga y estructuración de CV)
+- **Prompt (resumido):**
+  > Armar una interfaz de prueba en `profile-service` para enviar un CV al webhook de n8n y devolver el JSON con el perfil. Corregir la demora agregando un indicador de progreso y espera asíncrona del resultado, reconocer campos presentes o análogos devolviendo vacíos los faltantes sin usar `null` (con un indicador para completar manualmente), reparar la extracción en CVs PDF extensos y organizar las tarjetas de forma vertical con ancho fijo en columnas Bootstrap y salto de línea en las respuestas (incluido el JSON).
+- **Resumen de la respuesta:**
+  - Implementación por capas en `services/profile-service` (`domain/`, `application/`, `infrastructure/`, `api/`): almacenamiento en `CV_STORAGE_PATH`, cola en memoria `CvExtractionJobStore`, endpoints `POST /api/v1/profiles/cv-extract/async`, `GET /api/v1/profiles/cv-extract/jobs/{job_id}` y formulario `GET /api/v1/profiles/cv-test` maquetado con Bootstrap 5.3.3 (`cv-fixed-col` vertical + `json-pre` con `pre-wrap`/`overflow-wrap: anywhere`).
+  - Normalización tolerante (`normalize_cv_suggestions` y `normalizeCvCandidate`): mapea claves análogas en español/inglés, reemplaza escalares ausentes por `"COMPLETAR_MANUALMENTE"` y listas vacías por `[]` (cero `null`), y genera `pending_manual_fields`.
+  - Optimización de `WF-0R`, `WF-00` y `WF-0V`: `maxTokens: 8192` en NVIDIA NIM para evitar truncamiento tras `<think>`, reparador `extractJsonObject`/`repairJsonString` y fast-path determinístico en `WF-0V`.
+- **Archivos afectados:** `services/profile-service/`, `n8n/agentes/cv_structurer.json`, `n8n/generate_workflows.py`, `n8n/workflows/`, `mcp-tools/app/data/schemas/cv_standard.schema.json`, `contracts/cv_standard.schema.json`, `gateway/nginx.conf`, `.env.example`, `AGENTS.md`.
+- **Decisión:** aceptado.
+
+### P-006 — Simplificación arquitectónica: eliminación de `ai-service`, red directa `n8n ↔ mcp-tools` y separación de `PROMPTS.md`
+- **Fecha:** 2026-11-01 · **Autor:** Andres · **Agente:** Antigravity (`devops-agent` + `n8n-agent` + `mcp-agent`) · **Rama:** `refactor/infra/v0.2.0-sin-ai-service-y-prompts-md` · **HU:** transversal (Arquitectura / DevOps / Documentación)
+- **Prompt (resumido):**
+  > Vamos a hacer un cambio en la arquitectura: el servicio de IA (`ai-service`) no tiene sentido porque en realidad todo lo hace `n8n`, ni tampoco tiene sentido que `mcp-tools` pase por Nginx para comunicarse con `n8n` que es el único que lo va a consumir. Además, que el historial de prompts se registre en un archivo por separado y no esté en el `README.md`. Hacer esos cambios en la arquitectura y en `AGENTS.md`.
+- **Resumen de la respuesta:**
+  - Eliminación del contenedor y carpeta `services/ai-service` (trasladando las plantillas de prompts a `n8n/prompts/*.md` y el guardado de recomendaciones a `matching-service`), quitando `ai_svc` de Postgres, `location /api/v1/ai/` de Nginx y `ai-service` del matrix de CI.
+  - Comunicación directa y exclusiva `n8n ↔ mcp-tools` (`http://mcp-tools:8000/mcp`) mediante la red interna `mcp_internal` en `docker-compose.yml`, sin pasar por el API Gateway Nginx.
+  - Extracción del registro de prompts a `PROMPTS.md` y actualización de `AGENTS.md`, `README.md` y `.github/PULL_REQUEST_TEMPLATE.md`.
+- **Archivos afectados:** `PROMPTS.md`, `AGENTS.md`, `README.md`, `docker-compose.yml`, `docker-compose.override.yml`, `gateway/nginx.conf`, `infra/postgres/init/01-schemas.sh`, `.env.example`, `.github/workflows/ci.yml`, `.github/PULL_REQUEST_TEMPLATE.md`, `n8n/generate_workflows.py`, `n8n/prompts/`, `mcp-tools/`, `contracts/mock_endpoints.yaml`.
+- **Decisión:** aceptado.
+
+### P-007 — (plantilla)
+- **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
+- **Prompt (textual o resumido):**
+  > …
+- **Resumen de la respuesta:**
+  - …
+- **Archivos afectados:** …
+- **Decisión:** aceptado / aceptado con cambios / descartado — motivo
+

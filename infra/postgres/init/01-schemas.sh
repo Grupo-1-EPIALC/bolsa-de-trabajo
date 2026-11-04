@@ -28,7 +28,6 @@ create_service_schema auth_svc     auth     "$AUTH_DB_PASSWORD"
 create_service_schema profile_svc  profile  "$PROFILE_DB_PASSWORD"
 create_service_schema jobs_svc     jobs     "$JOBS_DB_PASSWORD"
 create_service_schema matching_svc matching "$MATCHING_DB_PASSWORD"
-create_service_schema ai_svc       ai       "$AI_DB_PASSWORD"
 
 # n8n es una herramienta externa que gestiona su propio esquema (corre
 # CREATE SCHEMA al iniciar): se le da una base separada de la que es dueño.
