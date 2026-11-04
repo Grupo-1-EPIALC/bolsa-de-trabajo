@@ -1,4 +1,4 @@
-    import { apiFetch } from './api';
+import { apiFetch } from './api';
 import { StudentProfile } from '../types/profile';
 
 export const profileService = {
