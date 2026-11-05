@@ -16,7 +16,7 @@
 
 | ID | Fecha | Autor | Agente / herramienta | Rama | Prompt (resumen) | Resumen de la respuesta | Decisión |
 |---|---|---|---|---|---|---|---|
-| P-001 | 2026-10-30 | Andres | Claude (planificación) | `docs/plan/v0.0.1-plan-inicial` | Generar plan de trabajo para MVP de bolsa de trabajo con SOLID, REST, microservicios, Docker, Django, FastAPI, n8n, MCP Python y React; 4 personas, 2 semanas; PDF con arquitectura, capas, tecnologías, roles, plan, RF/RNF, HU y tests; MD con reglas de agentes y registro de prompts | Se generó `Plan_MVP_Bolsa_de_Trabajo.pdf` (11 secciones: servicios, 21 RF, 14 RNF, 18 HU ≈ 67 pts, 34 casos de test, plan día a día en 2 sprints, flujo Git) y `AGENTS.md` con agentes de desarrollo y de runtime | aceptado (pendiente revisión del equipo) |
+| P-001 | 2026-10-30 | Andres | Claude (planificación) | `docs/plan/v0.0.1-plan-inicial` | Generar plan de trabajo para MVP de bolsa de trabajo con SOLID, REST, microservicios, Docker, Django, FastAPI, n8n, MCP Python y React; 4 personas, 2 semanas; PDF con arquitectura, capas, tecnologías, roles, plan, RF/RNF, HU y tests; MD con reglas de agentes y registro de prompts | Se generó `Plan_MVP_Bolsa_de_Trabajo.pdf` (11 secciones: 7 servicios, 21 RF, 14 RNF, 18 HU ≈ 67 pts, 34 casos de test, plan día a día en 2 sprints, flujo Git) y este AGENTS.md con 10 agentes de desarrollo y 3 de runtime | aceptado (pendiente revisión del equipo) |
 | P-002 | 2026-10-31 | Andres | Claude Code (`devops-agent`) | `chore/infra/v0.0.1-contenedores-base` | Crear sólo los contenedores y archivos de configuración comunes; auth-service pasa a NestJS | Compose (dev/prod), gateway Nginx, Postgres con rol+schema por servicio, Dockerfiles multi-stage no root con healthcheck, esqueletos `/health` por servicio, CI por carpeta, config común de lint y plantilla de PR | pendiente de revisión |
 | P-003 | 2026-10-31 | Andres | Antigravity (`mcp-agent` + `n8n-agent`) | `feature/mcp-n8n/v0.1.0-agentes-nvidia` | Armar flujos de n8n y agentes (orquestador, verificador, extractor de CV PDF/DOC/DOCX/MD y recomendador postulantes/empresas) usando modelos remotos de NVIDIA, reutilizando router/lectura de `agentes`, migrando Postgres a 17 y dejando toda la configuración en `.env` vía `mcp-tools` (con soporte futuro para panel y mocks de endpoints pendientes) | Migración a PostgreSQL 17, `mcp-tools` v0.1.0 con arquitectura limpia (`domain`/`application`/`infrastructure`/`tools`), router NVIDIA, `parse_cv_file` (con `antiword`), validación JSON Schema + grounding, mocks configurables (`MCP_USE_MOCKS`), cobertura 90 % y workflows `WF-0R`, `WF-0V`, `WF-00`, `WF-01` y `WF-06` | aceptado |
 | P-004 | 2026-11-01 | Andres | Antigravity (`mcp-agent` + `n8n-agent` + `devops-agent`) | `feature/mcp-n8n/v0.2.0-nodos-agente-y-skills` | Crear repo `Grupo-1-EPIALC/bolsa-de-trabajo` con reglas de publicación (PR + ramas por feature) y alinear la arquitectura de agentes con `C:\Users\Andres\proyectos\agentes` usando los nodos de Agente de n8n (`@n8n/n8n-nodes-langchain.agent`, `mcpClientTool`, `mcpClient`, `memoryBufferWindow`), perfiles MCP y skills (`leer_skill`), sin modelos locales Ollama | Repo creado y protegido en GitHub (`dev` y `main`), `mcp-tools` v0.2.0 con `ProfiledFastMCP` (`?perfil=`), `leer_skill` (con anti-bucle), `reglas.md`, skills de reclutamiento + ingeniería, catálogo `n8n/agentes/*.json` y workflows regenerados con nodos nativos de Agente de n8n conectados a NVIDIA NIM | aceptado |
@@ -24,7 +24,8 @@
 | P-006 | 2026-11-01 | Andres | Antigravity (`devops-agent` + `n8n-agent` + `mcp-agent`) | `refactor/infra/v0.2.0-sin-ai-service-y-prompts-md` | Simplificar arquitectura eliminando `ai-service` (ya que toda la IA corre en `n8n`), asegurar que `mcp-tools` se comunique directo con `n8n` sin pasar por Nginx (`gateway`), y separar el historial de prompts en un archivo independiente (`PROMPTS.md`) fuera de `README.md` y `AGENTS.md` | Eliminación de `services/ai-service` (plantillas movidas a `n8n/prompts/`), red interna `mcp_internal` directa entre `n8n` y `mcp-tools` sin exposición en `gateway/nginx.conf`, actualización de `docker-compose*.yml`, `.env.example`, `01-schemas.sh`, `ci.yml`, `README.md`, `AGENTS.md` y extracción del historial a `PROMPTS.md` | aceptado |
 | P-007 | 2026-11-04 | Andres | Claude Code (`matching-agent`) | `feature/matching/v0.1.0-motor-reglas-y-recomendador` | En base a `estructura_comun_perfil_oferta_match.md`, armar el servicio de match (n8n analiza y el servicio devuelve las recomendaciones); pool de datos de prueba; contrato para el front con el cálculo del score; integrar el JWT de auth-service; límites de ofertas/candidatos configurables por admin | `matching-service` v0.1.0 por capas (6 criterios, regla excluyente, `MissingSkillsAnalyzer`, 12 `ConditionCheck`, `SalaryComparator`, rankings, pedidos a WF-06, guardado y vistas reglas+IA), JWT RS256 vía JWKS con acceso por rol y dueño, `/settings` para admin, pool de 15 perfiles y 12 ofertas, `contracts/matching_frontend.md`; 102 tests, 97 % | pendiente de revisión |
 | P-008 | 2026-11-05 | Andres | Claude Code (`mcp-agent` + `n8n-agent`) | `feature/mcp-n8n/v0.3.0-match-advisor-ranking` | Agente de n8n que hace los match para recomendar a empresas y estudiantes; herramientas MCP de ranking (`rank_jobs_for_student`, `rank_candidates_for_job`) usadas por WF-06; cantidades configurables por admin | `mcp-tools` v0.3.0 con las 2 herramientas (HTTP a matching-service + mocks, perfiles `postulante`/`empresa`), agente `match_advisor` (Jean Grey) con prompt y 2 schemas sin score (`maxItems` 20), WF-06 reescrito (`student`/`company` por MCP, `training` conservado) que descarta score/rank/ids inventados y guarda en matching-service | pendiente de revisión |
-| P-009 | | | | | | | |
+| P-009 | 2026-11-05 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.1.0-vistas-iniciales` | Maquetación SPA responsive del Frontend en React + Vite + Tailwind v4, cliente HTTP `apiFetch` desacoplado, manejo de respuestas 304/404, validación de CV ≤5MB (RNF-04), AuthForm con CUIT/Registro y redirección automática con Toast centrado | Layout SPA desacoplado (`VITE_USE_MOCKS`), componentes `RuleScoreCard` (badge verde `RULES`), `AISuggestionCard` (badge ámbar `AI` con disclaimer), `StudentProfile` (CV PDF/DOCX), `AuthForm` con soporte CUIT/Razón Social y Toast flotante de bienvenida | aceptado |
+| P-010 | | | | | | | |
 
 ---
 
@@ -119,7 +120,20 @@
 - **Archivos afectados:** `mcp-tools/`, `n8n/agentes/match_advisor.json`, `n8n/prompts/match_advisor.md`, `n8n/generate_workflows.py`, `n8n/workflows/`, `contracts/match_student_recommendations.schema.json`, `contracts/match_company_recommendations.schema.json`, `contracts/mock_endpoints.yaml`, `AGENTS.md`.
 - **Decisión:** pendiente de revisión (requiere review de Integrante 1 por `mcp-tools`).
 
-### P-009 — (plantilla)
+### P-009 — Maquetación SPA del Frontend, Cliente API y UX de Navegación (v0.1.0)
+- **Fecha:** 2026-11-05 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.1.0-vistas-iniciales` · **HU / RNF:** HU-01, HU-02, HU-03, HU-07, HU-08, HU-14, HU-15 / RNF-04, RNF-12, RF-19
+- **Prompt (resumido):**
+  > Desarrollar e integrar la interfaz SPA del Frontend en React 18 + Vite + Tailwind CSS v4, estableciendo la capa de infraestructura HTTP desacoplada (`VITE_USE_MOCKS`) para alternar entre datos locales de prueba y el API Gateway Nginx (`http://localhost:8080/api/v1`), implementando la separación visual de Scoring (RULES vs AI), Perfil de Estudiante con validación de CV y Auth con CUIT/Registro y Toast de bienvenida.
+- **Resumen de la respuesta:**
+  - Implementación de cliente HTTP resiliente `src/services/api.ts` (`apiFetch`) sanitizado para respuestas 304, 404, 500 y parseo seguro de JSON.
+  - Componentes `RuleScoreCard.tsx` (badge verde `origin="RULES"`, fondo tenue `bg-emerald-100/60`) y `AISuggestionCard.tsx` (badge ámbar `origin="AI"`, fondo tenue `bg-amber-100/60` con disclaimer).
+  - Formulario `AuthForm.tsx` con soporte para CUIT/Razón Social y notificación callback `onLoginSuccess` para redirección automática y Toast centrado de bienvenida (3 seg).
+  - Componente `StudentProfile.tsx` con encabezado destacado (`text-2xl sm:text-3xl font-black`) y validación en cliente para CVs PDF/DOCX max 5 MB (RNF-04).
+  - Menú hamburguesa responsive (`md:hidden`) y layout Full-width en `App.tsx`.
+- **Archivos afectados:** `frontend/src/App.tsx`, `frontend/src/components/*`, `frontend/src/services/*`, `frontend/src/types/*`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (comprobado localmente en Vite y validado en vivo contra el stack Docker de microservicios).
+
+### P-010 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
@@ -127,4 +141,3 @@
   - …
 - **Archivos afectados:** …
 - **Decisión:** aceptado / aceptado con cambios / descartado — motivo
-
