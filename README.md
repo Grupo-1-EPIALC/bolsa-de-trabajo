@@ -54,6 +54,18 @@ Si algún puerto está ocupado en tu máquina, cambialo en `.env` (`GATEWAY_PORT
 1. **Sin `ai-service` intermedio**: toda la orquestación y ejecución de agentes de IA (estructuración de CVs, recomendaciones para estudiantes y empresas, selección de modelos en NVIDIA NIM y verificación anti-alucinación) se ejecuta directamente en **`n8n`**.
 2. **Comunicación directa `n8n ↔ mcp-tools` sin pasar por Nginx**: `n8n` es el único consumidor de `mcp-tools` y se conecta directamente a `http://mcp-tools:8000/mcp` a través de la red interna `mcp_internal`, sin exponer ni enrutar `mcp-tools` en el API Gateway (`gateway/nginx.conf`).
 
+### Auth API
+
+`auth-service` mantiene las cuentas (`student`, `company`, `admin`) en el schema PostgreSQL `auth`. Los datos profesionales de estudiantes y las vacantes permanecen en sus respectivos servicios.
+
+- `POST /api/v1/auth/register`: alta de `student` o `company`; las empresas envían razón social, CUIT y actividad.
+- `POST /api/v1/auth/login` (alias compatible: `/token`) y `POST /api/v1/auth/token/refresh`: login y rotación de refresh token.
+- `GET /api/v1/auth/me`, `POST /api/v1/auth/password/change`, `POST /api/v1/auth/email/change`: requieren `Authorization: Bearer <access_token>`.
+- `POST /api/v1/auth/password/reset`, `/password/reset/confirm`, `/email/confirm`: recuperación y confirmación de credenciales por email.
+- `GET /api/v1/auth/.well-known/jwks.json`: publica la clave RSA pública para validar access tokens RS256.
+
+El access token dura 15 minutos; el refresh token dura 7 días y se almacena como hash, se rota al usarlo y se revoca al cambiar o restablecer la contraseña. TypeORM aplica las migraciones de auth al iniciar el servicio. En desarrollo, los correos salen por SMTP hacia Mailpit.
+
 ### Agentes IA (`n8n`) y Servidor MCP (`mcp-tools`)
 
 - **`mcp-tools` (`v0.2.0`)**: expone herramientas MCP filtradas por perfil (`?perfil=planificador|cv|postulante|empresa|verificador|adjuntos`) y endpoints HTTP internos protegidos por `X-Service-Token`:
