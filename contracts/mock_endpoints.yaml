@@ -69,7 +69,7 @@ paths:
   /api/v1/matches:
     post:
       summary: Calcula el puntaje de compatibilidad por reglas (origin=RULES)
-      x-status: mock
+      x-status: implemented  # matching-service v0.1.0 (ver contracts/matching_service.openapi.json)
       requestBody:
         required: true
         content:
@@ -86,7 +86,7 @@ paths:
   /api/v1/matches/missing-skills:
     post:
       summary: Devuelve competencias faltantes y brecha de nivel ordenadas por prioridad
-      x-status: mock
+      x-status: implemented  # matching-service v0.1.0 (ver contracts/matching_service.openapi.json)
       requestBody:
         required: true
         content:
@@ -103,7 +103,7 @@ paths:
   /api/v1/matches/recommendations:
     post:
       summary: Persiste una recomendación generada por IA en n8n (origin=AI)
-      x-status: mock
+      x-status: implemented  # matching-service v0.1.0 (ver contracts/matching_service.openapi.json)
       requestBody:
         required: true
         content:

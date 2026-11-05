@@ -160,6 +160,8 @@ services:
       DATABASE_URL: postgresql://matching_svc:${MATCHING_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PROFILE_SERVICE_URL: http://profile-service:8000
       JOBS_SERVICE_URL: http://jobs-service:8000
+      # true = perfiles y ofertas ficticios hasta que profile/jobs expongan GET (ver app/data/mock)
+      MATCHING_USE_MOCKS: ${MATCHING_USE_MOCKS:-true}
 
   mcp-tools:
     <<: *common

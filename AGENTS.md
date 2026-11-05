@@ -154,6 +154,11 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Normalización de skills (minúsculas, sin acentos, sinónimos).
 - Respuestas de reglas siempre con `origin: "RULES"` y `engine_version`.
 - Exponer endpoint interno para persistir recomendaciones generadas por `n8n` (`POST /api/v1/matches/recommendations`, con `origin: "AI"`).
+- Usar la estructura común de [`contracts/estructura_comun_perfil_oferta_match.md`](contracts/estructura_comun_perfil_oferta_match.md): condiciones laborales en un bloque `conditions_fit` separado del score (un `ConditionCheck` por clase, `hard` configurable) y sueldo pretendido ↔ ofrecido en `salary_fit`, respetando su `visibility`.
+- Rankings por reglas en ambos sentidos (`GET /api/v1/matches/students/{profile_id}/jobs` y `GET /api/v1/matches/jobs/{job_id}/candidates`) con snapshots sin datos personales; pedidos de análisis a `WF-06` (`POST /api/v1/matches/recommendations/requests`), guardado del resultado (`POST /api/v1/matches/recommendations/batch`) y vistas combinadas reglas + IA (`GET /api/v1/matches/recommendations/{students|jobs}/{id}`). Contrato en `contracts/matching_service.openapi.json`.
+- Descartar cualquier `score`/`rank` que venga en contenido de IA: el valor mostrado sale siempre del motor.
+- Autenticar usuarios con el JWT RS256 de auth-service validado localmente contra el JWKS (`iss`, `aud`, `exp`, `role`) y servicios sólo con `X-Service-Token` (nunca como Bearer). Acceso por dueño: `student` → `profile.user_id == sub`; `company` → `job.company_id == sub`; recurso ajeno → 404; endpoints internos → 403 para usuarios. Contrato para el front en `contracts/matching_frontend.md`.
+- Cantidad de ofertas por estudiante y de candidatos por oferta configurable por un `admin` (`GET`/`PATCH /api/v1/matches/settings`, 1–20, valores iniciales en `scoring_rules.yaml`). Rige para vistas, rankings y pedidos de IA; un `limit` explícito sólo puede achicarla.
 **No debe:** llamar a ningún LLM directamente.
 **Tests mínimos:** UT-MATCH-01 a UT-MATCH-09.
 

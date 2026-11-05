@@ -1,0 +1,1177 @@
+[
+  {
+    "id": "job-001",
+    "company_id": "22222222-2222-4222-8222-000000000001",
+    "title": "Desarrollador/a Backend Python Jr.",
+    "company_snapshot": {
+      "name": "PampaTech S.A.",
+      "industry": "software",
+      "size": "51-200"
+    },
+    "status": "active",
+    "seniority": "junior",
+    "description": "Desarrollo de microservicios REST con Python, FastAPI y PostgreSQL.",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "lat": -34.5997,
+      "lon": -58.3819
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time",
+        "part_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 2,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 30,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "travel_availability": "none",
+      "salary": {
+        "min": 800000,
+        "max": 1000000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "adjustment": "quarterly",
+        "visibility": "public"
+      }
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Python",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "FastAPI",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "SQL",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Docker",
+          "level": 3,
+          "kind": "desired"
+        },
+        {
+          "name": "Testing",
+          "level": 2,
+          "kind": "desired"
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "B1",
+          "kind": "required"
+        }
+      ],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "field": "sistemas",
+          "kind": "required"
+        }
+      ],
+      "experience": {
+        "min_years": 1,
+        "area": "desarrollo backend",
+        "kind": "required"
+      },
+      "academic": {
+        "min_progress_percent": 50
+      }
+    },
+    "benefits": [
+      "capacitación",
+      "días de estudio",
+      "prepaga"
+    ]
+  },
+  {
+    "id": "job-002",
+    "company_id": "22222222-2222-4222-8222-000000000002",
+    "title": "Desarrollador/a Frontend React + TypeScript",
+    "company_snapshot": {
+      "name": "Andes Digital S.R.L.",
+      "industry": "software",
+      "size": "11-50"
+    },
+    "status": "active",
+    "seniority": "junior",
+    "description": "Construcción de interfaces accesibles en React 18 y TypeScript.",
+    "location": {
+      "country": "AR",
+      "province": "Mendoza",
+      "city": "Mendoza"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "freelance"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 30
+      },
+      "shifts": [
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "work_authorization": [
+        "AR",
+        "UY"
+      ],
+      "salary": {
+        "to_agree": true,
+        "visibility": "hidden"
+      }
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "React",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "TypeScript",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Git",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Node.js",
+          "level": 2,
+          "kind": "desired"
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "B2",
+          "kind": "required"
+        }
+      ],
+      "experience": {
+        "min_years": 1,
+        "area": "frontend",
+        "kind": "required"
+      }
+    },
+    "benefits": [
+      "horario flexible",
+      "equipo provisto"
+    ]
+  },
+  {
+    "id": "job-003",
+    "company_id": "22222222-2222-4222-8222-000000000003",
+    "title": "Ingeniero/a de Datos y Automatización",
+    "company_snapshot": {
+      "name": "Río Plata Analytics S.A.",
+      "industry": "datos",
+      "size": "201-1000"
+    },
+    "status": "active",
+    "seniority": "semi_senior",
+    "description": "Pipelines de datos en Python y SQL sobre contenedores Docker.",
+    "location": {
+      "country": "AR",
+      "province": "Buenos Aires",
+      "city": "Vicente López",
+      "lat": -34.5266,
+      "lon": -58.4794
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "onsite",
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 4,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 45
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "travel_availability": "occasional",
+      "driver_license": [
+        "B1"
+      ],
+      "salary": {
+        "min": 1200000,
+        "max": 1500000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match"
+      }
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Python",
+          "level": 4,
+          "kind": "excluding"
+        },
+        {
+          "name": "SQL",
+          "level": 4,
+          "kind": "required"
+        },
+        {
+          "name": "Docker",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Linux",
+          "level": 3,
+          "kind": "desired"
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "B2",
+          "kind": "required"
+        }
+      ],
+      "education": [
+        {
+          "level": "tertiary",
+          "status": "completed",
+          "kind": "required"
+        }
+      ],
+      "experience": {
+        "min_years": 2,
+        "area": "datos",
+        "kind": "required"
+      }
+    },
+    "benefits": [
+      "bono anual",
+      "prepaga"
+    ]
+  },
+  {
+    "id": "job-004",
+    "company_id": "22222222-2222-4222-8222-000000000004",
+    "title": "Desarrollador/a Python Trainee (remoto)",
+    "company_snapshot": {
+      "name": "Nube Austral S.A.",
+      "industry": "software",
+      "size": "51-200"
+    },
+    "status": "active",
+    "seniority": "trainee",
+    "description": "Primer empleo en desarrollo Python: scripts, APIs internas y tests, con mentoría.",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "lat": -34.6037,
+      "lon": -58.3816
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "travel_availability": "none",
+      "salary": {
+        "min": 600000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "public",
+        "negotiable": false,
+        "max": 800000
+      }
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Python",
+          "level": 2,
+          "kind": "required"
+        },
+        {
+          "name": "Git",
+          "level": 2,
+          "kind": "required"
+        },
+        {
+          "name": "SQL",
+          "level": 2,
+          "kind": "desired"
+        },
+        {
+          "name": "Testing",
+          "level": 1,
+          "kind": "desired"
+        },
+        {
+          "name": "Docker",
+          "level": 1,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 0,
+        "area": "desarrollo",
+        "kind": "required"
+      },
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "A2",
+          "kind": "desired"
+        }
+      ],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "kind": "required"
+        }
+      ],
+      "academic": {
+        "min_progress_percent": 30
+      }
+    },
+    "benefits": [
+      "mentoría",
+      "días de estudio",
+      "equipo provisto"
+    ]
+  },
+  {
+    "id": "job-005",
+    "company_id": "22222222-2222-4222-8222-000000000005",
+    "title": "QA Automation Jr.",
+    "company_snapshot": {
+      "name": "Ceibo Software S.R.L.",
+      "industry": "software",
+      "size": "11-50"
+    },
+    "status": "active",
+    "seniority": "junior",
+    "description": "Automatización de pruebas web y de APIs con Python y Selenium.",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "lat": -34.6037,
+      "lon": -58.3816
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time",
+        "part_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 30,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "travel_availability": "none",
+      "salary": {
+        "min": 750000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false,
+        "max": 950000
+      },
+      "hybrid_onsite_days": 2
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Testing",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Python",
+          "level": 2,
+          "kind": "required"
+        },
+        {
+          "name": "Selenium",
+          "level": 2,
+          "kind": "desired"
+        },
+        {
+          "name": "Git",
+          "level": 2,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 0.5,
+        "area": "testing",
+        "kind": "required"
+      },
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "B1",
+          "kind": "required"
+        }
+      ]
+    },
+    "benefits": [
+      "capacitación",
+      "prepaga"
+    ]
+  },
+  {
+    "id": "job-006",
+    "company_id": "22222222-2222-4222-8222-000000000006",
+    "title": "Analista de Datos Jr.",
+    "company_snapshot": {
+      "name": "Datos del Sur S.A.",
+      "industry": "datos",
+      "size": "201-1000"
+    },
+    "status": "active",
+    "seniority": "junior",
+    "description": "Modelado de datos, consultas SQL y tableros en Power BI para áreas de negocio.",
+    "location": {
+      "country": "AR",
+      "province": "Córdoba",
+      "city": "Córdoba",
+      "lat": -31.4201,
+      "lon": -64.1888
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "travel_availability": "none",
+      "salary": {
+        "min": 900000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false,
+        "max": 1100000
+      }
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "SQL",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Python",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Power BI",
+          "level": 2,
+          "kind": "desired"
+        },
+        {
+          "name": "Excel",
+          "level": 3,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 1,
+        "area": "datos",
+        "kind": "required"
+      },
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "B1",
+          "kind": "required"
+        }
+      ],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "kind": "required"
+        }
+      ]
+    },
+    "benefits": [
+      "bono anual",
+      "home office",
+      "prepaga"
+    ]
+  },
+  {
+    "id": "job-007",
+    "company_id": "22222222-2222-4222-8222-000000000007",
+    "title": "Soporte Técnico Nivel 1 (presencial)",
+    "company_snapshot": {
+      "name": "Litoral Sistemas S.A.",
+      "industry": "servicios IT",
+      "size": "51-200"
+    },
+    "status": "active",
+    "seniority": "junior",
+    "description": "Atención de incidentes, mantenimiento de puestos y redes en oficinas de clientes.",
+    "location": {
+      "country": "AR",
+      "province": "Santa Fe",
+      "city": "Rosario",
+      "lat": -32.9442,
+      "lon": -60.6505
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "onsite"
+      ],
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 45,
+        "max": 45
+      },
+      "shifts": [
+        "rotating"
+      ],
+      "availability_start": "immediate",
+      "travel_availability": "frequent",
+      "salary": {
+        "min": 700000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "public",
+        "negotiable": false,
+        "max": 800000
+      },
+      "driver_license": [
+        "B1"
+      ]
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Linux",
+          "level": 2,
+          "kind": "required"
+        },
+        {
+          "name": "Redes",
+          "level": 2,
+          "kind": "required"
+        },
+        {
+          "name": "Windows",
+          "level": 2,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 0,
+        "area": "soporte",
+        "kind": "required"
+      }
+    },
+    "benefits": [
+      "viáticos",
+      "capacitación"
+    ]
+  },
+  {
+    "id": "job-008",
+    "company_id": "22222222-2222-4222-8222-000000000002",
+    "title": "Desarrollador/a Backend Node.js SSr",
+    "company_snapshot": {
+      "name": "Andes Digital S.R.L.",
+      "industry": "software",
+      "size": "11-50"
+    },
+    "status": "active",
+    "seniority": "semi_senior",
+    "description": "APIs REST en Node.js + TypeScript sobre PostgreSQL y AWS para clientes de LATAM.",
+    "location": {
+      "country": "AR",
+      "province": "Mendoza",
+      "city": "Mendoza",
+      "lat": -32.8895,
+      "lon": -68.8458
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "freelance"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "travel_availability": "none",
+      "salary": {
+        "min": 1500,
+        "max": 2000,
+        "currency": "USD",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match"
+      },
+      "work_authorization": [
+        "AR",
+        "UY",
+        "CL"
+      ]
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Node.js",
+          "level": 4,
+          "kind": "excluding"
+        },
+        {
+          "name": "TypeScript",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "PostgreSQL",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Docker",
+          "level": 3,
+          "kind": "desired"
+        },
+        {
+          "name": "AWS",
+          "level": 2,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 3,
+        "area": "backend",
+        "kind": "required"
+      },
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "B2",
+          "kind": "required"
+        }
+      ]
+    },
+    "benefits": [
+      "pago en USD",
+      "horario flexible"
+    ]
+  },
+  {
+    "id": "job-009",
+    "company_id": "22222222-2222-4222-8222-000000000009",
+    "title": "Pasantía en Desarrollo Web",
+    "company_snapshot": {
+      "name": "Laboratorio Universidad-Empresa",
+      "industry": "educación",
+      "size": "11-50"
+    },
+    "status": "active",
+    "seniority": "trainee",
+    "description": "Pasantía con convenio universitario: maquetado y componentes en React.",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "lat": -34.6037,
+      "lon": -58.3816
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "employment_type": [
+        "internship"
+      ],
+      "contract_duration": [
+        "fixed_term"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 30
+      },
+      "shifts": [
+        "morning"
+      ],
+      "availability_start": "immediate",
+      "travel_availability": "none",
+      "salary": {
+        "min": 450000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "public",
+        "negotiable": false,
+        "max": 450000
+      },
+      "hybrid_onsite_days": 2
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "HTML",
+          "level": 2,
+          "kind": "required"
+        },
+        {
+          "name": "CSS",
+          "level": 2,
+          "kind": "required"
+        },
+        {
+          "name": "JavaScript",
+          "level": 2,
+          "kind": "required"
+        },
+        {
+          "name": "React",
+          "level": 1,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 0,
+        "area": "frontend",
+        "kind": "required"
+      },
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "kind": "required"
+        }
+      ],
+      "academic": {
+        "min_progress_percent": 40
+      }
+    },
+    "benefits": [
+      "convenio de pasantía",
+      "días de estudio"
+    ]
+  },
+  {
+    "id": "job-010",
+    "company_id": "22222222-2222-4222-8222-000000000010",
+    "title": "Analista Contable Jr.",
+    "company_snapshot": {
+      "name": "Estudio Paraná & Asociados",
+      "industry": "servicios profesionales",
+      "size": "11-50"
+    },
+    "status": "active",
+    "seniority": "junior",
+    "description": "Liquidaciones, conciliaciones y reportes contables en SAP y Excel.",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "lat": -34.6037,
+      "lon": -58.3816
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "travel_availability": "none",
+      "salary": {
+        "min": 850000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false,
+        "max": 1000000
+      },
+      "hybrid_onsite_days": 3
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Excel",
+          "level": 4,
+          "kind": "required"
+        },
+        {
+          "name": "Contabilidad",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "SAP",
+          "level": 2,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 0,
+        "area": "contabilidad",
+        "kind": "required"
+      },
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "A2",
+          "kind": "desired"
+        }
+      ],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "field": "contabilidad",
+          "kind": "required"
+        }
+      ],
+      "academic": {
+        "careers": [
+          "Contador Público"
+        ]
+      }
+    },
+    "benefits": [
+      "prepaga",
+      "días de examen"
+    ]
+  },
+  {
+    "id": "job-011",
+    "company_id": "22222222-2222-4222-8222-000000000011",
+    "title": "Community Manager Freelance",
+    "company_snapshot": {
+      "name": "Mate Creativo",
+      "industry": "marketing",
+      "size": "1-10"
+    },
+    "status": "active",
+    "seniority": "junior",
+    "description": "Gestión de redes sociales y piezas gráficas para marcas regionales.",
+    "location": {
+      "country": "AR",
+      "province": "Córdoba",
+      "city": "Córdoba",
+      "lat": -31.4201,
+      "lon": -64.1888
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "hourly"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "freelance"
+      ],
+      "contract_duration": [
+        "project"
+      ],
+      "weekly_hours": {
+        "min": 10,
+        "max": 20
+      },
+      "shifts": [
+        "afternoon"
+      ],
+      "availability_start": "immediate",
+      "travel_availability": "none",
+      "salary": {
+        "min": 8,
+        "max": 12,
+        "currency": "USD",
+        "period": "hour",
+        "gross": true,
+        "visibility": "public"
+      }
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Redes sociales",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Canva",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Copywriting",
+          "level": 3,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 0,
+        "area": "marketing",
+        "kind": "required"
+      }
+    },
+    "benefits": [
+      "horario flexible"
+    ]
+  },
+  {
+    "id": "job-012",
+    "company_id": "22222222-2222-4222-8222-000000000003",
+    "title": "DevOps Jr. (híbrido)",
+    "company_snapshot": {
+      "name": "Río Plata Analytics S.A.",
+      "industry": "datos",
+      "size": "201-1000"
+    },
+    "status": "active",
+    "seniority": "junior",
+    "description": "Automatización de despliegues con Docker y Kubernetes sobre Linux y AWS.",
+    "location": {
+      "country": "AR",
+      "province": "Buenos Aires",
+      "city": "Vicente López",
+      "lat": -34.5266,
+      "lon": -58.4794
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "travel_availability": "none",
+      "salary": {
+        "min": 1000000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false,
+        "max": 1200000
+      },
+      "hybrid_onsite_days": 3
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Docker",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Linux",
+          "level": 3,
+          "kind": "required"
+        },
+        {
+          "name": "Kubernetes",
+          "level": 2,
+          "kind": "desired"
+        },
+        {
+          "name": "AWS",
+          "level": 2,
+          "kind": "desired"
+        },
+        {
+          "name": "Python",
+          "level": 2,
+          "kind": "desired"
+        }
+      ],
+      "experience": {
+        "min_years": 1,
+        "area": "infraestructura",
+        "kind": "required"
+      },
+      "languages": [
+        {
+          "name": "Inglés",
+          "level": "B1",
+          "kind": "required"
+        }
+      ]
+    },
+    "benefits": [
+      "bono anual",
+      "prepaga",
+      "capacitación en cloud"
+    ]
+  }
+]

@@ -22,7 +22,8 @@
 | P-004 | 2026-11-01 | Andres | Antigravity (`mcp-agent` + `n8n-agent` + `devops-agent`) | `feature/mcp-n8n/v0.2.0-nodos-agente-y-skills` | Crear repo `Grupo-1-EPIALC/bolsa-de-trabajo` con reglas de publicación (PR + ramas por feature) y alinear la arquitectura de agentes con `C:\Users\Andres\proyectos\agentes` usando los nodos de Agente de n8n (`@n8n/n8n-nodes-langchain.agent`, `mcpClientTool`, `mcpClient`, `memoryBufferWindow`), perfiles MCP y skills (`leer_skill`), sin modelos locales Ollama | Repo creado y protegido en GitHub (`dev` y `main`), `mcp-tools` v0.2.0 con `ProfiledFastMCP` (`?perfil=`), `leer_skill` (con anti-bucle), `reglas.md`, skills de reclutamiento + ingeniería, catálogo `n8n/agentes/*.json` y workflows regenerados con nodos nativos de Agente de n8n conectados a NVIDIA NIM | aceptado |
 | P-005 | 2026-11-01 | Andres | Antigravity (`profile-agent` + `n8n-agent`) | `feature/profile/v0.1.0-cv-webhook-async` | Armar formulario de prueba en `profile-service` para enviar un CV al webhook de n8n (`WF-01`) con espera asíncrona e indicador de progreso, tarjetas verticales en columnas de ancho fijo con Bootstrap 5 y salto de línea en el JSON, optimizando la verificación y reemplazando campos ausentes por `COMPLETAR_MANUALMENTE` / `[]` (sin `null`) | Endpoints `/api/v1/profiles/cv-test`, `/cv-extract/async` y `/cv-extract/jobs/{job_id}` por capas en `profile-service` con UI Bootstrap 5 vertical y wrap de JSON, normalizador de campos análogos (`COMPLETAR_MANUALMENTE` + `pending_manual_fields`), `maxTokens: 8192` + reparador de JSON en `WF-00`/`WF-0R` y verificación instantánea determinística en `WF-0V` | aceptado |
 | P-006 | 2026-11-01 | Andres | Antigravity (`devops-agent` + `n8n-agent` + `mcp-agent`) | `refactor/infra/v0.2.0-sin-ai-service-y-prompts-md` | Simplificar arquitectura eliminando `ai-service` (ya que toda la IA corre en `n8n`), asegurar que `mcp-tools` se comunique directo con `n8n` sin pasar por Nginx (`gateway`), y separar el historial de prompts en un archivo independiente (`PROMPTS.md`) fuera de `README.md` y `AGENTS.md` | Eliminación de `services/ai-service` (plantillas movidas a `n8n/prompts/`), red interna `mcp_internal` directa entre `n8n` y `mcp-tools` sin exposición en `gateway/nginx.conf`, actualización de `docker-compose*.yml`, `.env.example`, `01-schemas.sh`, `ci.yml`, `README.md`, `AGENTS.md` y extracción del historial a `PROMPTS.md` | aceptado |
-| P-007 | | | | | | | |
+| P-007 | 2026-11-04 | Andres | Claude Code (`matching-agent`) | `feature/matching/v0.1.0-motor-reglas-y-recomendador` | En base a `estructura_comun_perfil_oferta_match.md`, armar el servicio de match (n8n analiza y el servicio devuelve las recomendaciones); pool de datos de prueba; contrato para el front con el cálculo del score; integrar el JWT de auth-service; límites de ofertas/candidatos configurables por admin | `matching-service` v0.1.0 por capas (6 criterios, regla excluyente, `MissingSkillsAnalyzer`, 12 `ConditionCheck`, `SalaryComparator`, rankings, pedidos a WF-06, guardado y vistas reglas+IA), JWT RS256 vía JWKS con acceso por rol y dueño, `/settings` para admin, pool de 15 perfiles y 12 ofertas, `contracts/matching_frontend.md`; 102 tests, 97 % | pendiente de revisión |
+| P-008 | | | | | | | |
 
 ---
 
@@ -95,7 +96,19 @@
 - **Archivos afectados:** `PROMPTS.md`, `AGENTS.md`, `README.md`, `docker-compose.yml`, `docker-compose.override.yml`, `gateway/nginx.conf`, `infra/postgres/init/01-schemas.sh`, `.env.example`, `.github/workflows/ci.yml`, `.github/PULL_REQUEST_TEMPLATE.md`, `n8n/generate_workflows.py`, `n8n/prompts/`, `mcp-tools/`, `contracts/mock_endpoints.yaml`.
 - **Decisión:** aceptado.
 
-### P-007 — (plantilla)
+### P-007 — `matching-service` v0.1.0: motor de reglas, recomendaciones, JWT y configuración por admin
+- **Fecha:** 2026-11-04 · **Autor:** Andres · **Agente:** Claude Code (`matching-agent`) · **Rama:** `feature/matching/v0.1.0-motor-reglas-y-recomendador` · **HU:** Matching y recomendaciones (estudiantes y empresas)
+- **Prompt (resumido):**
+  > En función a `contracts/estructura_comun_perfil_oferta_match.md` armá el servicio de match y el agente que va a hacer los match en n8n para recomendar a empresas y estudiantes: n8n hace el análisis y el servicio devuelve las recomendaciones. Después: armar un pool de datos de prueba, un contrato md para el front que explique el cálculo del score, revisar la integración con auth-service, verificar arquitectura y estándares, separar en 2 ramas y que la cantidad de ofertas y candidatos se pueda ajustar en configuración por un admin.
+- **Resumen de la respuesta:**
+  - Capas `domain/` (6 `ScoringCriterion` con pesos en `scoring_rules.yaml`, tope 40 por excluyente, `MissingSkillsAnalyzer`, 12 `ConditionCheck` duros/blandos, `SalaryComparator` §7.2), `application/` (mappers del contrato + legacy de mocks MCP, rankings, recomendaciones, `AccessPolicy`, `SettingsService`), `infrastructure/` (REST a profile/jobs, trigger a WF-06, mocks, repositorios en memoria, JWT) y `api/`.
+  - Endpoints para el front (vistas reglas + IA, pedidos asíncronos, match puntual, `/settings`) e internos para n8n/mcp-tools (rankings, missing-skills, guardado). Contratos `matching_service.openapi.json` y `matching_frontend.md`.
+  - Seguridad: JWT RS256 de auth-service validado contra el JWKS (`pyjwt[crypto]`), acceso por rol y dueño (404 en recursos ajenos, 403 en internos) y token de servicio sólo por `X-Service-Token`. Errores 404/405 con el formato común.
+  - Pool de datos ficticios (15 perfiles y 12 ofertas con dueños UUID); los tests usan fixtures propios. 102 tests, 97 % de cobertura, ruff/black/mypy estricto limpios.
+- **Archivos afectados:** `services/matching-service/`, `contracts/matching_service.openapi.json`, `contracts/matching_frontend.md`, `contracts/mock_endpoints.yaml`, `docker-compose.yml`, `.env.example`, `AGENTS.md`.
+- **Decisión:** pendiente de revisión (librerías nuevas `pyyaml` y `pyjwt[crypto]` a discutir en la daily).
+
+### P-008 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
