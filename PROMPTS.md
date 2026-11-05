@@ -25,6 +25,7 @@
 | P-007 | 2026-11-04 | Andres | Claude Code (`matching-agent`) | `feature/matching/v0.1.0-motor-reglas-y-recomendador` | En base a `estructura_comun_perfil_oferta_match.md`, armar el servicio de match (n8n analiza y el servicio devuelve las recomendaciones); pool de datos de prueba; contrato para el front con el cálculo del score; integrar el JWT de auth-service; límites de ofertas/candidatos configurables por admin | `matching-service` v0.1.0 por capas (6 criterios, regla excluyente, `MissingSkillsAnalyzer`, 12 `ConditionCheck`, `SalaryComparator`, rankings, pedidos a WF-06, guardado y vistas reglas+IA), JWT RS256 vía JWKS con acceso por rol y dueño, `/settings` para admin, pool de 15 perfiles y 12 ofertas, `contracts/matching_frontend.md`; 102 tests, 97 % | pendiente de revisión |
 | P-008 | 2026-11-05 | Andres | Claude Code (`mcp-agent` + `n8n-agent`) | `feature/mcp-n8n/v0.3.0-match-advisor-ranking` | Agente de n8n que hace los match para recomendar a empresas y estudiantes; herramientas MCP de ranking (`rank_jobs_for_student`, `rank_candidates_for_job`) usadas por WF-06; cantidades configurables por admin | `mcp-tools` v0.3.0 con las 2 herramientas (HTTP a matching-service + mocks, perfiles `postulante`/`empresa`), agente `match_advisor` (Jean Grey) con prompt y 2 schemas sin score (`maxItems` 20), WF-06 reescrito (`student`/`company` por MCP, `training` conservado) que descarta score/rank/ids inventados y guarda en matching-service | pendiente de revisión |
 | P-009 | | | | | | | |
+| P-010 | 2026-11-05 | Elian | OpenCode (DeepSeek V4.1 Flash Free) | `docs/jobs/v0.1.0-plan-y-contratos` | Elaborar, según AGENTS.md §2 y §4.3, README y contratos, el plan de implementación de jobs-service (búsquedas/vacantes de empresas), sin inventar alcance fuera de los MD; incluir contratos para frontend y matching, arquitectura, endpoints, persistencia, auth, validación, tests y fases | Plan ajustado a los requisitos MD: Job/Requirement, active/closed, 403 para recurso ajeno, ≥1 required, `GET /companies/me/searches`, `job.created`, tests UT-JOBS-01/02; contratos OpenAPI + front + matching; PostgreSQL schema `jobs`; JWT/service token; fases al 20 | pendiente de revisión |
 
 ---
 
@@ -127,4 +128,15 @@
   - …
 - **Archivos afectados:** …
 - **Decisión:** aceptado / aceptado con cambios / descartado — motivo
+
+### P-010 — Plan de implementación de jobs-service (búsquedas/vacantes)
+- **Fecha:** 2026-11-05 · **Autor:** Elian · **Agente:** OpenCode (DeepSeek V4.1 Flash Free) · **Rama:** `docs/jobs/v0.1.0-plan-y-contratos` · **HU:** Cargar empleos y búsquedas activas de empresas (AGENTS.md §4.3)
+- **Prompt (resumido y estructurado):**
+  > Actuá como `jobs-agent` (AGENTS.md §4.3). Antes de escribir código, elaborá un plan de implementación para las búsquedas/vacantes de empresas en `services/jobs-service`. Usá como fuente de verdad AGENTS.md §1–§3 y §4.3, README.md, `contracts/estructura_comun_perfil_oferta_match.md`, `contracts/matching_frontend.md`, `contracts/mock_endpoints.yaml` y los consumidores `matching-service`/`mcp-tools`. No inventes funcionalidades ni cambies el alcance: cada requisito del plan debe estar justificado por un MD del proyecto. Incluí contratos para el frontend y para matching, endpoints, modelo de datos, persistencia, auth, validación, tests UT-JOBS-01/02, riesgos y fases. No toques código de otros servicios.
+- **Resumen de la respuesta:**
+  - Se separó lo obligatorio por MD (Job/Requirement, active/closed, 403 para recurso ajeno, ≥1 required, `GET /companies/me/searches`, `job.created`, tests) de lo que no corresponde al MVP.
+  - Se definieron los contratos OpenAPI + front + matching, la arquitectura por capas, el schema PostgreSQL `jobs`, JWT RS256/`X-Service-Token` y las fases hasta el 20.
+  - No se escribió código; quedó pendiente la revisión de Dario y del compañero de matching.
+- **Archivos afectados:** `PROMPTS.md`; planificados `contracts/jobs_service.openapi.json`, `contracts/jobs_frontend.md`, `contracts/jobs_matching.md` y `services/jobs-service/`.
+- **Decisión:** pendiente de revisión.
 
