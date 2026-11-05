@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bolsa.local/schemas/match_student_recommendations.schema.json",
+  "title": "Ofertas recomendadas a un estudiante (Match Advisor, mode=student, origin=AI)",
+  "description": "Salida del agente match_advisor. No incluye score: el puntaje y el orden los define el motor de reglas de matching-service.",
+  "type": "object",
+  "required": [
+    "summary",
+    "jobs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "string",
+      "minLength": 5
+    },
+    "jobs": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "priority",
+          "fit_reasons",
+          "watch_outs",
+          "next_steps"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "alta",
+              "media",
+              "baja"
+            ]
+          },
+          "fit_reasons": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "string",
+              "minLength": 3
+            }
+          },
+          "watch_outs": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "string",
+              "minLength": 3
+            }
+          },
+          "next_steps": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "skill",
+                "text",
+                "priority"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "apply",
+                    "course",
+                    "project",
+                    "profile_tip"
+                  ]
+                },
+                "skill": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 5
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": [
+                    "alta",
+                    "media",
+                    "baja"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

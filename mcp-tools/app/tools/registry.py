@@ -272,6 +272,27 @@ def register_tools(mcp: FastMCP, container: ServiceContainer) -> dict[str, Calla
         return await _run_async(lambda: container.recruitment.compute_match(profile_id, job_id))
 
     @_expose
+    async def rank_jobs_for_student(profile_id: str, limit: int = 0) -> JsonDict:
+        """Ranking por reglas (`origin="RULES"`) de las ofertas compatibles para un estudiante,
+        ya ordenado y filtrado por condiciones laborales. Cada ítem trae `rank`, el snapshot de
+        la oferta (`job`) y el `match` (score, desglose, skills que coinciden y faltan,
+        `conditions_fit`). `limit=0` usa la cantidad configurada por el admin. NO reordenes ni
+        modifiques los puntajes."""
+        return await _run_async(
+            lambda: container.recruitment.rank_jobs_for_student(profile_id, limit=limit)
+        )
+
+    @_expose
+    async def rank_candidates_for_job(job_id: str, limit: int = 0) -> JsonDict:
+        """Ranking por reglas (`origin="RULES"`) de los candidatos compatibles para una oferta,
+        sin datos personales. Cada ítem trae `rank`, el snapshot del candidato (`candidate`) y el
+        `match`. `limit=0` usa la cantidad configurada por el admin. NO reordenes ni modifiques
+        los puntajes."""
+        return await _run_async(
+            lambda: container.recruitment.rank_candidates_for_job(job_id, limit=limit)
+        )
+
+    @_expose
     async def missing_skills(profile_id: str, job_id: str) -> JsonDict:
         """Devuelve las competencias faltantes y brechas de nivel entre un perfil y una oferta,
         ordenadas por prioridad (`alta`, `media`, `baja`)."""

@@ -1,0 +1,1727 @@
+[
+  {
+    "id": "stu-001",
+    "user_id": "11111111-1111-4111-8111-000000000001",
+    "personal": {
+      "name": "Valentina Gómez",
+      "email": "valentina.gomez@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "CABA",
+        "city": "Buenos Aires",
+        "lat": -34.6037,
+        "lon": -58.3816
+      }
+    },
+    "headline": "Estudiante avanzada de Sistemas con foco en backend Python y APIs REST",
+    "academic_status": {
+      "institution": "UTN FRBA",
+      "career": "Ingeniería en Sistemas de Información",
+      "current_year": 4,
+      "progress_percent": 72,
+      "student_shift": [
+        "evening"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Desarrolladora backend"
+      ],
+      "areas": [
+        "software"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "full_time"
+      ],
+      "work_modality": [
+        "hybrid",
+        "remote"
+      ],
+      "hybrid_onsite_days": 3,
+      "employment_type": [
+        "employee",
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent",
+        "fixed_term"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "immediate",
+      "max_commute_km": 30,
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 700000,
+        "max": 900000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "negotiable": true,
+        "visibility": "on_match"
+      }
+    },
+    "years_experience": 1,
+    "skills": [
+      {
+        "name": "Python",
+        "level": 4
+      },
+      {
+        "name": "SQL",
+        "level": 3
+      },
+      {
+        "name": "Git",
+        "level": 4
+      },
+      {
+        "name": "FastAPI",
+        "level": 3
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B2"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UTN FRBA",
+        "degree": "Ingeniería en Sistemas de Información",
+        "level": "university",
+        "status": "in_progress",
+        "field": "sistemas"
+      }
+    ]
+  },
+  {
+    "id": "stu-002",
+    "user_id": "11111111-1111-4111-8111-000000000002",
+    "personal": {
+      "name": "Mateo Fernández",
+      "email": "mateo.fernandez@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Córdoba",
+        "city": "Córdoba",
+        "lat": -31.4201,
+        "lon": -64.1888
+      }
+    },
+    "headline": "Desarrollador fullstack junior con foco en React y TypeScript",
+    "academic_status": {
+      "institution": "UNC",
+      "career": "Licenciatura en Ciencias de la Computación",
+      "current_year": 3,
+      "progress_percent": 55,
+      "student_shift": [
+        "morning"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Desarrollador frontend"
+      ],
+      "areas": [
+        "software"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "freelance"
+      ],
+      "contract_duration": [
+        "permanent",
+        "project"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 30
+      },
+      "shifts": [
+        "afternoon",
+        "evening"
+      ],
+      "availability_start": "within_15_days",
+      "willing_to_relocate": false,
+      "travel_availability": "none",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 4,
+        "max": 6,
+        "currency": "USD",
+        "period": "hour",
+        "gross": true,
+        "visibility": "hidden"
+      }
+    },
+    "years_experience": 2,
+    "skills": [
+      {
+        "name": "TypeScript",
+        "level": 4
+      },
+      {
+        "name": "React",
+        "level": 4
+      },
+      {
+        "name": "Node.js",
+        "level": 3
+      },
+      {
+        "name": "Git",
+        "level": 4
+      },
+      {
+        "name": "Docker",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "C1"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UNC",
+        "degree": "Licenciatura en Ciencias de la Computación",
+        "level": "university",
+        "status": "in_progress",
+        "field": "computación"
+      }
+    ]
+  },
+  {
+    "id": "stu-003",
+    "user_id": "11111111-1111-4111-8111-000000000003",
+    "personal": {
+      "name": "Camila Sosa",
+      "email": "camila.sosa@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Buenos Aires",
+        "city": "San Isidro",
+        "lat": -34.4708,
+        "lon": -58.5286
+      }
+    },
+    "headline": "Desarrolladora backend Python con experiencia en microservicios y Docker",
+    "academic_status": {
+      "institution": "UTN FRGP",
+      "career": "Tecnicatura Universitaria en Programación",
+      "current_year": 2,
+      "progress_percent": 100,
+      "student_shift": []
+    },
+    "target": {
+      "roles": [
+        "Desarrolladora backend",
+        "Data engineer"
+      ],
+      "areas": [
+        "software",
+        "datos"
+      ],
+      "seniority": "semi_senior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "onsite",
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 5,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 45
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "max_commute_km": 40,
+      "willing_to_relocate": false,
+      "travel_availability": "frequent",
+      "driver_license": [
+        "B1"
+      ],
+      "own_vehicle": true,
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 1300000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match"
+      }
+    },
+    "years_experience": 3,
+    "skills": [
+      {
+        "name": "Python",
+        "level": 5
+      },
+      {
+        "name": "FastAPI",
+        "level": 4
+      },
+      {
+        "name": "Docker",
+        "level": 4
+      },
+      {
+        "name": "PostgreSQL",
+        "level": 4
+      },
+      {
+        "name": "SQL",
+        "level": 4
+      },
+      {
+        "name": "Git",
+        "level": 5
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B2"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UTN FRGP",
+        "degree": "Tecnicatura Universitaria en Programación",
+        "level": "tertiary",
+        "status": "completed",
+        "field": "programación"
+      }
+    ]
+  },
+  {
+    "id": "stu-004",
+    "user_id": "11111111-1111-4111-8111-000000000004",
+    "personal": {
+      "name": "Lucía Pérez",
+      "email": "lucia.perez@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Buenos Aires",
+        "city": "San Isidro",
+        "lat": -34.4708,
+        "lon": -58.5286
+      }
+    },
+    "headline": "Estudiante de Sistemas orientada a frontend con React",
+    "academic_status": {
+      "institution": "UTN FRBA",
+      "career": "Ingeniería en Sistemas de Información",
+      "current_year": 4,
+      "progress_percent": 70,
+      "student_shift": [
+        "evening"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Desarrolladora frontend"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time"
+      ],
+      "work_modality": [
+        "hybrid",
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 30
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "immediate",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 600000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": true,
+        "max": 750000
+      },
+      "hybrid_onsite_days": 2,
+      "max_commute_km": 25
+    },
+    "years_experience": 0.5,
+    "skills": [
+      {
+        "name": "React",
+        "level": 3
+      },
+      {
+        "name": "JavaScript",
+        "level": 3
+      },
+      {
+        "name": "HTML",
+        "level": 4
+      },
+      {
+        "name": "CSS",
+        "level": 4
+      },
+      {
+        "name": "Git",
+        "level": 3
+      },
+      {
+        "name": "TypeScript",
+        "level": 1
+      },
+      {
+        "name": "Python",
+        "level": 1
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B2"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UTN FRBA",
+        "degree": "Ingeniería en Sistemas de Información",
+        "level": "university",
+        "status": "in_progress",
+        "field": "sistemas"
+      }
+    ]
+  },
+  {
+    "id": "stu-005",
+    "user_id": "11111111-1111-4111-8111-000000000005",
+    "personal": {
+      "name": "Tomás Benítez",
+      "email": "tomas.benitez@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Buenos Aires",
+        "city": "La Plata",
+        "lat": -34.9214,
+        "lon": -57.9545
+      }
+    },
+    "headline": "Estudiante de Informática con base en Python y Django",
+    "academic_status": {
+      "institution": "UNLP",
+      "career": "Licenciatura en Informática",
+      "current_year": 3,
+      "progress_percent": 45,
+      "student_shift": [
+        "morning"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Desarrollador backend"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 35
+      },
+      "shifts": [
+        "afternoon",
+        "evening"
+      ],
+      "availability_start": "immediate",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 550000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false
+      }
+    },
+    "years_experience": 0,
+    "skills": [
+      {
+        "name": "Python",
+        "level": 3
+      },
+      {
+        "name": "Django",
+        "level": 2
+      },
+      {
+        "name": "SQL",
+        "level": 2
+      },
+      {
+        "name": "Git",
+        "level": 3
+      },
+      {
+        "name": "Linux",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B1"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UNLP",
+        "degree": "Licenciatura en Informática",
+        "level": "university",
+        "status": "in_progress",
+        "field": "informática"
+      }
+    ]
+  },
+  {
+    "id": "stu-006",
+    "user_id": "11111111-1111-4111-8111-000000000006",
+    "personal": {
+      "name": "Martina Ruiz",
+      "email": "martina.ruiz@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "CABA",
+        "city": "Buenos Aires",
+        "lat": -34.6037,
+        "lon": -58.3816
+      }
+    },
+    "headline": "Estudiante avanzada de Contador Público con manejo de Excel y SAP",
+    "academic_status": {
+      "institution": "UBA FCE",
+      "career": "Contador Público",
+      "current_year": 5,
+      "progress_percent": 85,
+      "student_shift": [
+        "morning"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Analista contable"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "hybrid",
+        "onsite"
+      ],
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 45
+      },
+      "shifts": [
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 800000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false,
+        "max": 1000000
+      },
+      "hybrid_onsite_days": 5,
+      "max_commute_km": 20
+    },
+    "years_experience": 1,
+    "skills": [
+      {
+        "name": "Excel",
+        "level": 5
+      },
+      {
+        "name": "Contabilidad",
+        "level": 4
+      },
+      {
+        "name": "SAP",
+        "level": 2
+      },
+      {
+        "name": "Power BI",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B1"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UBA FCE",
+        "degree": "Contador Público",
+        "level": "university",
+        "status": "in_progress",
+        "field": "contabilidad"
+      }
+    ]
+  },
+  {
+    "id": "stu-007",
+    "user_id": "11111111-1111-4111-8111-000000000007",
+    "personal": {
+      "name": "Joaquín Herrera",
+      "email": "joaquin.herrera@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Santa Fe",
+        "city": "Rosario",
+        "lat": -32.9442,
+        "lon": -60.6505
+      }
+    },
+    "headline": "Desarrollador backend Node.js con 3 años de experiencia",
+    "academic_status": {
+      "institution": "UTN FRRo",
+      "career": "Ingeniería en Sistemas de Información",
+      "current_year": 5,
+      "progress_percent": 90,
+      "student_shift": []
+    },
+    "target": {
+      "roles": [
+        "Desarrollador backend"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time",
+        "part_time"
+      ],
+      "work_modality": [
+        "remote",
+        "hybrid"
+      ],
+      "employment_type": [
+        "employee",
+        "freelance"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 30,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 1500,
+        "max": 2000,
+        "currency": "USD",
+        "period": "month",
+        "gross": true,
+        "visibility": "hidden"
+      },
+      "hybrid_onsite_days": 2,
+      "max_commute_km": 15
+    },
+    "years_experience": 3,
+    "skills": [
+      {
+        "name": "Node.js",
+        "level": 4
+      },
+      {
+        "name": "TypeScript",
+        "level": 4
+      },
+      {
+        "name": "PostgreSQL",
+        "level": 3
+      },
+      {
+        "name": "Docker",
+        "level": 3
+      },
+      {
+        "name": "AWS",
+        "level": 2
+      },
+      {
+        "name": "Git",
+        "level": 4
+      },
+      {
+        "name": "Python",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B2"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UTN FRRo",
+        "degree": "Ingeniería en Sistemas de Información",
+        "level": "university",
+        "status": "in_progress",
+        "field": "sistemas"
+      }
+    ]
+  },
+  {
+    "id": "stu-008",
+    "user_id": "11111111-1111-4111-8111-000000000008",
+    "personal": {
+      "name": "Sofía Domínguez",
+      "email": "sofia.dominguez@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Mendoza",
+        "city": "Mendoza",
+        "lat": -32.8895,
+        "lon": -68.8458
+      }
+    },
+    "headline": "Estudiante de Ciencia de Datos con Python, SQL y Power BI",
+    "academic_status": {
+      "institution": "UNCuyo",
+      "career": "Licenciatura en Ciencia de Datos",
+      "current_year": 4,
+      "progress_percent": 65,
+      "student_shift": [
+        "evening"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Analista de datos"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time",
+        "part_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "immediate",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 800000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false,
+        "max": 1000000
+      }
+    },
+    "years_experience": 1,
+    "skills": [
+      {
+        "name": "Python",
+        "level": 4
+      },
+      {
+        "name": "SQL",
+        "level": 4
+      },
+      {
+        "name": "Power BI",
+        "level": 3
+      },
+      {
+        "name": "Excel",
+        "level": 4
+      },
+      {
+        "name": "Pandas",
+        "level": 3
+      },
+      {
+        "name": "Git",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B2"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UNCuyo",
+        "degree": "Licenciatura en Ciencia de Datos",
+        "level": "university",
+        "status": "in_progress",
+        "field": "datos"
+      }
+    ]
+  },
+  {
+    "id": "stu-009",
+    "user_id": "11111111-1111-4111-8111-000000000009",
+    "personal": {
+      "name": "Agustín Molina",
+      "email": "agustin.molina@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "CABA",
+        "city": "Buenos Aires",
+        "lat": -34.6037,
+        "lon": -58.3816
+      }
+    },
+    "headline": "Técnico en redes con experiencia en soporte de infraestructura",
+    "academic_status": {
+      "institution": "ITBA",
+      "career": "Tecnicatura en Redes y Telecomunicaciones",
+      "current_year": 2,
+      "progress_percent": 80,
+      "student_shift": [
+        "evening"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Soporte técnico",
+        "DevOps"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "onsite",
+        "hybrid"
+      ],
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 45
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "immediate",
+      "willing_to_relocate": false,
+      "travel_availability": "frequent",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 900000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false
+      },
+      "hybrid_onsite_days": 5,
+      "max_commute_km": 35,
+      "driver_license": [
+        "B1"
+      ],
+      "own_vehicle": true
+    },
+    "years_experience": 2,
+    "skills": [
+      {
+        "name": "Linux",
+        "level": 4
+      },
+      {
+        "name": "Redes",
+        "level": 4
+      },
+      {
+        "name": "Windows",
+        "level": 3
+      },
+      {
+        "name": "Docker",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B1"
+      }
+    ],
+    "education": [
+      {
+        "institution": "ITBA",
+        "degree": "Tecnicatura en Redes y Telecomunicaciones",
+        "level": "tertiary",
+        "status": "in_progress",
+        "field": "redes"
+      }
+    ]
+  },
+  {
+    "id": "stu-010",
+    "user_id": "11111111-1111-4111-8111-000000000010",
+    "personal": {
+      "name": "Florencia Acosta",
+      "email": "florencia.acosta@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Córdoba",
+        "city": "Córdoba",
+        "lat": -31.4201,
+        "lon": -64.1888
+      }
+    },
+    "headline": "Estudiante de Comunicación con foco en redes sociales y contenidos",
+    "academic_status": {
+      "institution": "UNC",
+      "career": "Licenciatura en Comunicación Social",
+      "current_year": 4,
+      "progress_percent": 75,
+      "student_shift": [
+        "morning"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Community manager"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "hourly"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "freelance",
+        "employee"
+      ],
+      "contract_duration": [
+        "project",
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 10,
+        "max": 25
+      },
+      "shifts": [
+        "afternoon",
+        "evening"
+      ],
+      "availability_start": "immediate",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 8,
+        "max": 12,
+        "currency": "USD",
+        "period": "hour",
+        "gross": true,
+        "visibility": "on_match"
+      }
+    },
+    "years_experience": 1,
+    "skills": [
+      {
+        "name": "Redes sociales",
+        "level": 4
+      },
+      {
+        "name": "Canva",
+        "level": 4
+      },
+      {
+        "name": "Copywriting",
+        "level": 4
+      },
+      {
+        "name": "Excel",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B2"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UNC",
+        "degree": "Licenciatura en Comunicación Social",
+        "level": "university",
+        "status": "in_progress",
+        "field": "comunicación"
+      }
+    ]
+  },
+  {
+    "id": "stu-011",
+    "user_id": "11111111-1111-4111-8111-000000000011",
+    "personal": {
+      "name": "Nicolás Vega",
+      "email": "nicolas.vega@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Tucumán",
+        "city": "San Miguel de Tucumán",
+        "lat": -26.8083,
+        "lon": -65.2176
+      }
+    },
+    "headline": "Estudiante de Ingeniería en Computación con bases de Python y C",
+    "academic_status": {
+      "institution": "UNT",
+      "career": "Ingeniería en Computación",
+      "current_year": 2,
+      "progress_percent": 25,
+      "student_shift": [
+        "morning"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Pasante de desarrollo"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 20
+      },
+      "shifts": [
+        "afternoon"
+      ],
+      "availability_start": "immediate",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 400000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false
+      }
+    },
+    "years_experience": 0,
+    "skills": [
+      {
+        "name": "Python",
+        "level": 2
+      },
+      {
+        "name": "Git",
+        "level": 2
+      },
+      {
+        "name": "HTML",
+        "level": 2
+      },
+      {
+        "name": "C",
+        "level": 3
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "A2"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UNT",
+        "degree": "Ingeniería en Computación",
+        "level": "university",
+        "status": "in_progress",
+        "field": "computación"
+      }
+    ]
+  },
+  {
+    "id": "stu-012",
+    "user_id": "11111111-1111-4111-8111-000000000012",
+    "personal": {
+      "name": "Valeria Ortiz",
+      "email": "valeria.ortiz@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Neuquén",
+        "city": "Neuquén",
+        "lat": -38.9516,
+        "lon": -68.0591
+      }
+    },
+    "headline": "Estudiante de Programación con experiencia en testing automatizado",
+    "academic_status": {
+      "institution": "UNCo",
+      "career": "Tecnicatura Universitaria en Programación",
+      "current_year": 2,
+      "progress_percent": 60,
+      "student_shift": [
+        "evening"
+      ]
+    },
+    "target": {
+      "roles": [
+        "QA automation"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time",
+        "part_time"
+      ],
+      "work_modality": [
+        "remote",
+        "hybrid"
+      ],
+      "employment_type": [
+        "employee",
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 25,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 700000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false
+      },
+      "hybrid_onsite_days": 2,
+      "max_commute_km": 20
+    },
+    "years_experience": 1,
+    "skills": [
+      {
+        "name": "Python",
+        "level": 3
+      },
+      {
+        "name": "FastAPI",
+        "level": 2
+      },
+      {
+        "name": "Testing",
+        "level": 3
+      },
+      {
+        "name": "Selenium",
+        "level": 3
+      },
+      {
+        "name": "Git",
+        "level": 3
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B1"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UNCo",
+        "degree": "Tecnicatura Universitaria en Programación",
+        "level": "tertiary",
+        "status": "in_progress",
+        "field": "programación"
+      }
+    ]
+  },
+  {
+    "id": "stu-013",
+    "user_id": "11111111-1111-4111-8111-000000000013",
+    "personal": {
+      "name": "Ignacio Castro",
+      "email": "ignacio.castro@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "CABA",
+        "city": "Buenos Aires",
+        "lat": -34.6037,
+        "lon": -58.3816
+      }
+    },
+    "headline": "Estudiante de Informática con Java y Spring",
+    "academic_status": {
+      "institution": "UADE",
+      "career": "Ingeniería en Informática",
+      "current_year": 3,
+      "progress_percent": 50,
+      "student_shift": [
+        "evening"
+      ]
+    },
+    "target": {
+      "roles": [
+        "Desarrollador backend"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "full_time"
+      ],
+      "work_modality": [
+        "hybrid",
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "immediate",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 700000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false,
+        "max": 850000
+      },
+      "hybrid_onsite_days": 3,
+      "max_commute_km": 20
+    },
+    "years_experience": 1,
+    "skills": [
+      {
+        "name": "Java",
+        "level": 4
+      },
+      {
+        "name": "Spring",
+        "level": 3
+      },
+      {
+        "name": "SQL",
+        "level": 3
+      },
+      {
+        "name": "Git",
+        "level": 3
+      },
+      {
+        "name": "Python",
+        "level": 1
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B2"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UADE",
+        "degree": "Ingeniería en Informática",
+        "level": "university",
+        "status": "in_progress",
+        "field": "informática"
+      }
+    ]
+  },
+  {
+    "id": "stu-014",
+    "user_id": "11111111-1111-4111-8111-000000000014",
+    "personal": {
+      "name": "Carla Medina",
+      "email": "carla.medina@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Salta",
+        "city": "Salta",
+        "lat": -24.7821,
+        "lon": -65.4232
+      }
+    },
+    "headline": "Estudiante de Sistemas con Python, Django y PostgreSQL",
+    "academic_status": {
+      "institution": "UNSa",
+      "career": "Licenciatura en Análisis de Sistemas",
+      "current_year": 4,
+      "progress_percent": 75,
+      "student_shift": []
+    },
+    "target": {
+      "roles": [
+        "Desarrolladora backend"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 850000,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "visibility": "on_match",
+        "negotiable": false
+      }
+    },
+    "years_experience": 1.5,
+    "skills": [
+      {
+        "name": "Python",
+        "level": 3
+      },
+      {
+        "name": "Django",
+        "level": 3
+      },
+      {
+        "name": "PostgreSQL",
+        "level": 3
+      },
+      {
+        "name": "Docker",
+        "level": 2
+      },
+      {
+        "name": "Git",
+        "level": 3
+      },
+      {
+        "name": "Linux",
+        "level": 3
+      },
+      {
+        "name": "Testing",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "B1"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UNSa",
+        "degree": "Licenciatura en Análisis de Sistemas",
+        "level": "university",
+        "status": "in_progress",
+        "field": "sistemas"
+      }
+    ]
+  },
+  {
+    "id": "stu-015",
+    "user_id": "11111111-1111-4111-8111-000000000015",
+    "personal": {
+      "name": "Bruno Giménez",
+      "email": "bruno.gimenez@example.com",
+      "phone": "COMPLETAR_MANUALMENTE",
+      "location": {
+        "country": "AR",
+        "province": "Buenos Aires",
+        "city": "Mar del Plata",
+        "lat": -38.0055,
+        "lon": -57.5426
+      }
+    },
+    "headline": "Estudiante avanzado de Informática con Python y Machine Learning",
+    "academic_status": {
+      "institution": "UNMdP",
+      "career": "Ingeniería en Informática",
+      "current_year": 5,
+      "progress_percent": 95,
+      "student_shift": []
+    },
+    "target": {
+      "roles": [
+        "Data scientist",
+        "Desarrollador Python"
+      ],
+      "seniority": "junior"
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "employment_type": [
+        "employee",
+        "freelance"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "willing_to_relocate": false,
+      "travel_availability": "occasional",
+      "work_authorization": [
+        "AR"
+      ],
+      "salary": {
+        "min": 1200,
+        "currency": "USD",
+        "period": "month",
+        "gross": true,
+        "visibility": "hidden"
+      }
+    },
+    "years_experience": 2,
+    "skills": [
+      {
+        "name": "Python",
+        "level": 4
+      },
+      {
+        "name": "Machine Learning",
+        "level": 3
+      },
+      {
+        "name": "SQL",
+        "level": 3
+      },
+      {
+        "name": "Git",
+        "level": 4
+      },
+      {
+        "name": "Docker",
+        "level": 3
+      },
+      {
+        "name": "Testing",
+        "level": 2
+      }
+    ],
+    "languages": [
+      {
+        "name": "Español",
+        "level": "native"
+      },
+      {
+        "name": "Inglés",
+        "level": "C1"
+      }
+    ],
+    "education": [
+      {
+        "institution": "UNMdP",
+        "degree": "Ingeniería en Informática",
+        "level": "university",
+        "status": "in_progress",
+        "field": "informática"
+      }
+    ]
+  }
+]

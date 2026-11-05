@@ -1,0 +1,96 @@
+"""Carga `scoring_rules.yaml` y el diccionario de sinónimos de skills."""
+
+import json
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from app.domain.errors import InvalidRulesError
+from app.domain.rules import (
+    DEFAULT_CONDITIONS,
+    DEFAULT_WEIGHTS,
+    ConditionRule,
+    RankingRules,
+    SalaryRules,
+    ScoringRules,
+)
+
+
+def _mapping(value: object) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def rules_from_mapping(data: Mapping[str, Any]) -> ScoringRules:
+    weights = {k: float(v) for k, v in _mapping(data.get("weights")).items()} or dict(
+        DEFAULT_WEIGHTS
+    )
+    raw_conditions = _mapping(data.get("conditions"))
+    conditions: dict[str, ConditionRule] = {}
+    for name, default_hard in DEFAULT_CONDITIONS.items():
+        cfg = _mapping(raw_conditions.get(name))
+        conditions[name] = ConditionRule(
+            enabled=bool(cfg.get("enabled", True)), hard=bool(cfg.get("hard", default_hard))
+        )
+    salary = _mapping(data.get("salary"))
+    ranking = _mapping(data.get("ranking"))
+    defaults_salary = SalaryRules()
+    defaults_ranking = RankingRules()
+    return ScoringRules(
+        version=str(data.get("version", "1.0.0")),
+        weights=weights,
+        excluding_cap=float(data.get("excluding_cap", 40)),
+        conditions=conditions,
+        salary=SalaryRules(
+            tolerance_percent=float(
+                salary.get("tolerance_percent", defaults_salary.tolerance_percent)
+            ),
+            net_to_gross=float(salary.get("net_to_gross", defaults_salary.net_to_gross)),
+            weeks_per_month=float(salary.get("weeks_per_month", defaults_salary.weeks_per_month)),
+            working_days_per_month=float(
+                salary.get("working_days_per_month", defaults_salary.working_days_per_month)
+            ),
+            salaries_per_year=float(
+                salary.get("salaries_per_year", defaults_salary.salaries_per_year)
+            ),
+            default_weekly_hours=float(
+                salary.get("default_weekly_hours", defaults_salary.default_weekly_hours)
+            ),
+            fx_rates={
+                str(k).upper(): float(v) for k, v in _mapping(salary.get("fx_rates")).items()
+            },
+        ),
+        ranking=RankingRules(
+            student_jobs_limit=int(
+                ranking.get("student_jobs_limit", defaults_ranking.student_jobs_limit)
+            ),
+            company_candidates_limit=int(
+                ranking.get("company_candidates_limit", defaults_ranking.company_candidates_limit)
+            ),
+            max_pool=int(ranking.get("max_pool", defaults_ranking.max_pool)),
+            exclude_incompatible=bool(
+                ranking.get("exclude_incompatible", defaults_ranking.exclude_incompatible)
+            ),
+            min_score=float(ranking.get("min_score", defaults_ranking.min_score)),
+        ),
+    )
+
+
+def load_rules(path: str | Path) -> ScoringRules:
+    file = Path(path)
+    if not file.is_file():
+        raise InvalidRulesError(f"No se encontró el archivo de reglas: {file}")
+    try:
+        data = yaml.safe_load(file.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise InvalidRulesError(f"scoring_rules.yaml inválido: {exc}") from exc
+    return rules_from_mapping(_mapping(data))
+
+
+def load_synonyms(path: str | Path) -> dict[str, str]:
+    file = Path(path)
+    if not file.is_file():
+        return {}
+    data = json.loads(file.read_text(encoding="utf-8"))
+    return {str(k): str(v) for k, v in _mapping(data).items()}

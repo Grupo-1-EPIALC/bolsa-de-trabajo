@@ -69,7 +69,7 @@ paths:
   /api/v1/matches:
     post:
       summary: Calcula el puntaje de compatibilidad por reglas (origin=RULES)
-      x-status: mock
+      x-status: implemented  # matching-service v0.1.0 (ver contracts/matching_service.openapi.json)
       requestBody:
         required: true
         content:
@@ -86,7 +86,7 @@ paths:
   /api/v1/matches/missing-skills:
     post:
       summary: Devuelve competencias faltantes y brecha de nivel ordenadas por prioridad
-      x-status: mock
+      x-status: implemented  # matching-service v0.1.0 (ver contracts/matching_service.openapi.json)
       requestBody:
         required: true
         content:
@@ -100,10 +100,42 @@ paths:
       responses:
         "200":
           description: Lista de `{skill, kind, required_level, current_level, gap, priority}`
+  /api/v1/matches/students/{profile_id}/jobs:
+    get:
+      summary: Ofertas rankeadas por reglas para un estudiante (herramienta MCP rank_jobs_for_student)
+      x-status: implemented  # matching-service v0.1.0 (ver contracts/matching_service.openapi.json)
+      parameters:
+        - in: path
+          name: profile_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 20 }
+          description: Opcional; sin limit usa la cantidad configurada por el admin
+      responses:
+        "200":
+          description: "`{origin: RULES, profile, items: [{rank, job, match}], evaluated, excluded_incompatible}`"
+  /api/v1/matches/jobs/{job_id}/candidates:
+    get:
+      summary: Candidatos rankeados por reglas para una oferta (herramienta MCP rank_candidates_for_job)
+      x-status: implemented  # matching-service v0.1.0 (ver contracts/matching_service.openapi.json)
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 20 }
+          description: Opcional; sin limit usa la cantidad configurada por el admin
+      responses:
+        "200":
+          description: "`{origin: RULES, job, items: [{rank, candidate, match}], evaluated, excluded_incompatible}`"
   /api/v1/matches/recommendations:
     post:
       summary: Persiste una recomendación generada por IA en n8n (origin=AI)
-      x-status: mock
+      x-status: implemented  # matching-service v0.1.0 (ver contracts/matching_service.openapi.json)
       requestBody:
         required: true
         content:

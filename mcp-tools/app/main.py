@@ -55,6 +55,7 @@ TOOL_PROFILES: dict[str, set[str]] = {
         "list_active_jobs",
         "compute_match",
         "missing_skills",
+        "rank_jobs_for_student",
         "search_courses",
         "save_recommendation",
         "validate_json_schema",
@@ -70,6 +71,7 @@ TOOL_PROFILES: dict[str, set[str]] = {
         "list_candidate_profiles",
         "compute_match",
         "missing_skills",
+        "rank_candidates_for_job",
         "save_recommendation",
         "validate_json_schema",
         "check_grounding",
@@ -128,7 +130,7 @@ async def health(_: Request) -> JSONResponse:
         {
             "status": "ok",
             "service": "mcp-tools",
-            "version": "0.2.0",
+            "version": "0.3.0",
             "tools": sorted(REGISTERED_TOOLS.keys()),
             "profiles": sorted(TOOL_PROFILES.keys()),
         }
