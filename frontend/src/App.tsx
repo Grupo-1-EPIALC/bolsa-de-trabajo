@@ -1,62 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RuleScoreCard } from './components/RuleScoreCard';
 import { AISuggestionCard } from './components/AISuggestionCard';
 import { StudentProfile } from './components/StudentProfile';
 import { AuthForm } from './components/AuthForm';
+import { matchingService } from './services/matchingService';
 import { MOCK_STUDENT_PROFILE } from './services/mockData';
 import { MatchResponse } from './types/matching';
 import { UserCheck, User, LogIn, Briefcase, Menu, X } from 'lucide-react';
-
-const MOCK_MATCH: MatchResponse = {
-  profile_id: 'prof-01',
-  job_id: 'job-01',
-  rule_based: {
-    origin: 'RULES',
-    engine_version: '0.1.0',
-    score: 82.5,
-    excluding_cap_applied: false,
-    breakdown: {
-      required_skills: 45,
-      desired_skills: 15,
-      skill_levels: 12.5,
-      experience: 5,
-      education: 5,
-      languages: 0,
-    },
-    missing_skills: [
-      { skill: 'TypeScript', required_level: 2, current_level: 0, gap: 2, priority: 'alta', kind: 'required' },
-      { skill: 'Docker', required_level: 2, current_level: 0, gap: 2, priority: 'media', kind: 'desired' },
-    ],
-  },
-  ai_recommendations: {
-    origin: 'AI',
-    model: 'nvidia/llama-3.1-70b-instruct',
-    generated_at: '2026-11-04T10:00:00Z',
-    prompt_version: '1.0.0',
-    disclaimer: 'Sugerencia generada por IA orientativa. Los puntajes oficiales se basan strictly en las reglas del sistema.',
-    items: [
-      { type: 'course', skill: 'TypeScript', text: 'Realizar un taller práctico de TypeScript enfocado en React SPA para elevar nivel 0 a 2.', priority: 'alta' },
-      { type: 'profile_improvement', text: 'Subir al perfil proyectos personales que utilicen Docker compose local.', priority: 'media' },
-    ],
-  },
-};
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'matching' | 'auth'>('matching');
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
+  const [matchData, setMatchData] = useState<MatchResponse | null>(null);
+  const [loadingMatch, setLoadingMatch] = useState<boolean>(true);
+  const [matchError, setMatchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoadingMatch(true);
+    matchingService.getMatchScore('prof-01', 'job-01')
+      .then((data) => {
+        if (data && Object.keys(data).length > 0) {
+          setMatchData(data);
+        }
+        setLoadingMatch(false);
+      })
+      .catch((err: any) => {
+        console.error("Error al obtener scoring/matching:", err);
+        setMatchError(err.message || "Error al conectar con la API de Matching");
+        setLoadingMatch(false);
+      });
+  }, []);
+
   const handleTabSelect = (tab: 'profile' | 'matching' | 'auth') => {
     setActiveTab(tab);
-    setMobileMenuOpen(false); // Cierra automáticamente al hacer clic en una pestaña
+    setMobileMenuOpen(false);
   };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans antialiased flex flex-col w-full overflow-x-hidden">
-      {/* Header con posicionamiento relativo para anclar el desplegable */}
+      {/* Header Fijo */}
       <header className="bg-slate-900 text-white shadow-lg border-b border-slate-800 sticky top-0 z-50 relative">
         <div className="w-full px-4 sm:px-8 h-20 flex items-center justify-between">
-          
-          {/* Logo / Nombre de la App */}
           <div className="flex items-center space-x-3.5">
             <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shrink-0">
               <Briefcase className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -69,7 +54,7 @@ export const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Navegación Desktop (Visible sólo de md: en adelante) */}
+          {/* Navegación Desktop */}
           <nav className="hidden md:flex items-center space-x-2">
             <button
               onClick={() => handleTabSelect('matching')}
@@ -108,7 +93,7 @@ export const App: React.FC = () => {
             </button>
           </nav>
 
-          {/* Botón Hamburguesa en Mobile */}
+          {/* Botón Menú Mobile */}
           <div className="flex md:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -120,15 +105,13 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* 🚀 MENÚ FLOTANTE PEGADO AL HEADER Y AUTOMÁTICAMENTE OCULTO EN DESKTOP (md:hidden) */}
+        {/* Dropdown Mobile */}
         {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full right-0 w-auto min-w-[210px] max-w-[260px] bg-slate-900 border-x border-b border-slate-800 rounded-bl-2xl p-2.5 shadow-2xl space-y-1 z-50">
+          <div className="md:hidden absolute top-full right-4 sm:right-8 w-auto min-w-[210px] max-w-[260px] bg-slate-900 border-x border-b border-slate-700 rounded-b-2xl p-2.5 shadow-2xl space-y-1 z-50">
             <button
               onClick={() => handleTabSelect('matching')}
               className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'matching'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-200 hover:bg-slate-800'
+                activeTab === 'matching' ? 'bg-blue-600 text-white' : 'text-slate-200 hover:bg-slate-800'
               }`}
             >
               <UserCheck className="w-4 h-4 text-blue-400" />
@@ -138,9 +121,7 @@ export const App: React.FC = () => {
             <button
               onClick={() => handleTabSelect('profile')}
               className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'profile'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-200 hover:bg-slate-800'
+                activeTab === 'profile' ? 'bg-blue-600 text-white' : 'text-slate-200 hover:bg-slate-800'
               }`}
             >
               <User className="w-4 h-4 text-blue-400" />
@@ -150,9 +131,7 @@ export const App: React.FC = () => {
             <button
               onClick={() => handleTabSelect('auth')}
               className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'auth'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-200 hover:bg-slate-800'
+                activeTab === 'auth' ? 'bg-blue-600 text-white' : 'text-slate-200 hover:bg-slate-800'
               }`}
             >
               <LogIn className="w-4 h-4 text-blue-400" />
@@ -162,7 +141,7 @@ export const App: React.FC = () => {
         )}
       </header>
 
-      {/* Contenido Principal Adaptativo Full Width */}
+      {/* Contenido Principal */}
       <main className="w-full px-4 sm:px-8 py-6 sm:py-8 flex-1">
         {activeTab === 'matching' && (
           <div className="w-full space-y-6 sm:space-y-8">
@@ -180,10 +159,20 @@ export const App: React.FC = () => {
               </span>
             </div>
 
-            <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8 items-start">
-              <RuleScoreCard scoreData={MOCK_MATCH.rule_based} />
-              <AISuggestionCard aiData={MOCK_MATCH.ai_recommendations} />
-            </div>
+            {matchError && (
+              <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-200 text-sm font-bold">
+                {matchError} (Mostrando datos locales de respaldo)
+              </div>
+            )}
+
+            {loadingMatch ? (
+              <div className="p-8 text-center text-slate-500 font-bold">Cargando puntuación de matching...</div>
+            ) : (
+              <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8 items-start">
+                <RuleScoreCard scoreData={matchData?.rule_based} />
+                <AISuggestionCard aiData={matchData?.ai_recommendations} />
+              </div>
+            )}
           </div>
         )}
 

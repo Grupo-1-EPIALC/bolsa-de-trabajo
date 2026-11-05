@@ -10,9 +10,22 @@ export interface LoginResponse {
   refresh: string;
 }
 
+const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
+
 export const authService = {
-  // POST /api/v1/auth/token (HU-03)
+  // POST /api/v1/auth/token
   login: async (credentials: LoginPayload): Promise<LoginResponse> => {
+    if (USE_MOCKS) {
+      console.log('[MOCK] Login simulado para:', credentials.email);
+      const fakeTokens = {
+        access: 'mock_jwt_access_token_xyz_123',
+        refresh: 'mock_jwt_refresh_token_xyz_123',
+      };
+      localStorage.setItem('access_token', fakeTokens.access);
+      localStorage.setItem('refresh_token', fakeTokens.refresh);
+      return Promise.resolve(fakeTokens);
+    }
+
     const data = await apiFetch<LoginResponse>('/auth/token', {
       method: 'POST',
       body: JSON.stringify(credentials),
@@ -22,8 +35,13 @@ export const authService = {
     return data;
   },
 
-  // POST /api/v1/auth/register (HU-01 / HU-02)
+  // POST /api/v1/auth/register
   register: async (payload: any): Promise<void> => {
+    if (USE_MOCKS) {
+      console.log('[MOCK] Registro simulado:', payload);
+      return Promise.resolve();
+    }
+
     return apiFetch<void>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
