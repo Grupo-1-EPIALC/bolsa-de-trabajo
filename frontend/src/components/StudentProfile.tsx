@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { profileService } from '../services/profileService';
 import { StudentProfile as StudentProfileType } from '../types/profile';
 import { MOCK_STUDENT_PROFILE } from '../services/mockData';
-import { UploadCloud, CheckCircle, AlertCircle, User } from 'lucide-react';
+import { UploadCloud, User } from 'lucide-react';
 
 interface StudentProfileProps {
   initialProfile?: StudentProfileType;
