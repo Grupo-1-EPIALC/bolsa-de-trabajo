@@ -1,0 +1,50 @@
+# Reglas del motor de matching (origin = "RULES").
+# Ver contracts/estructura_comun_perfil_oferta_match.md §7.
+# Cambiar pesos o condiciones => subir `version` (MINOR) para que quede trazado en cada match.
+version: "1.0.0"
+
+# Pesos de los criterios del score (deben sumar 100).
+weights:
+  required_skills: 50
+  desired_skills: 15
+  levels: 15
+  experience: 10
+  education: 5
+  languages: 5
+
+# Si falta una skill `excluding`, el score queda topeado en este valor.
+excluding_cap: 40
+
+# Condiciones laborales (conditions_fit). No suman al score.
+# hard: true => si no coincide, el match se marca incompatible (y se excluye del ranking).
+conditions:
+  work_modality:      { enabled: true, hard: true }
+  location:           { enabled: true, hard: true }
+  work_schedule:      { enabled: true, hard: true }
+  shifts:             { enabled: true, hard: false }
+  employment_type:    { enabled: true, hard: true }
+  contract_duration:  { enabled: true, hard: false }
+  availability_start: { enabled: true, hard: false }
+  salary:             { enabled: true, hard: false }
+  travel:             { enabled: true, hard: false }
+  driver_license:     { enabled: true, hard: true }
+  work_authorization: { enabled: true, hard: true }
+  academic:           { enabled: true, hard: false }
+
+# Sueldo pretendido ↔ ofrecido (§7.2): todo se normaliza a mensual bruto.
+salary:
+  tolerance_percent: 10        # brecha máxima para "partial"
+  net_to_gross: 1.21           # factor neto -> bruto
+  weeks_per_month: 4.33        # hora -> mes
+  working_days_per_month: 21   # día -> mes
+  salaries_per_year: 13        # año -> mes (12 sueldos + aguinaldo)
+  default_weekly_hours: 40     # si el sueldo es por hora y no hay horas semanales
+  fx_rates: {}                 # ej. { USD_ARS: 1200 } — sin tipo de cambio => "unknown"
+
+ranking:
+  # Valores iniciales; un admin los ajusta en PUT /api/v1/matches/settings (1 a 20)
+  student_jobs_limit: 5        # ofertas recomendadas a cada estudiante
+  company_candidates_limit: 10 # candidatos recomendados por oferta
+  max_pool: 200                # máximo de perfiles/ofertas que se evalúan por ranking
+  exclude_incompatible: true   # excluir matches que fallan una condición dura
+  min_score: 0
