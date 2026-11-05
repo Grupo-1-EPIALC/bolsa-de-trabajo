@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bolsa.local/schemas/match_company_recommendations.schema.json",
+  "title": "Candidatos recomendados para una oferta (Match Advisor, mode=company, origin=AI)",
+  "description": "Salida del agente match_advisor. No incluye score: el puntaje y el orden los define el motor de reglas de matching-service. `strengths` son nombres de competencias presentes en el perfil (se verifican por grounding).",
+  "type": "object",
+  "required": [
+    "summary",
+    "candidates"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "string",
+      "minLength": 5
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": [
+          "profile_id",
+          "priority",
+          "justification",
+          "strengths",
+          "gaps",
+          "conditions_alerts",
+          "interview_questions"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "alta",
+              "media",
+              "baja"
+            ]
+          },
+          "justification": {
+            "type": "string",
+            "minLength": 5
+          },
+          "strengths": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "gaps": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "conditions_alerts": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "string",
+              "minLength": 3
+            }
+          },
+          "interview_questions": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "string",
+              "minLength": 5
+            }
+          }
+        }
+      }
+    }
+  }
+}

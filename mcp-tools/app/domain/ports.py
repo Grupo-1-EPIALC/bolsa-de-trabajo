@@ -36,6 +36,14 @@ class MatchingGateway(Protocol):
 
     async def missing_skills(self, profile_id: str, job_id: str) -> list[JsonDict]: ...
 
+    async def rank_jobs_for_student(self, profile_id: str, limit: int | None) -> JsonDict:
+        """Ofertas rankeadas por reglas. `limit=None` => cantidad configurada por el admin."""
+        ...
+
+    async def rank_candidates_for_job(self, job_id: str, limit: int | None) -> JsonDict:
+        """Candidatos rankeados por reglas. `limit=None` => cantidad configurada por el admin."""
+        ...
+
 
 class CourseCatalog(Protocol):
     def search(self, skills: list[str], limit: int) -> list[JsonDict]: ...

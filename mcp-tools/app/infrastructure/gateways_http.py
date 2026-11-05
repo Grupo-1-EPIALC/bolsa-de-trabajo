@@ -94,6 +94,20 @@ class HttpMatchingGateway(_BaseHttpGateway):
         items = data.get("items", data) if isinstance(data, dict) else data
         return [dict(item) for item in items]
 
+    async def rank_jobs_for_student(self, profile_id: str, limit: int | None) -> JsonDict:
+        params = {"limit": limit} if limit else None
+        data = await self._request(
+            "GET", f"/api/v1/matches/students/{profile_id}/jobs", params=params
+        )
+        return dict(data)
+
+    async def rank_candidates_for_job(self, job_id: str, limit: int | None) -> JsonDict:
+        params = {"limit": limit} if limit else None
+        data = await self._request(
+            "GET", f"/api/v1/matches/jobs/{job_id}/candidates", params=params
+        )
+        return dict(data)
+
 
 class HttpRecommendationStore(_BaseHttpGateway):
     async def save(self, recommendation: JsonDict) -> JsonDict:
