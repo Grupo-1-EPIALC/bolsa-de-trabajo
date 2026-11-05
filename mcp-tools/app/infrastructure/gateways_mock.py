@@ -269,6 +269,91 @@ class MockMatchingGateway:
         gaps.sort(key=lambda g: (priority_order.get(str(g["priority"]), 3), -int(g["gap"])))
         return gaps
 
+    # Mismos valores iniciales que matching-service (scoring_rules.yaml → ranking)
+    DEFAULT_STUDENT_JOBS = 5
+    DEFAULT_COMPANY_CANDIDATES = 10
+
+    async def _match_block(self, profile_id: str, job_id: str) -> JsonDict:
+        match = await self.compute_match(profile_id, job_id)
+        missing = await self.missing_skills(profile_id, job_id)
+        return {
+            "origin": "RULES",
+            "engine_version": match["engine_version"],
+            "profile_id": profile_id,
+            "job_id": job_id,
+            "score": match["score"],
+            "excluding_cap_applied": match["excluding_Rule_applied"],
+            "breakdown": [{"criterion": k, "earned": v} for k, v in match["breakdown"].items()],
+            "missing_skills": missing,
+            "matched_skills": [],
+            # Los mocks no modelan condiciones laborales: todo es compatible.
+            "conditions_fit": {
+                "compatible": True,
+                "distance_km": None,
+                "checks": [],
+                "salary_fit": None,
+            },
+        }
+
+    @staticmethod
+    def _candidate_snapshot(profile: JsonDict) -> JsonDict:
+        """Sin nombre ni contacto (mismo criterio que matching-service)."""
+        return {
+            "profile_id": profile["id"],
+            "headline": profile.get("summary", ""),
+            "years_experience": profile.get("years_experience", 0),
+            "skills": profile.get("skills", []),
+            "languages": profile.get("languages", []),
+            "academic_status": {"career": profile.get("career", "")},
+        }
+
+    @staticmethod
+    def _job_snapshot(job: JsonDict) -> JsonDict:
+        return {
+            "job_id": job["id"],
+            "title": job.get("title", ""),
+            "company_name": job.get("company_name", ""),
+            "requirements": {"skills": job.get("requirements", [])},
+        }
+
+    async def rank_jobs_for_student(self, profile_id: str, limit: int | None) -> JsonDict:
+        profile = await self._profiles.get_profile(profile_id)
+        jobs = await self._jobs.list_active_jobs(limit=1000)
+        ranked = [(job, await self._match_block(profile_id, job["id"])) for job in jobs]
+        ranked.sort(key=lambda pair: (-float(pair[1]["score"]), pair[0]["id"]))
+        top = ranked[: limit or self.DEFAULT_STUDENT_JOBS]
+        return {
+            "origin": "RULES",
+            "profile_id": profile_id,
+            "profile": self._candidate_snapshot(profile),
+            "engine_version": MOCK_ENGINE_VERSION,
+            "evaluated": len(jobs),
+            "excluded_incompatible": 0,
+            "items": [
+                {"rank": pos, "job": self._job_snapshot(job), "match": match}
+                for pos, (job, match) in enumerate(top, start=1)
+            ],
+        }
+
+    async def rank_candidates_for_job(self, job_id: str, limit: int | None) -> JsonDict:
+        job = await self._jobs.get_job(job_id)
+        profiles = await self._profiles.list_profiles(skills=[], limit=1000)
+        ranked = [(p, await self._match_block(p["id"], job_id)) for p in profiles]
+        ranked.sort(key=lambda pair: (-float(pair[1]["score"]), pair[0]["id"]))
+        top = ranked[: limit or self.DEFAULT_COMPANY_CANDIDATES]
+        return {
+            "origin": "RULES",
+            "job_id": job_id,
+            "job": self._job_snapshot(job),
+            "engine_version": MOCK_ENGINE_VERSION,
+            "evaluated": len(profiles),
+            "excluded_incompatible": 0,
+            "items": [
+                {"rank": pos, "candidate": self._candidate_snapshot(p), "match": match}
+                for pos, (p, match) in enumerate(top, start=1)
+            ],
+        }
+
 
 class MockRecommendationStore:
     def __init__(self) -> None:

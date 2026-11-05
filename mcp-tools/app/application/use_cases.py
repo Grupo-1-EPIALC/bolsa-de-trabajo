@@ -97,6 +97,22 @@ class RecruitmentToolsService:
             raise InvalidInputError("profile_id y job_id son obligatorios")
         return await self._matching.missing_skills(profile_id.strip(), job_id.strip())
 
+    async def rank_jobs_for_student(self, profile_id: str, limit: int | None = None) -> JsonDict:
+        clean_id = profile_id.strip()
+        if not clean_id:
+            raise InvalidInputError("profile_id es obligatorio")
+        result = await self._matching.rank_jobs_for_student(clean_id, _optional_limit(limit))
+        result.setdefault("origin", "RULES")
+        return result
+
+    async def rank_candidates_for_job(self, job_id: str, limit: int | None = None) -> JsonDict:
+        clean_id = job_id.strip()
+        if not clean_id:
+            raise InvalidInputError("job_id es obligatorio")
+        result = await self._matching.rank_candidates_for_job(clean_id, _optional_limit(limit))
+        result.setdefault("origin", "RULES")
+        return result
+
     def search_courses(self, skills: list[str], limit: int = 5) -> list[JsonDict]:
         if limit <= 0:
             raise InvalidInputError("limit debe ser mayor que 0")
@@ -242,3 +258,12 @@ class SkillCatalogService:
             offset=offset,
             session_id=session_id,
         )
+
+
+def _optional_limit(limit: int | None) -> int | None:
+    """`None`/0 => usar la cantidad configurada por el admin en matching-service."""
+    if limit is None or limit == 0:
+        return None
+    if limit < 0:
+        raise InvalidInputError("limit no puede ser negativo")
+    return limit

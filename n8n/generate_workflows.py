@@ -17,7 +17,7 @@ Genera en `n8n/workflows/`:
   - `WF-0V-verificador.json`     (NVIDIA · Verificador determinístico + Doctor Strange)
   - `WF-00-orquestador.json`     (NVIDIA · Orquestador multi-agente Captain + Chat/Webhook/Sub-workflow)
   - `WF-01-procesar-cv.json`     (WF-01 · Procesar CV · CV Structurer con MCP Client)
-  - `WF-06-recomendador.json`    (WF-06 · Recomendador Postulantes y Empresas)
+  - `WF-06-recomendador.json`    (WF-06 · Recomendador Postulantes y Empresas con Match Advisor)
 """
 
 import json
@@ -107,6 +107,7 @@ def _load_catalog() -> tuple[dict[str, Any], dict[str, Any], str, dict[str, str]
         "cv_structurer": (PROMPTS_DIR / "cv_structurer.md").read_text(encoding="utf-8"),
         "training_advisor": (PROMPTS_DIR / "training_advisor.md").read_text(encoding="utf-8"),
         "company_advisor": (PROMPTS_DIR / "company_advisor.md").read_text(encoding="utf-8"),
+        "match_advisor": (PROMPTS_DIR / "match_advisor.md").read_text(encoding="utf-8"),
         "verifier": (PROMPTS_DIR / "verifier.md").read_text(encoding="utf-8"),
     }
     return catalog, sistema, reglas_md, prompts_md
@@ -570,6 +571,35 @@ const normalizeCvCandidate = (rawInput, sourceText = '') => {
     links,
     pending_manual_fields: pending,
   };
+};
+"""
+
+
+MATCHING_HELPER_JS = r"""
+const MATCHING_BASE = ($env.MATCHING_SERVICE_URL || 'http://matching-service:8000').replace(/\/+$/, '');
+
+// REST directo a matching-service (red interna backend, con X-Service-Token).
+const callMatching = async (method, path, body = null) => {
+  const opts = {
+    method,
+    url: `${MATCHING_BASE}${path}`,
+    headers: { 'X-Service-Token': SERVICE_TOKEN, 'Accept': 'application/json' },
+    json: true,
+    timeout: 30000,
+  };
+  if (body !== null) opts.body = body;
+  try {
+    return { ok: true, data: await this.helpers.httpRequest(opts) };
+  } catch (e) {
+    const status = Number(e && (e.httpCode || (e.response && e.response.status) || e.statusCode)) || 502;
+    const upstream = (e && e.response && e.response.body && e.response.body.error)
+      || (e && e.cause && e.cause.response && e.cause.response.body && e.cause.response.body.error);
+    return {
+      ok: false,
+      status_code: status >= 400 && status < 600 ? status : 502,
+      error: upstream || { code: 'MATCHING_UNAVAILABLE', message: String((e && e.message) || e), details: {} },
+    };
+  }
 };
 """
 
@@ -1053,6 +1083,13 @@ if (schemaName !== 'cv_standard') {
       for (const st of (c.strengths || [])) terms.push(String(st));
     }
   }
+  if (Array.isArray(candidateObj.jobs)) {
+    for (const jb of candidateObj.jobs) {
+      for (const step of (jb.next_steps || [])) {
+        if (step && step.skill) terms.push(String(step.skill));
+      }
+    }
+  }
 }
 
 const schemaRes = await callMcpTool('validate_json_schema', {
@@ -1254,6 +1291,8 @@ const taskMap = {
   cv_extract: { agent: 'cv_structurer', schema: 'cv_standard', role: 'cv', perfil: 'cv' },
   recommend_student: { agent: 'training_advisor', schema: 'student_recommendations', role: 'default', perfil: 'postulante' },
   recommend_company: { agent: 'company_advisor', schema: 'company_recommendations', role: 'default', perfil: 'empresa' },
+  match_student: { agent: 'match_advisor', schema: 'match_student_recommendations', role: 'default', perfil: 'postulante' },
+  match_company: { agent: 'match_advisor', schema: 'match_company_recommendations', role: 'default', perfil: 'empresa' },
 };
 
 const mapped = taskMap[b.task] || {
@@ -1919,14 +1958,134 @@ const cfgRes = await callMcpTool('get_agent_settings');
 const cfg = cfgRes.data || cfgRes || {};
 const recoCfg = cfg.recommendations || {};
 
+const requestId = String(body.request_id || '');
+// limit: lo manda matching-service (ya acotado a lo que configuró el admin). 0 = usar esa config.
+const requestedLimit = Math.max(0, Number(body.limit || 0));
+const mcpStatus = (err) => ({ not_found: 404, invalid_input: 400 }[err && err.code] || 502);
+
+// Resumen del match por reglas para el LLM: sin montos de sueldo (sólo resultado y brecha).
+const compactMatch = (m) => ({
+  score: m.score,
+  excluding_cap_applied: m.excluding_cap_applied,
+  matched_skills: m.matched_skills || [],
+  missing_skills: m.missing_skills || [],
+  conditions_fit: {
+    compatible: m.conditions_fit ? m.conditions_fit.compatible : null,
+    distance_km: m.conditions_fit ? m.conditions_fit.distance_km : null,
+    alerts: ((m.conditions_fit && m.conditions_fit.checks) || [])
+      .filter(c => c.result === 'mismatch' || c.result === 'partial')
+      .map(c => ({ condition: c.condition, result: c.result, hard: c.hard, profile_value: c.profile_value, job_value: c.job_value })),
+    salary_fit: m.conditions_fit && m.conditions_fit.salary_fit
+      ? { result: m.conditions_fit.salary_fit.result, gap_percent: m.conditions_fit.salary_fit.gap_percent }
+      : null,
+  },
+});
+
 if (mode === 'student') {
+  const profileId = String(body.profile_id || '');
+  if (!profileId) {
+    return [{ json: { valid: false, status_code: 400, error: { code: 'INVALID_INPUT', message: 'profile_id es obligatorio para mode=student', details: {} } } }];
+  }
+  const rk = await callMcpTool('rank_jobs_for_student', { profile_id: profileId, limit: requestedLimit });
+  if (!rk.ok) {
+    return [{ json: { valid: false, status_code: mcpStatus(rk.error), error: rk.error } }];
+  }
+  const { ok: _okStudent, ...ranking } = rk;
+  const items = ranking.items || [];
+  const base = { mode: 'student', request_id: requestId, profile_id: profileId, subject_id: profileId, rule_based: ranking };
+  if (!items.length) {
+    return [{ json: { ...base, valid: false, skip_ai: true, status_code: 200, reason: 'No hay ofertas compatibles por reglas para este estudiante.' } }];
+  }
+
+  const missingNames = [...new Set(items.flatMap(it => ((it.match && it.match.missing_skills) || []).map(m => m.skill)).filter(Boolean))];
+  const coursesRes = missingNames.length
+    ? await callMcpTool('search_courses', { skills: missingNames, limit: Number(recoCfg.max_items_per_job || 5) }).catch(() => ({}))
+    : {};
+  const courses = coursesRes.data || [];
+
+  const source = {
+    mode: 'student',
+    profile: ranking.profile || { profile_id: profileId },
+    rule_based: {
+      origin: 'RULES',
+      engine_version: ranking.engine_version,
+      items: items.map(it => ({ rank: it.rank, job_id: it.job && it.job.job_id, job: it.job, ...compactMatch(it.match || {}) })),
+    },
+    available_courses: courses,
+  };
+  const sourceText = JSON.stringify(source, null, 2);
+  const topScore = items[0].match ? items[0].match.score : null;
+  return [{
+    json: {
+      ...base,
+      valid: true,
+      task: 'match_student',
+      agent: 'match_advisor',
+      role: 'default',
+      perfil_mcp: 'postulante',
+      schema_name: 'match_student_recommendations',
+      source_text: sourceText,
+      expected_score: topScore,
+      reported_score: topScore,
+      prompt_version: '1.0.0',
+      user_prompt: `mode=student. Recomendá al estudiante ${profileId} las ofertas del ranking por reglas, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","jobs":[...]}:\n\n${sourceText}`,
+    },
+  }];
+}
+
+if (mode === 'company') {
+  const jobId = String(body.job_id || '');
+  if (!jobId) {
+    return [{ json: { valid: false, status_code: 400, error: { code: 'INVALID_INPUT', message: 'job_id es obligatorio para mode=company', details: {} } } }];
+  }
+  const rk = await callMcpTool('rank_candidates_for_job', { job_id: jobId, limit: requestedLimit });
+  if (!rk.ok) {
+    return [{ json: { valid: false, status_code: mcpStatus(rk.error), error: rk.error } }];
+  }
+  const { ok: _okCompany, ...ranking } = rk;
+  const items = ranking.items || [];
+  const base = { mode: 'company', request_id: requestId, job_id: jobId, subject_id: jobId, rule_based: ranking };
+  if (!items.length) {
+    return [{ json: { ...base, valid: false, skip_ai: true, status_code: 200, reason: 'No hay candidatos compatibles por reglas para esta oferta.' } }];
+  }
+
+  const source = {
+    mode: 'company',
+    job: ranking.job || { job_id: jobId },
+    rule_based: {
+      origin: 'RULES',
+      engine_version: ranking.engine_version,
+      items: items.map(it => ({ rank: it.rank, profile_id: it.candidate && it.candidate.profile_id, candidate: it.candidate, ...compactMatch(it.match || {}) })),
+    },
+  };
+  const sourceText = JSON.stringify(source, null, 2);
+  const topScore = items[0].match ? items[0].match.score : null;
+  return [{
+    json: {
+      ...base,
+      valid: true,
+      task: 'match_company',
+      agent: 'match_advisor',
+      role: 'default',
+      perfil_mcp: 'empresa',
+      schema_name: 'match_company_recommendations',
+      source_text: sourceText,
+      expected_score: topScore,
+      reported_score: topScore,
+      prompt_version: '1.0.0',
+      user_prompt: `mode=company. Recomendá los candidatos del ranking por reglas para la oferta ${jobId}, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","candidates":[...]}:\n\n${sourceText}`,
+    },
+  }];
+}
+
+if (mode === 'training') {
   const profileId = String(body.profile_id || '');
   if (!profileId) {
     return [{
       json: {
         valid: false,
         status_code: 400,
-        error: { code: 'INVALID_INPUT', message: 'profile_id es obligatorio para mode=student', details: {} },
+        error: { code: 'INVALID_INPUT', message: 'profile_id es obligatorio para mode=training', details: {} },
       },
     }];
   }
@@ -1960,8 +2119,8 @@ if (mode === 'student') {
       job_id: jid,
       title: job.title,
       score: matchRes.score,
-      excluding_failed: matchRes.excluding_failed || [],
-      criteria_breakdown: matchRes.criteria_breakdown || {},
+      excluding_cap_applied: Boolean(matchRes.excluding_cap_applied),
+      breakdown: matchRes.breakdown || matchRes.criteria_breakdown || [],
       missing_skills: missingList,
       origin: 'RULES',
       engine_version: matchRes.engine_version || '1.0.0',
@@ -1987,7 +2146,7 @@ if (mode === 'student') {
   return [{
     json: {
       valid: true,
-      mode: 'student',
+      mode: 'training',
       profile_id: profileId,
       primary_job_id: topMatch ? topMatch.job_id : 'job-general',
       rule_based: {
@@ -2009,86 +2168,11 @@ if (mode === 'student') {
   }];
 }
 
-if (mode === 'company') {
-  const jobId = String(body.job_id || '');
-  if (!jobId) {
-    return [{
-      json: {
-        valid: false,
-        status_code: 400,
-        error: { code: 'INVALID_INPUT', message: 'job_id es obligatorio para mode=company', details: {} },
-      },
-    }];
-  }
-
-  const jobRes = await callMcpTool('get_job', { job_id: jobId });
-  if (!jobRes.ok) {
-    return [{ json: { valid: false, status_code: 404, error: jobRes.error } }];
-  }
-
-  const profilesRes = await callMcpTool('list_candidate_profiles', {
-    limit: Number(recoCfg.max_profiles_per_job || 5),
-  });
-  const profiles = profilesRes.data || [];
-
-  const rankedCandidates = [];
-  for (const prof of profiles) {
-    const pid = prof.id || prof.profile_id;
-    const matchRes = await callMcpTool('compute_match', { profile_id: pid, job_id: jobId });
-    const missRes = await callMcpTool('missing_skills', { profile_id: pid, job_id: jobId });
-    rankedCandidates.push({
-      profile_id: pid,
-      full_name: prof.full_name,
-      skills: prof.skills || [],
-      experience_years: prof.experience_years || 0,
-      score: matchRes.score,
-      excluding_failed: matchRes.excluding_failed || [],
-      missing_skills: missRes.data || [],
-      origin: 'RULES',
-      engine_version: matchRes.engine_version || '1.0.0',
-    });
-  }
-
-  rankedCandidates.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
-  const topCandidate = rankedCandidates[0] || null;
-
-  const sourcePayload = {
-    job: jobRes,
-    ranked_candidates_by_rules: rankedCandidates,
-  };
-  const sourceText = JSON.stringify(sourcePayload, null, 2);
-
-  return [{
-    json: {
-      valid: true,
-      mode: 'company',
-      job_id: jobId,
-      primary_profile_id: topCandidate ? topCandidate.profile_id : 'prof-none',
-      rule_based: {
-        origin: 'RULES',
-        engine_version: '1.0.0',
-        job_id: jobId,
-        candidates: rankedCandidates,
-      },
-      task: 'recommend_company',
-      agent: 'company_advisor',
-      role: 'default',
-      perfil_mcp: 'empresa',
-      schema_name: 'company_recommendations',
-      source_text: sourceText,
-      expected_score: topCandidate ? topCandidate.score : null,
-      reported_score: topCandidate ? topCandidate.score : null,
-      prompt_version: '1.0.0',
-      user_prompt: `Generá el resumen ejecutivo y justificación por candidato en JSON ({"summary":"...","candidates":[...]}) respetando el score exacto calculado por reglas para la oferta ${jobId}:\n\n${sourceText}`,
-    },
-  }];
-}
-
 return [{
   json: {
     valid: false,
     status_code: 400,
-    error: { code: 'INVALID_INPUT', message: "mode debe ser 'student' o 'company'", details: { mode } },
+    error: { code: 'INVALID_INPUT', message: "mode debe ser 'student', 'company' o 'training'", details: { mode } },
   },
 }];
 """
@@ -2096,9 +2180,22 @@ return [{
 
     persist_and_format_js = (
         MCP_HELPER_JS
+        + MATCHING_HELPER_JS
         + r"""
 const ctx = $('Obtener Contexto por Reglas (MCP)').first().json;
+const DISCLAIMER = 'Recomendación orientativa generada por IA. El puntaje y el ranking provienen exclusivamente del motor de reglas.';
 if (!ctx.valid) {
+  if (ctx.skip_ai) {
+    return [{
+      json: {
+        status_code: 200,
+        mode: ctx.mode,
+        request_id: ctx.request_id,
+        rule_based: ctx.rule_based,
+        ai_recommendations: { origin: 'AI', status: 'skipped', reason: ctx.reason, items: [] },
+      },
+    }];
+  }
   return [{ json: { error: ctx.error, status_code: ctx.status_code } }];
 }
 
@@ -2108,34 +2205,82 @@ if (!orq.ok) {
     json: {
       status_code: orq.status_code || 503,
       mode: ctx.mode,
+      request_id: ctx.request_id,
       rule_based: ctx.rule_based,
       error: orq.error || { code: 'AI_ADVISOR_FAILED', message: 'No se pudo generar la recomendación IA' },
     },
   }];
 }
 
+if (ctx.mode === 'student' || ctx.mode === 'company') {
+  const aiData = orq.data || {};
+  const isStudent = ctx.mode === 'student';
+  const key = isStudent ? 'job_id' : 'profile_id';
+  const rankItems = (ctx.rule_based && ctx.rule_based.items) || [];
+  const idOf = (it) => String(isStudent ? (it.job && it.job.job_id) : (it.candidate && it.candidate.profile_id));
+  const ruleById = new Map(rankItems.map(it => [idOf(it), it]));
+  const rawList = isStudent ? aiData.jobs : aiData.candidates;
+  const aiList = Array.isArray(rawList) ? rawList : [];
+
+  // Integridad Reglas vs. IA: sólo ids del ranking, sin duplicados, sin score/rank del LLM
+  // y en el orden de rank calculado por matching-service.
+  const seen = new Set();
+  const dropped = [];
+  const entries = [];
+  for (const raw of aiList) {
+    const id = String((raw && raw[key]) || '');
+    if (!ruleById.has(id) || seen.has(id)) { dropped.push(id || '(sin id)'); continue; }
+    seen.add(id);
+    const clean = { ...raw };
+    delete clean.score; delete clean.rank; delete clean.origin; delete clean.breakdown;
+    entries.push({ ...clean, [key]: id, items: isStudent ? (clean.next_steps || []) : [] });
+  }
+  entries.sort((a, b) => Number(ruleById.get(String(a[key])).rank) - Number(ruleById.get(String(b[key])).rank));
+
+  const meta = {
+    origin: 'AI',
+    model: orq.model || 'nvidia',
+    prompt_version: ctx.prompt_version || '1.0.0',
+    generated_at: new Date().toISOString(),
+    disclaimer: DISCLAIMER,
+    verified: Boolean(orq.verified),
+  };
+  const saved = await callMatching('POST', '/api/v1/matches/recommendations/batch', {
+    mode: ctx.mode,
+    subject_id: ctx.subject_id,
+    request_id: ctx.request_id,
+    summary: String(aiData.summary || ''),
+    entries,
+    ...meta,
+  });
+
+  return [{
+    json: {
+      status_code: 200,
+      mode: ctx.mode,
+      request_id: ctx.request_id,
+      rule_based: ctx.rule_based,
+      ai_recommendations: {
+        ...meta,
+        status: 'ready',
+        summary: String(aiData.summary || ''),
+        items: entries,
+        dropped_ids: dropped,
+        persisted: saved.ok,
+        persist_error: saved.ok ? null : saved.error,
+      },
+    },
+  }];
+}
+
 const aiData = orq.data || {};
 let itemsToSave = [];
-if (ctx.mode === 'student') {
+// mode=training: recomendaciones de formación (training_advisor) vía MCP save_recommendation
+if (ctx.mode === 'training') {
   itemsToSave = Array.isArray(aiData.items) ? aiData.items : [];
   await callMcpTool('save_recommendation', {
     profile_id: ctx.profile_id,
     job_id: ctx.primary_job_id,
-    items: itemsToSave,
-    model: orq.model || 'nvidia',
-    prompt_version: ctx.prompt_version || '1.0.0',
-  }).catch(() => null);
-} else {
-  const cands = Array.isArray(aiData.candidates) ? aiData.candidates : [];
-  itemsToSave = cands.map(c => ({
-    type: 'candidate_review',
-    skill: (c.strengths && c.strengths[0]) || 'general',
-    text: `${c.profile_id} (score=${c.score}): ${c.justification}`,
-    priority: c.priority || 'media',
-  }));
-  await callMcpTool('save_recommendation', {
-    profile_id: ctx.primary_profile_id,
-    job_id: ctx.job_id,
     items: itemsToSave,
     model: orq.model || 'nvidia',
     prompt_version: ctx.prompt_version || '1.0.0',
@@ -2204,8 +2349,11 @@ return [{
             "rec-note",
             "Nota WF-06",
             "## WF-06 · Recomendador (`POST /webhook/recommendations`)\n"
-            "- `mode=student` (`profile_id`): ejecuta al agente `training_advisor` (Professor X, con `Herramientas (MCP)` en `perfil=postulante` y skill `orientacion-postulante`).\n"
-            "- `mode=company` (`job_id`): ejecuta al agente `company_advisor` (Nick Fury, con `Herramientas (MCP)` en `perfil=empresa` y skill `seleccion-candidatos`).\n"
+            "- `mode=student` (`profile_id`): obtiene el ranking de ofertas por reglas con la herramienta MCP `rank_jobs_for_student` y ejecuta al agente `match_advisor` (Jean Grey, `perfil=postulante`).\n"
+            "- `mode=company` (`job_id`): obtiene el ranking de candidatos con `rank_candidates_for_job` y ejecuta a `match_advisor` (`perfil=empresa`).\n"
+            "- La cantidad de ofertas y candidatos la define un admin en matching-service (`/api/v1/matches/settings`).\n"
+            "- `mode=training` (`profile_id`): flujo de formación con `training_advisor` (Professor X).\n"
+            "- Guarda el resultado en matching-service (`POST /api/v1/matches/recommendations/batch`) con el `request_id` y descarta score/rank que invente el LLM.\n"
             '- Separa estrictamente `rule_based` (`origin: "RULES"`) de `ai_recommendations` (`origin: "AI"`).',
             [0, -260],
         ),
@@ -2236,7 +2384,10 @@ def main() -> None:
     }
     for filename, wf in workflows.items():
         target = OUT_DIR / filename
-        target.write_text(json.dumps(wf, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        # newline="\n": mismo resultado en Windows y Linux (el repo usa LF)
+        target.write_text(
+            json.dumps(wf, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+        )
         print(f"Generado: {target.relative_to(ROOT)} ({len(wf['nodes'])} nodos)")
 
 
