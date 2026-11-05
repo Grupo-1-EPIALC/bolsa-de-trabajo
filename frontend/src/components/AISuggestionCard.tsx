@@ -1,9 +1,9 @@
 import React from 'react';
-import { AIRecommendations } from '../types/matching';
+import { AIRecommendationResult } from '../types/matching';
 import { Sparkles, Bot, Info, BookOpen } from 'lucide-react';
 
 interface Props {
-  aiData?: AIRecommendations;
+  aiData?: AIRecommendationResult;
 }
 
 export const AISuggestionCard: React.FC<Props> = ({ aiData }) => {

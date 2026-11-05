@@ -32,12 +32,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLoginSuccess }) => {
 
         await authService.register(payload);
         setMessage({ text: 'Registro exitoso. Redirigiendo...', type: 'success' });
-        
+
         // Notifica la redirección
         setTimeout(() => {
           if (onLoginSuccess) onLoginSuccess();
         }, 500);
-
       } else {
         // Login (HU-03)
         await authService.login({ email, password });

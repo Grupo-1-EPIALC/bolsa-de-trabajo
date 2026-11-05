@@ -31,13 +31,16 @@ export const RuleScoreCard: React.FC<Props> = ({ scoreData }) => {
             </span>
           </div>
           <h3 className="text-xl font-extrabold text-slate-900">Compatibilidad Auditada</h3>
-          <p className="text-xs text-slate-600 mt-0.5">Motor determinístico v{scoreData.engine_version}</p>
+          <p className="text-xs text-slate-600 mt-0.5">
+            Motor determinístico v{scoreData.engine_version}
+          </p>
         </div>
 
         {/* Score numérico compacto (text-3xl) */}
         <div className="flex flex-col items-end shrink-0">
           <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            {scoreData.score}<span className="text-xs font-semibold text-slate-500">/100</span>
+            {scoreData.score}
+            <span className="text-xs font-semibold text-slate-500">/100</span>
           </div>
           <span className="text-[11px] text-emerald-800 font-bold bg-emerald-200/90 px-2 py-0.5 rounded mt-0.5 border border-emerald-300">
             Verificado
@@ -47,22 +50,25 @@ export const RuleScoreCard: React.FC<Props> = ({ scoreData }) => {
 
       {/* Desglose de Criterios (Fondo blanco interno de alto contraste) */}
       <div className="space-y-3 mb-5 bg-white/90 p-4 rounded-xl border border-emerald-200/80 shadow-xs">
-        <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Desglose de Criterios</h4>
-        
-        {scoreData.breakdown && Object.entries(scoreData.breakdown).map(([criterion, pts]) => (
-          <div key={criterion} className="space-y-1">
-            <div className="flex justify-between text-xs font-semibold text-slate-700">
-              <span className="capitalize">{criterion.replace('_', ' ')}</span>
-              <span className="text-slate-900 font-extrabold">{pts} pts</span>
+        <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          Desglose de Criterios
+        </h4>
+
+        {scoreData.breakdown &&
+          Object.entries(scoreData.breakdown).map(([criterion, pts]) => (
+            <div key={criterion} className="space-y-1">
+              <div className="flex justify-between text-xs font-semibold text-slate-700">
+                <span className="capitalize">{criterion.replace('_', ' ')}</span>
+                <span className="text-slate-900 font-extrabold">{pts} pts</span>
+              </div>
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min((pts / 50) * 100, 100)}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min((pts / 50) * 100, 100)}%` }}
-              />
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       {/* Competencias Faltantes */}
@@ -74,7 +80,10 @@ export const RuleScoreCard: React.FC<Props> = ({ scoreData }) => {
 
         <div className="space-y-2">
           {scoreData.missing_skills?.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between p-2.5 bg-white/95 rounded-lg border border-emerald-200/70 text-xs shadow-xs">
+            <div
+              key={idx}
+              className="flex items-center justify-between p-2.5 bg-white/95 rounded-lg border border-emerald-200/70 text-xs shadow-xs"
+            >
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
                 <span className="font-bold text-slate-800">{item.skill}</span>

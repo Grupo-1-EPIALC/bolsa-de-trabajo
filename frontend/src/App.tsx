@@ -15,7 +15,7 @@ export const App: React.FC = () => {
 
   // Estado de sesión en Frontend
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  
+
   // 🍞 Estado del Toast de Bienvenida No Invasivo
   const [showWelcomeToast, setShowWelcomeToast] = useState<boolean>(false);
 
@@ -31,7 +31,8 @@ export const App: React.FC = () => {
     }
 
     setLoadingMatch(true);
-    matchingService.getMatchScore('stu-001', 'job-001')
+    matchingService
+      .getMatchScore('stu-001', 'job-001')
       .then((data) => {
         if (data && Object.keys(data).length > 0) {
           setMatchData(data);
@@ -39,8 +40,8 @@ export const App: React.FC = () => {
         setLoadingMatch(false);
       })
       .catch((err: any) => {
-        console.error("Error al obtener scoring/matching:", err);
-        setMatchError(err.message || "Error al conectar con la API de Matching");
+        console.error('Error al obtener scoring/matching:', err);
+        setMatchError(err.message || 'Error al conectar con la API de Matching');
         setLoadingMatch(false);
       });
   }, []);
@@ -91,7 +92,9 @@ export const App: React.FC = () => {
               <span className="font-extrabold text-white text-lg sm:text-xl tracking-tight block leading-tight">
                 Bolsa de Trabajo
               </span>
-              <span className="text-[11px] sm:text-xs text-slate-400 font-medium">Matching Auditado & IA  </span>
+              <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
+                Matching Auditado & IA{' '}
+              </span>
             </div>
           </div>
 
@@ -162,7 +165,9 @@ export const App: React.FC = () => {
             <button
               onClick={() => handleTabSelect('matching')}
               className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'matching' ? 'bg-blue-600 text-white' : 'text-slate-200 hover:bg-slate-800'
+                activeTab === 'matching'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-200 hover:bg-slate-800'
               }`}
             >
               <UserCheck className="w-4 h-4 text-blue-400" />
@@ -172,7 +177,9 @@ export const App: React.FC = () => {
             <button
               onClick={() => handleTabSelect('profile')}
               className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'profile' ? 'bg-blue-600 text-white' : 'text-slate-200 hover:bg-slate-800'
+                activeTab === 'profile'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-200 hover:bg-slate-800'
               }`}
             >
               <User className="w-4 h-4 text-blue-400" />
@@ -181,7 +188,10 @@ export const App: React.FC = () => {
 
             {isAuthenticated ? (
               <button
-                onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                onClick={() => {
+                  handleLogout();
+                  setMobileMenuOpen(false);
+                }}
                 className="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-950/40 transition-all"
               >
                 <LogOut className="w-4 h-4 text-red-400" />
@@ -191,7 +201,9 @@ export const App: React.FC = () => {
               <button
                 onClick={() => handleTabSelect('auth')}
                 className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === 'auth' ? 'bg-blue-600 text-white' : 'text-slate-200 hover:bg-slate-800'
+                  activeTab === 'auth'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-200 hover:bg-slate-800'
                 }`}
               >
                 <LogIn className="w-4 h-4 text-blue-400" />
@@ -212,7 +224,11 @@ export const App: React.FC = () => {
                   Evaluación de Compatibilidad
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                  Candidato: <span className="font-bold text-slate-800">Lucía Pérez (stu-001)</span> — Puesto: <span className="font-bold text-slate-800">Desarrollador Frontend Trainee (job-001)</span>
+                  Candidato: <span className="font-bold text-slate-800">Lucía Pérez (stu-001)</span>{' '}
+                  — Puesto:{' '}
+                  <span className="font-bold text-slate-800">
+                    Desarrollador Frontend Trainee (job-001)
+                  </span>
                 </p>
               </div>
               <span className="self-start md:self-auto text-xs sm:text-sm font-bold px-3.5 py-1.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full">
@@ -227,7 +243,9 @@ export const App: React.FC = () => {
             )}
 
             {loadingMatch ? (
-              <div className="p-8 text-center text-slate-500 font-bold">Cargando puntuación de matching...</div>
+              <div className="p-8 text-center text-slate-500 font-bold">
+                Cargando puntuación de matching...
+              </div>
             ) : (
               <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8 items-start">
                 <RuleScoreCard scoreData={matchData?.rule_based} />

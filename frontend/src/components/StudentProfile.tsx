@@ -9,7 +9,9 @@ interface StudentProfileProps {
 }
 
 export const StudentProfile: React.FC<StudentProfileProps> = ({ initialProfile }) => {
-  const [profile, setProfile] = useState<StudentProfileType>(initialProfile || MOCK_STUDENT_PROFILE);
+  const [profile, setProfile] = useState<StudentProfileType>(
+    initialProfile || MOCK_STUDENT_PROFILE,
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +22,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ initialProfile }
 
   useEffect(() => {
     setLoading(true);
-    profileService.getProfile()
+    profileService
+      .getProfile()
       .then((data) => {
         if (data && Object.keys(data).length > 0) {
           setProfile(data);
@@ -28,8 +31,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ initialProfile }
         setLoading(false);
       })
       .catch((err: any) => {
-        console.error("Error al consultar la API de perfiles:", err);
-        setError(err.message || "Error al conectar con la API Gateway");
+        console.error('Error al consultar la API de perfiles:', err);
+        setError(err.message || 'Error al conectar con la API Gateway');
         setLoading(false);
       });
   }, []);
@@ -38,10 +41,14 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ initialProfile }
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const allowedTypes = [
-        'application/pdf', 
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       ];
-      if (!allowedTypes.includes(file.type) && !file.name.endsWith('.pdf') && !file.name.endsWith('.docx')) {
+      if (
+        !allowedTypes.includes(file.type) &&
+        !file.name.endsWith('.pdf') &&
+        !file.name.endsWith('.docx')
+      ) {
         setUploadStatus('Formato no permitido. Solo se aceptan archivos PDF o DOCX.');
         return;
       }
@@ -68,7 +75,8 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ initialProfile }
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-500 font-bold">Cargando perfil...</div>;
+  if (loading)
+    return <div className="p-8 text-center text-slate-500 font-bold">Cargando perfil...</div>;
 
   return (
     <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200/80 space-y-8">
@@ -101,19 +109,21 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ initialProfile }
       {/* Carga de CV (HU-08 / RNF-04) */}
       <div className="border-2 border-dashed border-slate-200 p-6 sm:p-8 rounded-2xl text-center bg-slate-50/50 hover:bg-slate-50 transition-all">
         <UploadCloud className="w-10 h-10 text-blue-500 mx-auto mb-3" />
-        <h3 className="text-lg font-extrabold text-slate-800 mb-1">Cargar o Actualizar CV (HU-08)</h3>
+        <h3 className="text-lg font-extrabold text-slate-800 mb-1">
+          Cargar o Actualizar CV (HU-08)
+        </h3>
         <p className="text-xs sm:text-sm text-slate-500 mb-4">Formato PDF o DOCX (máximo 5 MB)</p>
-        
+
         <div className="flex flex-col items-center gap-3">
-          <input 
-            type="file" 
-            accept=".pdf,.docx" 
+          <input
+            type="file"
+            accept=".pdf,.docx"
             onChange={handleFileChange}
             className="text-xs sm:text-sm text-slate-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer"
           />
           {cvFile && (
-            <button 
-              onClick={handleUpload} 
+            <button
+              onClick={handleUpload}
               disabled={uploading}
               className="px-5 py-2.5 bg-blue-600 text-white font-bold text-xs sm:text-sm rounded-xl hover:bg-blue-700 disabled:bg-slate-400 transition-all shadow-md shadow-blue-600/20"
             >
@@ -135,7 +145,7 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({ initialProfile }
         </h3>
         <div className="flex flex-wrap gap-3">
           {profile.skills.map((skill, idx) => (
-            <span 
+            <span
               key={idx}
               className="inline-flex items-center space-x-1.5 text-xs sm:text-sm bg-slate-100 text-slate-800 px-4 py-2 rounded-xl border border-slate-200/80 font-bold shadow-xs"
             >

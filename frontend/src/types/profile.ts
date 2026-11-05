@@ -71,7 +71,7 @@ export interface EducationItem {
   level: EducationLevel;
   status: EducationStatus;
   start?: string; // YYYY-MM
-  end?: string;   // YYYY-MM
+  end?: string; // YYYY-MM
   progress_percent?: number;
 }
 

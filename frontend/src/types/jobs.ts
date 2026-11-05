@@ -1,10 +1,10 @@
-import { 
-  Location, 
-  WorkConditions, 
-  Seniority, 
-  ProfileSkillItem, 
-  ProfileLanguageItem, 
-  EducationItem 
+import {
+  Location,
+  WorkConditions,
+  Seniority,
+  ProfileSkillItem,
+  ProfileLanguageItem,
+  EducationItem,
 } from './profile';
 
 export type RequirementKind = 'required' | 'desired' | 'excluding';
