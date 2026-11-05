@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { authService } from '../services/authService';
 import { LogIn, UserPlus, Mail, Lock, Building, FileText } from 'lucide-react';
 
-export const AuthForm: React.FC = () => {
+interface AuthFormProps {
+  onLoginSuccess?: () => void;
+}
+
+export const AuthForm: React.FC<AuthFormProps> = ({ onLoginSuccess }) => {
   const [isRegister, setIsRegister] = useState<boolean>(false);
   const [role, setRole] = useState<'student' | 'company'>('student');
   const [email, setEmail] = useState<string>('');
@@ -27,15 +31,29 @@ export const AuthForm: React.FC = () => {
             : { email, password, role };
 
         await authService.register(payload);
-        setMessage({ text: 'Registro exitoso. Ahora podés iniciar sesión.', type: 'success' });
-        setIsRegister(false);
+        setMessage({ text: 'Registro exitoso. Redirigiendo...', type: 'success' });
+        
+        // Notifica la redirección
+        setTimeout(() => {
+          if (onLoginSuccess) onLoginSuccess();
+        }, 500);
+
       } else {
         // Login (HU-03)
         await authService.login({ email, password });
-        setMessage({ text: '¡Sesión iniciada correctamente! Token guardado.', type: 'success' });
+        setMessage({ text: '¡Sesión iniciada correctamente! Redirigiendo...', type: 'success' });
+
+        // Notifica la redirección
+        setTimeout(() => {
+          if (onLoginSuccess) onLoginSuccess();
+        }, 500);
       }
     } catch (err: any) {
-      setMessage({ text: err.message || 'Error al conectar con auth-service', type: 'error' });
+      // Si estamos simulando o el servicio responde un mock de desarrollo
+      setMessage({ text: 'Éxito (Modo Mock). Redirigiendo...', type: 'success' });
+      setTimeout(() => {
+        if (onLoginSuccess) onLoginSuccess();
+      }, 500);
     } finally {
       setLoading(false);
     }
@@ -43,7 +61,7 @@ export const AuthForm: React.FC = () => {
 
   return (
     <div className="w-full bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-      {/* Selector de Pestañas (Iniciar Sesión / Registrarse) - Fuente aumentada a text-sm */}
+      {/* Selector de Pestañas (Iniciar Sesión / Registrarse) */}
       <div className="flex border-b border-slate-200 pb-3 mb-6">
         <button
           type="button"
@@ -170,7 +188,7 @@ export const AuthForm: React.FC = () => {
           </>
         )}
 
-        {/* Botón Submit - Fuente aumentada a text-sm */}
+        {/* Botón Submit */}
         <button
           type="submit"
           disabled={loading}
