@@ -126,14 +126,34 @@ export const StepCvData: React.FC<StepCvDataProps> = ({
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    // Lo que el usuario guarda queda confirmado (las skills de la IA conservan source "cv_ai").
-    const skills = (form.skills ?? []).map((s) => ({
+
+    // 1. Sanitizar skills (eliminar `normalized` para que Pydantic no rebote)
+    const skills = (form.skills ?? []).map(({ normalized, ...s }) => ({
       ...s,
       level: Number(s.level),
       source: s.source ?? 'manual',
       confirmed: true,
     }));
-    onSave(compact({ ...form, skills }));
+
+    // 2. Sanitizar experiencia (eliminar `months` calculado)
+    const experience = (form.experience ?? []).map(({ months, ...x }) => x);
+
+    // 3. Sanitizar idiomas (eliminar `normalized`)
+    const languages = (form.languages ?? []).map(({ normalized, ...l }) => l);
+
+    // 4. Asegurar que summary viaje limpio si el usuario escribió algo
+    const cleanPayload = compact({
+      ...form,
+      skills,
+      experience,
+      languages,
+    });
+
+    if (form.summary && form.summary.trim() !== '') {
+      cleanPayload.summary = form.summary.trim();
+    }
+
+    onSave(cleanPayload);
   };
 
   return (
@@ -227,7 +247,7 @@ export const StepCvData: React.FC<StepCvDataProps> = ({
             required
             multiline
             maxLength={2000}
-            value={form.summary}
+            value={form.summary === 'COMPLETAR_MANUALMENTE' ? '' : form.summary || ''}
             review={isReview('summary')}
             onChange={(v) => setForm((f) => ({ ...f, summary: v }))}
           />

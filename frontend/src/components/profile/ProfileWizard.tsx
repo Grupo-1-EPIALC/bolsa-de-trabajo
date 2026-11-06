@@ -45,8 +45,53 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
     setSaving(true);
     setError(null);
     try {
-      const updated = await profileService.update(sections);
+      // 1. Limpiar las listas de propiedades calculadas por el backend (normalized, months)
+      const cleanSkills = sections.skills?.map(({ normalized, ...s }: any) => ({
+        ...s,
+        level: Number(s.level),
+        source: s.source ?? 'manual',
+        confirmed: true,
+      }));
+
+      const cleanExperience = sections.experience?.map(({ months, ...x }: any) => x);
+      const cleanLanguages = sections.languages?.map(({ normalized, ...l }: any) => l);
+
+      // 2. Construir manualmente el objeto SOLO con los campos editables permitidos
+      // Esto descarta automáticamente id, user_id, completion, created_at, etc.
+      const rawPayload: any = {
+        personal: sections.personal,
+        headline: sections.headline,
+        academic_status: sections.academic_status,
+        target: sections.target,
+        work_conditions: sections.work_conditions,
+        skills: cleanSkills,
+        experience: cleanExperience,
+        education: sections.education,
+        languages: cleanLanguages,
+        certifications: sections.certifications,
+        projects: sections.projects,
+        links: sections.links,
+        volunteering: sections.volunteering,
+        references_available: sections.references_available,
+        visibility: sections.visibility,
+        job_search_status: sections.job_search_status,
+        consents: sections.consents,
+      };
+
+      // 3. Procesar el resumen: si tiene texto lo agregamos limpio
+      if (sections.summary && sections.summary.trim() !== '') {
+        rawPayload.summary = sections.summary.trim();
+      }
+
+      // 4. Limpiar undefineds con JavaScript nativo (reemplaza a compact y evita errores de TS)
+      const finalPayload = Object.fromEntries(
+        Object.entries(rawPayload).filter(([_, v]) => v !== undefined),
+      ) as ProfileSections;
+
+      // 5. Enviar a la API
+      const updated = await profileService.update(finalPayload);
       onProfileChange(updated);
+
       if (step === 'cv') setUseDraft(false);
       const next = STEP_ORDER[stepIndex + 1];
       if (next) goTo(next);
