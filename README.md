@@ -14,9 +14,12 @@ Matching estudiante–oferta con microservicios REST, scoring por reglas y agent
 ```bash
 cp .env.example .env            # completar valores (en dev los de ejemplo sirven)
 mkdir -p secrets                # claves JWT de auth-service (ver .env.example)
+sh infra/scripts/create-volumes.sh   # una sola vez: volúmenes externos con los datos
 docker compose up -d --build    # modo desarrollo (hot reload)
-docker compose ps               # todos deben quedar "healthy"
+docker compose ps               # todos deben quedar "healthy" (n8n-init queda "exited 0")
 ```
+
+Sin `sh` (PowerShell): `docker volume create bolsa_pg_data; docker volume create bolsa_n8n_data; docker volume create bolsa_cv_storage`.
 
 Modo tipo producción (sin `docker-compose.override.yml`):
 
@@ -24,7 +27,19 @@ Modo tipo producción (sin `docker-compose.override.yml`):
 docker compose -f docker-compose.yml up -d --build
 ```
 
-Apagar: `docker compose down` · Borrar también datos (base, n8n, CVs): `docker compose down -v`.
+Apagar: `docker compose down`.
+
+### Datos persistentes
+
+Los datos viven en **volúmenes externos**, fuera de los contenedores y de compose: sobreviven a recrear contenedores o imágenes y también a `docker compose down -v`.
+
+| Volumen | Qué guarda |
+|---|---|
+| `bolsa_pg_data` | PostgreSQL: bases de todos los servicios, la base de n8n (workflows, credenciales, ejecuciones) y los logos de empresas |
+| `bolsa_n8n_data` | Configuración de n8n (`/home/node/.n8n`) |
+| `bolsa_cv_storage` | CVs subidos por los estudiantes |
+
+Para empezar de cero hay que borrarlos a mano (**se pierde todo**): `docker compose down && docker volume rm bolsa_pg_data bolsa_n8n_data bolsa_cv_storage && sh infra/scripts/create-volumes.sh`.
 
 ## URLs
 
@@ -78,22 +93,29 @@ El access token dura 15 minutos; el refresh token dura 7 días y se almacena com
   - `WF-01-procesar-cv.json`: webhook `POST /webhook/cv-extract` (`CV Structurer`).
   - `WF-06-recomendador.json`: webhook `POST /webhook/recommendations` (`Training Advisor` para postulantes y `Company Advisor` para empresas).
 
-Para regenerar e importar los workflows en el contenedor `n8n`:
+**Los workflows se cargan solos.** Antes de n8n corre `n8n-init` ([`n8n/init/bootstrap.sh`](n8n/init/bootstrap.sh)), que en cada `docker compose up`:
+
+1. crea o actualiza la credencial **"OpenAI account"** (NVIDIA NIM) si `NVIDIA_API_KEY` está en `.env`; si está vacía, deja la que se haya creado en la UI;
+2. importa `n8n/workflows/*.json` (ids fijos: actualiza, no duplica);
+3. publica (activa) cada workflow para que respondan los webhooks.
+
+El repo es la fuente de verdad: lo que se cambie **sólo en la UI** de n8n se pisa en el próximo arranque. Para cambiar un workflow, editá el generador o el JSON y reiniciá:
 
 ```bash
 python n8n/generate_workflows.py
-docker exec bolsa-n8n-1 n8n import:workflow --separate --input=/workflows
+docker compose up -d --force-recreate n8n   # vuelve a correr n8n-init
 ```
 
 ### Base de datos
 
 Una instancia PostgreSQL 17 con un **rol y un schema por microservicio REST** (`infra/postgres/init/01-schemas.sh`: `auth`, `profile`, `jobs`, `matching`).
 Cada rol sólo puede usar su schema, así ningún servicio lee los datos de otro. `n8n` usa una base aparte porque gestiona su propio esquema.
-El script corre solo al crear el volumen; si lo cambiás: `docker compose down -v && docker compose up -d`.
+El script corre sólo cuando el volumen `bolsa_pg_data` está vacío. Si lo cambiás, aplicá el cambio con SQL sobre la base existente; recrear el volumen borra **todos** los datos, incluidos los workflows y credenciales de n8n (ver "Datos persistentes").
 
 ### Almacenamiento y correo
 
-- CVs: volumen Docker `cv_storage` montado en `profile-service` (`/data/cvs`).
+- CVs: volumen externo `bolsa_cv_storage` montado en `profile-service` (`/data/cvs`).
+- Logos de empresas: en PostgreSQL (schema `profile`), dentro de `bolsa_pg_data`.
 - Correo: Mailpit (puertos SMTP 1025 / UI 8025).
 
 ## Estructura
