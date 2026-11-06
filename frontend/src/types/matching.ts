@@ -1,82 +1,141 @@
-// src/types/matching.ts
-// Tipos oficiales alineados con matching-service v0.1.0 (contrato OpenAPI / matching_frontend.md)
+// Tipos de matching-service según contracts/matching_frontend.md (§4).
+// El score y el orden salen siempre de rule_based (origin RULES); la IA nunca trae score.
 
-export type MissingSkillKind = 'required' | 'desired';
-export type SkillPriority = 'alta' | 'media' | 'baja';
+import type { ApiErrorBody, Location, WorkConditions } from './profile';
+
+export type Priority = 'alta' | 'media' | 'baja';
+export type ConditionResult = 'match' | 'partial' | 'mismatch' | 'unknown' | string;
+
+export interface BreakdownItem {
+  criterion: string;
+  weight: number;
+  earned: number;
+  details?: Record<string, unknown>;
+}
+
+export interface MatchedSkill {
+  skill: string;
+  kind: string;
+  profile_level: number;
+  required_level: number;
+}
 
 export interface MissingSkill {
   skill: string;
+  kind: string;
   required_level: number;
   current_level: number;
   gap: number;
-  priority: SkillPriority;
-  kind: MissingSkillKind;
+  priority: Priority;
 }
 
-export interface ScoreBreakdown {
-  required_skills: number;
-  desired_skills: number;
-  skill_levels: number;
-  experience: number;
-  education: number;
-  languages: number;
+export interface ConditionCheck {
+  condition: string;
+  result: ConditionResult;
+  hard: boolean;
+  profile_value?: unknown;
+  job_value?: unknown;
 }
 
-export interface ConditionsFit {
-  salary_fit?: boolean;
-  modality_fit?: boolean;
-  location_distance_km?: number;
+export interface SalaryFit {
+  result: ConditionResult;
+  expected_monthly?: { min: number; max: number } | null;
+  offered_monthly?: { min: number; max: number } | null;
+  gap_percent?: number | null;
+  currency?: string;
 }
 
-// Bloque determinístico de Reglas (origin: "RULES")
-export interface RuleBasedResult {
+/** Match por reglas (§4.4). */
+export interface Match {
   origin: 'RULES';
   engine_version: string;
+  rules_version?: string;
+  computed_at?: string;
+  profile_id: string;
+  job_id: string;
   score: number;
-  excluding_cap_applied?: boolean;
-  breakdown: ScoreBreakdown;
+  excluding_cap_applied: boolean;
+  breakdown: BreakdownItem[];
+  matched_skills: MatchedSkill[];
   missing_skills: MissingSkill[];
-  conditions_fit?: ConditionsFit;
+  conditions_fit?: {
+    compatible: boolean;
+    distance_km?: number | null;
+    checks: ConditionCheck[];
+    salary_fit?: SalaryFit;
+  };
 }
 
-export interface AIRecommendationItem {
-  type: 'course' | 'profile_improvement' | 'cert' | string;
+export interface JobSnapshot {
+  job_id: string;
+  title: string;
+  company_name?: string;
+  seniority?: string;
+  location?: Partial<Location>;
+  work_conditions?: WorkConditions;
+  [extra: string]: unknown;
+}
+
+export interface StudentRuleItem {
+  rank: number;
+  job: JobSnapshot;
+  match: Match;
+}
+
+export interface NextStep {
+  type: string;
   skill?: string;
   text: string;
-  priority: SkillPriority;
+  priority?: Priority;
 }
 
-// Bloque orientativo de IA (origin: "AI")
-export interface AIRecommendationResult {
-  origin: 'AI';
-  model: string;
-  generated_at: string;
-  prompt_version?: string;
-  disclaimer: string;
-  items: AIRecommendationItem[];
-}
-
-// Respuesta completa de evaluación (POST /api/v1/matches)
-export interface MatchResponse {
-  profile_id: string;
+export interface StudentAIItem {
   job_id: string;
-  rule_based: RuleBasedResult;
-  ai_recommendations: AIRecommendationResult;
+  content: {
+    priority?: Priority;
+    fit_reasons?: string[];
+    watch_outs?: string[];
+    next_steps?: NextStep[];
+  };
 }
 
-// Recomendaciones para candidatos (GET /api/v1/matches/recommendations/students/{profile_id})
-export interface StudentRecommendationItem {
-  job_id: string;
-  job_title: string;
-  company_name?: string;
-  score: number;
-  match: MatchResponse;
-}
+export type AIStatus =
+  'not_requested' | 'pending' | 'processing' | 'ready' | 'completed' | 'failed';
 
-// Recomendaciones para empresas (GET /api/v1/matches/recommendations/jobs/{job_id})
-export interface JobCandidateRecommendationItem {
+/** Vista del estudiante (§4.1). */
+export interface StudentRecommendationsView {
   profile_id: string;
-  candidate_name?: string;
-  score: number;
-  match: MatchResponse;
+  rule_based: {
+    origin: 'RULES';
+    engine_version: string;
+    rules_version?: string;
+    evaluated: number;
+    excluded_incompatible: number;
+    items: StudentRuleItem[];
+  };
+  ai_recommendations: {
+    origin: 'AI';
+    status: AIStatus;
+    request_id?: string | null;
+    error?: ApiErrorBody | null;
+    summary?: string;
+    model?: string;
+    prompt_version?: string;
+    generated_at?: string;
+    disclaimer?: string;
+    verified?: boolean;
+    items?: StudentAIItem[];
+  };
+}
+
+/** Pedido de análisis con IA (§4.3). */
+export interface RecommendationRequest {
+  request_id: string;
+  mode: 'student' | 'company';
+  subject_id: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  created_at: string;
+  updated_at: string;
+  limit?: number;
+  error: ApiErrorBody | null;
 }

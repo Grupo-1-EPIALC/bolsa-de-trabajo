@@ -1,214 +1,282 @@
 import React, { useState } from 'react';
-import { authService } from '../services/authService';
-import { LogIn, UserPlus, Mail, Lock, Building, FileText } from 'lucide-react';
+import { authService, PASSWORD_MIN_LENGTH } from '../services/authService';
+import { errorMessage, validationMessages } from '../services/api';
+import type { AuthMode } from '../navigation';
+import type { SessionUser } from '../services/session';
 
 interface AuthFormProps {
-  onLoginSuccess?: () => void;
+  initialMode?: AuthMode;
+  onSuccess: (user: SessionUser, mode: AuthMode) => void;
 }
 
-export const AuthForm: React.FC<AuthFormProps> = ({ onLoginSuccess }) => {
-  const [isRegister, setIsRegister] = useState<boolean>(false);
-  const [role, setRole] = useState<'student' | 'company'>('student');
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [cuit, setCuit] = useState<string>('');
-  const [companyName, setCompanyName] = useState<string>('');
+interface IconInputProps {
+  id: string;
+  label: string;
+  icon: string;
+  type?: string;
+  value: string;
+  placeholder: string;
+  autoComplete?: string;
+  hint?: string;
+  minLength?: number;
+  maxLength?: number;
+  onChange: (value: string) => void;
+}
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
+const IconInput: React.FC<IconInputProps> = ({
+  id,
+  label,
+  icon,
+  type = 'text',
+  value,
+  placeholder,
+  autoComplete,
+  hint,
+  minLength,
+  maxLength,
+  onChange,
+}) => (
+  <div>
+    <label htmlFor={id} className="form-label">
+      {label}
+    </label>
+    <div className="input-group">
+      <span className="input-group-text bg-white text-magenta">
+        <i className={`bi ${icon}`} aria-hidden="true" />
+      </span>
+      <input
+        id={id}
+        type={type}
+        required
+        className="form-control"
+        value={value}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        minLength={minLength}
+        maxLength={maxLength}
+        aria-describedby={hint ? `${id}-hint` : undefined}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+    {hint && (
+      <div id={`${id}-hint`} className="form-text">
+        {hint}
+      </div>
+    )}
+  </div>
+);
+
+export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'login', onSuccess }) => {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [role, setRole] = useState<'student' | 'company'>('student');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
+  const [legalName, setLegalName] = useState('');
+  const [cuit, setCuit] = useState('');
+  const [activity, setActivity] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<{ message: string; items: string[] } | null>(null);
+
+  const isRegister = mode === 'register';
+
+  const switchMode = (next: AuthMode) => {
+    setMode(next);
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage(null);
+    setError(null);
 
-    try {
-      if (isRegister) {
-        // Registro (HU-01 / HU-02)
-        const payload =
-          role === 'company'
-            ? { email, password, role, cuit, company_name: companyName }
-            : { email, password, role };
-
-        await authService.register(payload);
-        setMessage({ text: 'Registro exitoso. Redirigiendo...', type: 'success' });
-
-        // Notifica la redirección
-        setTimeout(() => {
-          if (onLoginSuccess) onLoginSuccess();
-        }, 500);
-      } else {
-        // Login (HU-03)
-        await authService.login({ email, password });
-        setMessage({ text: '¡Sesión iniciada correctamente! Redirigiendo...', type: 'success' });
-
-        // Notifica la redirección
-        setTimeout(() => {
-          if (onLoginSuccess) onLoginSuccess();
-        }, 500);
+    if (isRegister) {
+      if (password.length < PASSWORD_MIN_LENGTH) {
+        setError({
+          message: `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`,
+          items: [],
+        });
+        return;
       }
-    } catch (err: any) {
-      // Si estamos simulando o el servicio responde un mock de desarrollo
-      setMessage({ text: 'Éxito (Modo Mock). Redirigiendo...', type: 'success' });
-      setTimeout(() => {
-        if (onLoginSuccess) onLoginSuccess();
-      }, 500);
+      if (password !== password2) {
+        setError({ message: 'Las contraseñas no coinciden.', items: [] });
+        return;
+      }
+      if (role === 'company' && !/^\d{11}$/.test(cuit)) {
+        setError({ message: 'El CUIT son 11 dígitos, sin guiones.', items: [] });
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      const user = isRegister
+        ? await authService.register({
+            email,
+            password,
+            role,
+            ...(role === 'company' ? { company: { legal_name: legalName, cuit, activity } } : {}),
+          })
+        : await authService.login({ email, password });
+      onSuccess(user, mode);
+    } catch (err) {
+      setError({ message: errorMessage(err), items: validationMessages(err) });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-      {/* Selector de Pestañas (Iniciar Sesión / Registrarse) */}
-      <div className="flex border-b border-slate-200 pb-3 mb-6">
-        <button
-          type="button"
-          onClick={() => {
-            setIsRegister(false);
-            setMessage(null);
-          }}
-          className={`flex-1 flex items-center justify-center space-x-2 pb-2 text-sm font-bold transition-all ${
-            !isRegister
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          <LogIn className="w-4 h-4" />
-          <span>Iniciar Sesión</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setIsRegister(true);
-            setMessage(null);
-          }}
-          className={`flex-1 flex items-center justify-center space-x-2 pb-2 text-sm font-bold transition-all ${
-            isRegister
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Registrarse</span>
-        </button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-        {/* Selector de Tipo de Cuenta */}
-        {isRegister && (
-          <div>
-            <label className="block text-slate-700 font-bold uppercase tracking-wider mb-1.5 text-xs">
-              Tipo de Cuenta:
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as 'student' | 'company')}
-              className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 font-medium text-sm text-slate-800 focus:bg-white focus:outline-none focus:border-blue-500 transition-all"
+    <div className="card card-elevated">
+      <div className="card-body p-4 p-md-5">
+        {/* Selector Iniciar sesión / Registrarse */}
+        <ul className="nav nav-pills nav-fill bg-soft rounded-pill p-1 mb-4" role="tablist">
+          <li className="nav-item" role="presentation">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!isRegister}
+              className={`nav-link rounded-pill ${!isRegister ? 'active' : ''}`}
+              onClick={() => switchMode('login')}
             >
-              <option value="student">Estudiante / Graduado</option>
-              <option value="company">Empresa / Organización</option>
-            </select>
-          </div>
-        )}
+              <i className="bi bi-box-arrow-in-right me-2" aria-hidden="true" />
+              Iniciar sesión
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={isRegister}
+              className={`nav-link rounded-pill ${isRegister ? 'active' : ''}`}
+              onClick={() => switchMode('register')}
+            >
+              <i className="bi bi-person-plus me-2" aria-hidden="true" />
+              Registrarse
+            </button>
+          </li>
+        </ul>
 
-        {/* Campo Correo Electrónico */}
-        <div>
-          <label className="block text-slate-700 font-bold uppercase tracking-wider mb-1.5 text-xs">
-            Correo Electrónico:
-          </label>
-          <div className="relative">
-            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="usuario@ejemplo.com"
-              className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl bg-white font-medium text-sm focus:outline-none focus:border-blue-500 transition-all"
-            />
-          </div>
-        </div>
+        <h2 className="h4 fw-extrabold mb-1">
+          {isRegister ? 'Creá tu cuenta' : 'Bienvenido/a de nuevo'}
+        </h2>
+        <p className="small mb-4">
+          {isRegister
+            ? 'Después de crear la cuenta vas a armar tu perfil.'
+            : 'Ingresá con tu correo y contraseña.'}
+        </p>
 
-        {/* Campo Contraseña */}
-        <div>
-          <label className="block text-slate-700 font-bold uppercase tracking-wider mb-1.5 text-xs">
-            Contraseña:
-          </label>
-          <div className="relative">
-            <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <input
+        <form onSubmit={handleSubmit} className="d-grid gap-3">
+          {isRegister && (
+            <div>
+              <label htmlFor="auth-role" className="form-label">
+                Tipo de cuenta
+              </label>
+              <select
+                id="auth-role"
+                className="form-select"
+                value={role}
+                onChange={(e) => setRole(e.target.value as 'student' | 'company')}
+              >
+                <option value="student">Estudiante / Graduado</option>
+                <option value="company">Empresa / Organización</option>
+              </select>
+            </div>
+          )}
+
+          <IconInput
+            id="auth-email"
+            label="Correo electrónico"
+            icon="bi-envelope"
+            type="email"
+            value={email}
+            placeholder="usuario@ejemplo.com"
+            autoComplete="email"
+            onChange={setEmail}
+          />
+
+          <IconInput
+            id="auth-password"
+            label="Contraseña"
+            icon="bi-lock"
+            type="password"
+            value={password}
+            placeholder="••••••••••••"
+            autoComplete={isRegister ? 'new-password' : 'current-password'}
+            hint={isRegister ? `Mínimo ${PASSWORD_MIN_LENGTH} caracteres.` : undefined}
+            minLength={isRegister ? PASSWORD_MIN_LENGTH : undefined}
+            maxLength={128}
+            onChange={setPassword}
+          />
+
+          {isRegister && (
+            <IconInput
+              id="auth-password2"
+              label="Repetí la contraseña"
+              icon="bi-lock"
               type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl bg-white font-medium text-sm focus:outline-none focus:border-blue-500 transition-all"
+              value={password2}
+              placeholder="••••••••••••"
+              autoComplete="new-password"
+              onChange={setPassword2}
             />
+          )}
+
+          {/* Datos de la empresa (HU-02) */}
+          {isRegister && role === 'company' && (
+            <>
+              <IconInput
+                id="auth-company"
+                label="Razón social"
+                icon="bi-building"
+                value={legalName}
+                placeholder="Empresa Ficticia S.A."
+                autoComplete="organization"
+                maxLength={200}
+                onChange={setLegalName}
+              />
+              <IconInput
+                id="auth-cuit"
+                label="CUIT (sin guiones)"
+                icon="bi-file-earmark-text"
+                value={cuit}
+                placeholder="30712345678"
+                maxLength={11}
+                onChange={(v) => setCuit(v.replace(/\D/g, ''))}
+              />
+              <IconInput
+                id="auth-activity"
+                label="Actividad"
+                icon="bi-briefcase"
+                value={activity}
+                placeholder="Desarrollo de software"
+                maxLength={160}
+                onChange={setActivity}
+              />
+            </>
+          )}
+
+          <button type="submit" disabled={loading} className="btn btn-primary btn-pill btn-lg mt-2">
+            {loading && (
+              <span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />
+            )}
+            {loading ? 'Procesando...' : isRegister ? 'Crear cuenta' : 'Ingresar'}
+          </button>
+        </form>
+
+        {error && (
+          <div role="alert" className="alert alert-danger small fw-semibold mt-4 mb-0">
+            {error.message}
+            {error.items.length > 0 && (
+              <ul className="mb-0 mt-1 fw-normal">
+                {error.items.map((i) => (
+                  <li key={i}>{i}</li>
+                ))}
+              </ul>
+            )}
           </div>
-        </div>
-
-        {/* Campos de Empresa (HU-02) */}
-        {isRegister && role === 'company' && (
-          <>
-            <div>
-              <label className="block text-slate-700 font-bold uppercase tracking-wider mb-1.5 text-xs">
-                Razón Social:
-              </label>
-              <div className="relative">
-                <Building className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  required
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Empresa S.A."
-                  className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl bg-white font-medium text-sm focus:outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-slate-700 font-bold uppercase tracking-wider mb-1.5 text-xs">
-                CUIT (sin guiones):
-              </label>
-              <div className="relative">
-                <FileText className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  required
-                  value={cuit}
-                  onChange={(e) => setCuit(e.target.value)}
-                  placeholder="30712345678"
-                  className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-xl bg-white font-medium text-sm focus:outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-            </div>
-          </>
         )}
-
-        {/* Botón Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:bg-slate-300 shadow-md shadow-blue-600/20 transition-all mt-3"
-        >
-          {loading ? 'Procesando...' : isRegister ? 'Crear Cuenta' : 'Ingresar'}
-        </button>
-      </form>
-
-      {/* Mensajes de feedback */}
-      {message && (
-        <div
-          className={`mt-4 p-3 text-xs rounded-xl font-bold flex items-center space-x-2 border ${
-            message.type === 'error'
-              ? 'bg-red-50 text-red-800 border-red-200'
-              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-          }`}
-        >
-          <span>{message.text}</span>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

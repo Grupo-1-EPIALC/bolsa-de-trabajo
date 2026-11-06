@@ -1,0 +1,431 @@
+/*
+ * Tema institucional sobre Bootstrap 5.3, inspirado en udelaciudad.edu.ar:
+ *   - magenta #BA3995: color dominante (barra superior, botones, bloques destacados, footer)
+ *   - violeta #682CAD: detalles (links del menú, títulos de sección, íconos)
+ *   - blanco: fondos · amarillo #FFD200: acento puntual
+ *   - tipografía Montserrat.
+ * Los paneles/badges RULES (verde) e IA (ámbar) se mantienen por requisito (AGENTS.md §2.2).
+ */
+
+:root {
+  --app-magenta: #ba3995;
+  --app-magenta-dark: #9c2e7d;
+  --app-magenta-darker: #7d2464;
+  --app-magenta-soft: #fbf0f7;
+  --app-pink: #e3b0d5;
+  --app-violet: #682cad;
+  --app-yellow: #ffd200;
+  --app-yellow-dark: #e6bd00;
+  --app-dark: #303235;
+  --app-text: #55575c;
+
+  --bs-primary: var(--app-magenta);
+  --bs-primary-rgb: 186, 57, 149;
+  --bs-primary-text-emphasis: var(--app-magenta-darker);
+  --bs-primary-bg-subtle: var(--app-magenta-soft);
+  --bs-primary-border-subtle: var(--app-pink);
+  --bs-dark: var(--app-dark);
+  --bs-dark-rgb: 48, 50, 53;
+
+  --bs-body-font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bs-body-color: var(--app-text);
+  --bs-body-bg: #fff;
+  --bs-heading-color: var(--app-dark);
+  --bs-link-color: var(--app-violet);
+  --bs-link-color-rgb: 104, 44, 173;
+  --bs-link-hover-color: var(--app-magenta);
+  --bs-link-hover-color-rgb: 186, 57, 149;
+  --bs-border-radius: 0.5rem;
+  --bs-border-radius-lg: 0.75rem;
+  --bs-focus-ring-color: rgba(186, 57, 149, 0.35);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  font-weight: 600;
+}
+
+.fw-extrabold {
+  font-weight: 700 !important;
+}
+.text-violet {
+  color: var(--app-violet) !important;
+}
+.text-magenta {
+  color: var(--app-magenta) !important;
+}
+.text-yellow {
+  color: var(--app-yellow) !important;
+}
+.bg-soft {
+  background-color: var(--app-magenta-soft) !important;
+}
+
+/* ------------------------------------------------------------ botones --- */
+.btn {
+  font-weight: 500;
+}
+.btn-pill {
+  border-radius: 50rem;
+  padding-inline: 1.5rem;
+}
+.btn-primary {
+  --bs-btn-bg: var(--app-magenta);
+  --bs-btn-border-color: var(--app-magenta);
+  --bs-btn-hover-bg: var(--app-magenta-dark);
+  --bs-btn-hover-border-color: var(--app-magenta-dark);
+  --bs-btn-active-bg: var(--app-magenta-darker);
+  --bs-btn-active-border-color: var(--app-magenta-darker);
+  --bs-btn-disabled-bg: #d58fc0;
+  --bs-btn-disabled-border-color: #d58fc0;
+  --bs-btn-focus-shadow-rgb: 186, 57, 149;
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--app-magenta);
+  --bs-btn-border-color: var(--app-magenta);
+  --bs-btn-hover-bg: var(--app-magenta);
+  --bs-btn-hover-border-color: var(--app-magenta);
+  --bs-btn-active-bg: var(--app-magenta-dark);
+  --bs-btn-active-border-color: var(--app-magenta-dark);
+  --bs-btn-focus-shadow-rgb: 186, 57, 149;
+}
+/* Acento amarillo con texto oscuro (contraste AA), de uso puntual */
+.btn-accent {
+  --bs-btn-color: var(--app-dark);
+  --bs-btn-bg: var(--app-yellow);
+  --bs-btn-border-color: var(--app-yellow);
+  --bs-btn-hover-color: var(--app-dark);
+  --bs-btn-hover-bg: var(--app-yellow-dark);
+  --bs-btn-hover-border-color: var(--app-yellow-dark);
+  --bs-btn-active-color: var(--app-dark);
+  --bs-btn-active-bg: var(--app-yellow-dark);
+  --bs-btn-active-border-color: var(--app-yellow-dark);
+  --bs-btn-focus-shadow-rgb: 255, 210, 0;
+}
+/* Botón blanco sobre bloques magenta */
+.btn-on-magenta {
+  --bs-btn-color: var(--app-magenta);
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: #fff;
+  --bs-btn-hover-color: var(--app-magenta-darker);
+  --bs-btn-hover-bg: var(--app-magenta-soft);
+  --bs-btn-hover-border-color: var(--app-magenta-soft);
+  --bs-btn-active-color: var(--app-magenta-darker);
+  --bs-btn-active-bg: var(--app-pink);
+  --bs-btn-active-border-color: var(--app-pink);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--app-pink);
+  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+.form-label {
+  font-weight: 500;
+  color: var(--app-dark);
+  font-size: 0.875rem;
+}
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--app-magenta);
+  --bs-nav-link-color: var(--app-violet);
+  --bs-nav-link-hover-color: var(--app-magenta);
+}
+.nav-pills .nav-link {
+  font-weight: 500;
+}
+
+/* Foco visible para navegación por teclado */
+:focus-visible {
+  outline: 3px solid var(--app-violet);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------- cabecera --- */
+.topbar {
+  background-color: var(--app-magenta);
+  font-size: 0.8rem;
+  color: #fff;
+}
+
+.site-navbar {
+  background-color: #fff;
+  box-shadow: 0 2px 10px rgba(48, 50, 53, 0.06);
+}
+.site-navbar .navbar-brand {
+  color: var(--app-magenta);
+  font-weight: 700;
+  line-height: 1.05;
+}
+.site-navbar .brand-sub {
+  color: var(--app-violet);
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+.brand-mark {
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 0.9rem 0.9rem 0.9rem 0.2rem;
+  background-color: var(--app-magenta);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+.site-navbar .nav-link {
+  color: var(--app-violet);
+  font-weight: 400;
+  font-size: 0.95rem;
+}
+.site-navbar .nav-link:hover,
+.site-navbar .nav-link.active {
+  color: var(--app-magenta);
+}
+.site-navbar .nav-link.active {
+  font-weight: 600;
+}
+/* Botón destacado del menú (cuadrado, magenta), como "Campus virtual" en la referencia */
+.btn-nav-cta {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--app-magenta);
+  --bs-btn-border-color: var(--app-magenta);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--app-magenta-dark);
+  --bs-btn-hover-border-color: var(--app-magenta-dark);
+  --bs-btn-active-bg: var(--app-magenta-darker);
+  --bs-btn-active-border-color: var(--app-magenta-darker);
+  --bs-btn-border-radius: 0;
+  padding: 0.75rem 1.75rem;
+}
+
+/* --------------------------------------------------------------- hero --- */
+.hero {
+  position: relative;
+  min-height: 72vh;
+  display: flex;
+  align-items: flex-end;
+  background-size: cover;
+  background-position: center 35%;
+}
+/* Leve sombreado inferior para legibilidad, sin teñir la foto */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 55%);
+}
+.hero > .container {
+  position: relative;
+  z-index: 1;
+}
+/* Rótulo magenta redondeado sobre la foto */
+.hero-label {
+  background-color: rgba(186, 57, 149, 0.92);
+  color: #fff;
+  border-radius: 2.5rem 0.25rem 0.25rem 2.5rem;
+  padding: 1.1rem 2rem;
+  max-width: 62rem;
+}
+.hero-label h1 {
+  color: #fff;
+  font-weight: 600;
+  font-size: clamp(1.4rem, 2.4vw, 2.1rem);
+  line-height: 1.15;
+}
+.hero-label p {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.95rem;
+}
+.hero-label .btn {
+  padding-inline: 1.1rem;
+}
+
+/* Encabezado de página interna (franja magenta) */
+.page-header {
+  background-color: var(--app-magenta);
+  color: rgba(255, 255, 255, 0.95);
+}
+.page-header h1 {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Página de acceso: fondo con la foto y panel claro */
+.auth-section {
+  position: relative;
+  background-size: cover;
+  background-position: center 35%;
+}
+.auth-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(186, 57, 149, 0.88) 0%,
+    rgba(186, 57, 149, 0.55) 55%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+.auth-section > .container {
+  position: relative;
+  z-index: 1;
+}
+.auth-section h1 {
+  color: #fff;
+  font-weight: 600;
+}
+.auth-section .lead {
+  color: #fff;
+}
+
+/* ----------------------------------------------------------- secciones --- */
+.section-title {
+  color: var(--app-violet);
+  font-weight: 500;
+}
+.eyebrow {
+  display: inline-block;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--app-magenta);
+}
+
+.feature-card {
+  border: 1px solid #eee;
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: 0 4px 18px rgba(48, 50, 53, 0.06);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(186, 57, 149, 0.15);
+}
+.icon-circle {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background-color: var(--app-magenta-soft);
+  color: var(--app-magenta);
+  flex-shrink: 0;
+}
+.step-number {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: var(--app-magenta);
+  color: #fff;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cta-band {
+  background-color: var(--app-magenta-soft);
+  border-top: 4px solid var(--app-pink);
+  color: var(--app-text);
+}
+.cta-band h2 {
+  color: var(--app-violet);
+}
+.card-elevated {
+  border: 1px solid #eee;
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: 0 4px 18px rgba(48, 50, 53, 0.06);
+}
+
+/* ------------------------------------------- paneles RULES vs IA (§2.2) --- */
+.panel-rules {
+  border: 1px solid var(--bs-success-border-subtle);
+  border-left: 6px solid var(--bs-success);
+  background-color: #f2fbf6;
+}
+.panel-ai {
+  border: 1px solid var(--bs-warning-border-subtle);
+  border-left: 6px solid var(--bs-warning);
+  background-color: #fffaeb;
+}
+.badge-rules {
+  background-color: var(--bs-success-bg-subtle);
+  color: var(--bs-success-text-emphasis);
+  border: 1px solid var(--bs-success-border-subtle);
+}
+.badge-ai {
+  background-color: var(--bs-warning-bg-subtle);
+  color: var(--bs-warning-text-emphasis);
+  border: 1px solid var(--bs-warning-border-subtle);
+}
+.score-value {
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--app-dark);
+}
+.cv-dropzone {
+  border: 2px dashed var(--app-pink);
+  background-color: var(--app-magenta-soft);
+  border-radius: var(--bs-border-radius-lg);
+}
+
+/* ---------------------------------------------------------------- footer --- */
+.site-footer {
+  background-color: var(--app-magenta);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.9rem;
+}
+.site-footer h2 {
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.site-footer .brand-mark {
+  background-color: #fff;
+  color: var(--app-magenta);
+}
+.site-footer .footer-link {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+}
+.site-footer .footer-link:hover {
+  color: var(--app-yellow);
+  text-decoration: underline;
+}
+.site-footer .footer-bottom {
+  background-color: var(--app-magenta-darker);
+  font-size: 0.8rem;
+}
+
+/* Toast flotante */
+.toast-floating {
+  position: fixed;
+  top: 7rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1080;
+}

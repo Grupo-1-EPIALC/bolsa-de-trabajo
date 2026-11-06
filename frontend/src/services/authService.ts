@@ -1,55 +1,51 @@
+// auth-service (NestJS) · /api/v1/auth
 import { apiFetch } from './api';
+import { session, SessionUser, TokenPair } from './session';
 
 export interface LoginPayload {
   email: string;
-  password?: string;
+  password: string;
 }
 
-export interface LoginResponse {
-  access: string;
-  refresh: string;
+export interface CompanyData {
+  legal_name: string;
+  cuit: string;
+  activity: string;
 }
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  role: 'student' | 'company';
+  company?: CompanyData;
+}
+
+type AuthResponse = TokenPair & { user: SessionUser };
+
+export const PASSWORD_MIN_LENGTH = 12;
 
 export const authService = {
-  // POST /api/v1/auth/token
-  login: async (credentials: LoginPayload): Promise<LoginResponse> => {
-    if (USE_MOCKS) {
-      console.log('[MOCK] Login simulado para:', credentials.email);
-      const fakeTokens = {
-        access: 'mock_jwt_access_token_xyz_123',
-        refresh: 'mock_jwt_refresh_token_xyz_123',
-      };
-      localStorage.setItem('access_token', fakeTokens.access);
-      localStorage.setItem('refresh_token', fakeTokens.refresh);
-      return Promise.resolve(fakeTokens);
-    }
-
-    const data = await apiFetch<LoginResponse>('/auth/token', {
+  /** POST /auth/token → inicia la sesión. */
+  async login(credentials: LoginPayload): Promise<SessionUser> {
+    const data = await apiFetch<AuthResponse>('/auth/token', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
-    localStorage.setItem('access_token', data.access);
-    localStorage.setItem('refresh_token', data.refresh);
-    return data;
+    session.start(data.user, data);
+    return data.user;
   },
 
-  // POST /api/v1/auth/register
-  register: async (payload: any): Promise<void> => {
-    if (USE_MOCKS) {
-      console.log('[MOCK] Registro simulado:', payload);
-      return Promise.resolve();
-    }
-
-    return apiFetch<void>('/auth/register', {
+  /** POST /auth/register → crea la cuenta e inicia la sesión (auth-service devuelve los tokens). */
+  async register(payload: RegisterPayload): Promise<SessionUser> {
+    const data = await apiFetch<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    session.start(data.user, data);
+    return data.user;
   },
 
-  logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+  logout() {
+    session.clear();
   },
 };
