@@ -1,0 +1,1684 @@
+[
+  {
+    "id": "job-001",
+    "company_id": "22222222-2222-4222-8222-000000000001",
+    "company_snapshot": {
+      "name": "PampaTech S.A.",
+      "industry": "software",
+      "size": "51-200",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Desarrollador/a Backend Python Jr.",
+    "description": "Desarrollo de microservicios REST con Python, FastAPI y PostgreSQL.",
+    "responsibilities": [],
+    "area": "desarrollo backend",
+    "seniority": "junior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time",
+        "part_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 2,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 30,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "salary": {
+        "min": 800000.0,
+        "max": 1000000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": "quarterly",
+        "variable_compensation": [],
+        "visibility": "public",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Python",
+          "normalized": "python",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "FastAPI",
+          "normalized": "fastapi",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "SQL",
+          "normalized": "sql",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Docker",
+          "normalized": "docker",
+          "level": 3,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Testing",
+          "normalized": "testing",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "B1",
+          "kind": "required",
+          "certification": null
+        }
+      ],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "kind": "required",
+          "institution": null,
+          "degree": null,
+          "field": "sistemas",
+          "progress_percent": null,
+          "gpa": null
+        }
+      ],
+      "experience": {
+        "min_years": 1.0,
+        "kind": "required",
+        "area": "desarrollo backend"
+      },
+      "certifications": [],
+      "academic": {
+        "min_progress_percent": 50.0,
+        "careers": [],
+        "min_current_year": null
+      }
+    },
+    "benefits": [
+      "capacitación",
+      "días de estudio",
+      "prepaga"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-002",
+    "company_id": "22222222-2222-4222-8222-000000000002",
+    "company_snapshot": {
+      "name": "Andes Digital S.R.L.",
+      "industry": "software",
+      "size": "11-50",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Desarrollador/a Frontend React + TypeScript",
+    "description": "Construcción de interfaces accesibles en React 18 y TypeScript.",
+    "responsibilities": [],
+    "area": "frontend",
+    "seniority": "junior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "Mendoza",
+      "city": "Mendoza",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "hybrid_onsite_days": null,
+      "employment_type": [
+        "employee",
+        "freelance"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 30
+      },
+      "shifts": [
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "salary": {
+        "min": null,
+        "max": null,
+        "currency": null,
+        "period": null,
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "hidden",
+        "to_agree": true,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": null,
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [
+        "AR",
+        "UY"
+      ],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "React",
+          "normalized": "react",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "TypeScript",
+          "normalized": "typescript",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Git",
+          "normalized": "git",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Node.js",
+          "normalized": "node.js",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "B2",
+          "kind": "required",
+          "certification": null
+        }
+      ],
+      "education": [],
+      "experience": {
+        "min_years": 1.0,
+        "kind": "required",
+        "area": "frontend"
+      },
+      "certifications": [],
+      "academic": null
+    },
+    "benefits": [
+      "horario flexible",
+      "equipo provisto"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-003",
+    "company_id": "22222222-2222-4222-8222-000000000003",
+    "company_snapshot": {
+      "name": "Río Plata Analytics S.A.",
+      "industry": "datos",
+      "size": "201-1000",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Ingeniero/a de Datos y Automatización",
+    "description": "Pipelines de datos en Python y SQL sobre contenedores Docker.",
+    "responsibilities": [],
+    "area": "datos",
+    "seniority": "semi_senior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "Buenos Aires",
+      "city": "Vicente López",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "onsite",
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 4,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 45
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "salary": {
+        "min": 1200000.0,
+        "max": 1500000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "on_match",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "occasional",
+      "driver_license": [
+        "B1"
+      ],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Python",
+          "normalized": "python",
+          "level": 4,
+          "kind": "excluding",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "SQL",
+          "normalized": "sql",
+          "level": 4,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Docker",
+          "normalized": "docker",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Linux",
+          "normalized": "linux",
+          "level": 3,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "B2",
+          "kind": "required",
+          "certification": null
+        }
+      ],
+      "education": [
+        {
+          "level": "tertiary",
+          "status": "completed",
+          "kind": "required",
+          "institution": null,
+          "degree": null,
+          "field": null,
+          "progress_percent": null,
+          "gpa": null
+        }
+      ],
+      "experience": {
+        "min_years": 2.0,
+        "kind": "required",
+        "area": "datos"
+      },
+      "certifications": [],
+      "academic": null
+    },
+    "benefits": [
+      "bono anual",
+      "prepaga"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-004",
+    "company_id": "22222222-2222-4222-8222-000000000004",
+    "company_snapshot": {
+      "name": "Nube Austral S.A.",
+      "industry": "software",
+      "size": "51-200",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Desarrollador/a Python Trainee (remoto)",
+    "description": "Primer empleo en desarrollo Python: scripts, APIs internas y tests, con mentoría.",
+    "responsibilities": [],
+    "area": "desarrollo",
+    "seniority": "trainee",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "hybrid_onsite_days": null,
+      "employment_type": [
+        "employee",
+        "internship"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "salary": {
+        "min": 600000.0,
+        "max": 800000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "public",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Python",
+          "normalized": "python",
+          "level": 2,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Git",
+          "normalized": "git",
+          "level": 2,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "SQL",
+          "normalized": "sql",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Testing",
+          "normalized": "testing",
+          "level": 1,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Docker",
+          "normalized": "docker",
+          "level": 1,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "A2",
+          "kind": "desired",
+          "certification": null
+        }
+      ],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "kind": "required",
+          "institution": null,
+          "degree": null,
+          "field": null,
+          "progress_percent": null,
+          "gpa": null
+        }
+      ],
+      "experience": {
+        "min_years": 0.0,
+        "kind": "required",
+        "area": "desarrollo"
+      },
+      "certifications": [],
+      "academic": {
+        "min_progress_percent": 30.0,
+        "careers": [],
+        "min_current_year": null
+      }
+    },
+    "benefits": [
+      "mentoría",
+      "días de estudio",
+      "equipo provisto"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-005",
+    "company_id": "22222222-2222-4222-8222-000000000005",
+    "company_snapshot": {
+      "name": "Ceibo Software S.R.L.",
+      "industry": "software",
+      "size": "11-50",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "QA Automation Jr.",
+    "description": "Automatización de pruebas web y de APIs con Python y Selenium.",
+    "responsibilities": [],
+    "area": "testing",
+    "seniority": "junior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time",
+        "part_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 2,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 30,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "salary": {
+        "min": 750000.0,
+        "max": 950000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "on_match",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Testing",
+          "normalized": "testing",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Python",
+          "normalized": "python",
+          "level": 2,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Selenium",
+          "normalized": "selenium",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Git",
+          "normalized": "git",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "B1",
+          "kind": "required",
+          "certification": null
+        }
+      ],
+      "education": [],
+      "experience": {
+        "min_years": 0.5,
+        "kind": "required",
+        "area": "testing"
+      },
+      "certifications": [],
+      "academic": null
+    },
+    "benefits": [
+      "capacitación",
+      "prepaga"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-006",
+    "company_id": "22222222-2222-4222-8222-000000000006",
+    "company_snapshot": {
+      "name": "Datos del Sur S.A.",
+      "industry": "datos",
+      "size": "201-1000",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Analista de Datos Jr.",
+    "description": "Modelado de datos, consultas SQL y tableros en Power BI para áreas de negocio.",
+    "responsibilities": [],
+    "area": "datos",
+    "seniority": "junior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "Córdoba",
+      "city": "Córdoba",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "hybrid_onsite_days": null,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "salary": {
+        "min": 900000.0,
+        "max": 1100000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "on_match",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "SQL",
+          "normalized": "sql",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Python",
+          "normalized": "python",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Power BI",
+          "normalized": "power bi",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Excel",
+          "normalized": "excel",
+          "level": 3,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "B1",
+          "kind": "required",
+          "certification": null
+        }
+      ],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "kind": "required",
+          "institution": null,
+          "degree": null,
+          "field": null,
+          "progress_percent": null,
+          "gpa": null
+        }
+      ],
+      "experience": {
+        "min_years": 1.0,
+        "kind": "required",
+        "area": "datos"
+      },
+      "certifications": [],
+      "academic": null
+    },
+    "benefits": [
+      "bono anual",
+      "home office",
+      "prepaga"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-007",
+    "company_id": "22222222-2222-4222-8222-000000000007",
+    "company_snapshot": {
+      "name": "Litoral Sistemas S.A.",
+      "industry": "servicios IT",
+      "size": "51-200",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Soporte Técnico Nivel 1 (presencial)",
+    "description": "Atención de incidentes, mantenimiento de puestos y redes en oficinas de clientes.",
+    "responsibilities": [],
+    "area": "soporte",
+    "seniority": "junior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "Santa Fe",
+      "city": "Rosario",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "onsite"
+      ],
+      "hybrid_onsite_days": null,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 45,
+        "max": 45
+      },
+      "shifts": [
+        "rotating"
+      ],
+      "availability_start": "immediate",
+      "salary": {
+        "min": 700000.0,
+        "max": 800000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "public",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "frequent",
+      "driver_license": [
+        "B1"
+      ],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Linux",
+          "normalized": "linux",
+          "level": 2,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Redes",
+          "normalized": "redes",
+          "level": 2,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Windows",
+          "normalized": "windows",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [],
+      "education": [],
+      "experience": {
+        "min_years": 0.0,
+        "kind": "required",
+        "area": "soporte"
+      },
+      "certifications": [],
+      "academic": null
+    },
+    "benefits": [
+      "viáticos",
+      "capacitación"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-008",
+    "company_id": "22222222-2222-4222-8222-000000000002",
+    "company_snapshot": {
+      "name": "Andes Digital S.R.L.",
+      "industry": "software",
+      "size": "11-50",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Desarrollador/a Backend Node.js SSr",
+    "description": "APIs REST en Node.js + TypeScript sobre PostgreSQL y AWS para clientes de LATAM.",
+    "responsibilities": [],
+    "area": "backend",
+    "seniority": "semi_senior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "Mendoza",
+      "city": "Mendoza",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "hybrid_onsite_days": null,
+      "employment_type": [
+        "employee",
+        "freelance"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "salary": {
+        "min": 1500.0,
+        "max": 2000.0,
+        "currency": "USD",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "on_match",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [
+        "AR",
+        "UY",
+        "CL"
+      ],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Node.js",
+          "normalized": "node.js",
+          "level": 4,
+          "kind": "excluding",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "TypeScript",
+          "normalized": "typescript",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "PostgreSQL",
+          "normalized": "postgresql",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Docker",
+          "normalized": "docker",
+          "level": 3,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "AWS",
+          "normalized": "aws",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "B2",
+          "kind": "required",
+          "certification": null
+        }
+      ],
+      "education": [],
+      "experience": {
+        "min_years": 3.0,
+        "kind": "required",
+        "area": "backend"
+      },
+      "certifications": [],
+      "academic": null
+    },
+    "benefits": [
+      "pago en USD",
+      "horario flexible"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-009",
+    "company_id": "22222222-2222-4222-8222-000000000009",
+    "company_snapshot": {
+      "name": "Laboratorio Universidad-Empresa",
+      "industry": "educación",
+      "size": "11-50",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Pasantía en Desarrollo Web",
+    "description": "Pasantía con convenio universitario: maquetado y componentes en React.",
+    "responsibilities": [],
+    "area": "frontend",
+    "seniority": "trainee",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 2,
+      "employment_type": [
+        "internship"
+      ],
+      "contract_duration": [
+        "fixed_term"
+      ],
+      "weekly_hours": {
+        "min": 20,
+        "max": 30
+      },
+      "shifts": [
+        "morning"
+      ],
+      "availability_start": "immediate",
+      "salary": {
+        "min": 450000.0,
+        "max": 450000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "public",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "HTML",
+          "normalized": "html",
+          "level": 2,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "CSS",
+          "normalized": "css",
+          "level": 2,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "JavaScript",
+          "normalized": "javascript",
+          "level": 2,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "React",
+          "normalized": "react",
+          "level": 1,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "kind": "required",
+          "institution": null,
+          "degree": null,
+          "field": null,
+          "progress_percent": null,
+          "gpa": null
+        }
+      ],
+      "experience": {
+        "min_years": 0.0,
+        "kind": "required",
+        "area": "frontend"
+      },
+      "certifications": [],
+      "academic": {
+        "min_progress_percent": 40.0,
+        "careers": [],
+        "min_current_year": null
+      }
+    },
+    "benefits": [
+      "convenio de pasantía",
+      "días de estudio"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-010",
+    "company_id": "22222222-2222-4222-8222-000000000010",
+    "company_snapshot": {
+      "name": "Estudio Paraná & Asociados",
+      "industry": "servicios profesionales",
+      "size": "11-50",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Analista Contable Jr.",
+    "description": "Liquidaciones, conciliaciones y reportes contables en SAP y Excel.",
+    "responsibilities": [],
+    "area": "contabilidad",
+    "seniority": "junior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 3,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_15_days",
+      "salary": {
+        "min": 850000.0,
+        "max": 1000000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "on_match",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Excel",
+          "normalized": "excel",
+          "level": 4,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Contabilidad",
+          "normalized": "contabilidad",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "SAP",
+          "normalized": "sap",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "A2",
+          "kind": "desired",
+          "certification": null
+        }
+      ],
+      "education": [
+        {
+          "level": "university",
+          "status": "in_progress",
+          "kind": "required",
+          "institution": null,
+          "degree": null,
+          "field": "contabilidad",
+          "progress_percent": null,
+          "gpa": null
+        }
+      ],
+      "experience": {
+        "min_years": 0.0,
+        "kind": "required",
+        "area": "contabilidad"
+      },
+      "certifications": [],
+      "academic": {
+        "min_progress_percent": null,
+        "careers": [
+          "Contador Público"
+        ],
+        "min_current_year": null
+      }
+    },
+    "benefits": [
+      "prepaga",
+      "días de examen"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-011",
+    "company_id": "22222222-2222-4222-8222-000000000011",
+    "company_snapshot": {
+      "name": "Mate Creativo",
+      "industry": "marketing",
+      "size": "1-10",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "Community Manager Freelance",
+    "description": "Gestión de redes sociales y piezas gráficas para marcas regionales.",
+    "responsibilities": [],
+    "area": "marketing",
+    "seniority": "junior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "Córdoba",
+      "city": "Córdoba",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "part_time",
+        "hourly"
+      ],
+      "work_modality": [
+        "remote"
+      ],
+      "hybrid_onsite_days": null,
+      "employment_type": [
+        "freelance"
+      ],
+      "contract_duration": [
+        "project"
+      ],
+      "weekly_hours": {
+        "min": 10,
+        "max": 20
+      },
+      "shifts": [
+        "afternoon"
+      ],
+      "availability_start": "immediate",
+      "salary": {
+        "min": 8.0,
+        "max": 12.0,
+        "currency": "USD",
+        "period": "hour",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "public",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Redes sociales",
+          "normalized": "redes sociales",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Canva",
+          "normalized": "canva",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Copywriting",
+          "normalized": "copywriting",
+          "level": 3,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [],
+      "education": [],
+      "experience": {
+        "min_years": 0.0,
+        "kind": "required",
+        "area": "marketing"
+      },
+      "certifications": [],
+      "academic": null
+    },
+    "benefits": [
+      "horario flexible"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  },
+  {
+    "id": "job-012",
+    "company_id": "22222222-2222-4222-8222-000000000003",
+    "company_snapshot": {
+      "name": "Río Plata Analytics S.A.",
+      "industry": "datos",
+      "size": "201-1000",
+      "logo_url": null
+    },
+    "status": "active",
+    "title": "DevOps Jr. (híbrido)",
+    "description": "Automatización de despliegues con Docker y Kubernetes sobre Linux y AWS.",
+    "responsibilities": [],
+    "area": "infraestructura",
+    "seniority": "junior",
+    "vacancies": 1,
+    "location": {
+      "country": "AR",
+      "province": "Buenos Aires",
+      "city": "Vicente López",
+      "postal_code": null,
+      "zone": null
+    },
+    "work_conditions": {
+      "work_schedule": [
+        "full_time"
+      ],
+      "work_modality": [
+        "hybrid"
+      ],
+      "hybrid_onsite_days": 3,
+      "employment_type": [
+        "employee"
+      ],
+      "contract_duration": [
+        "permanent"
+      ],
+      "weekly_hours": {
+        "min": 40,
+        "max": 40
+      },
+      "shifts": [
+        "morning",
+        "afternoon"
+      ],
+      "availability_start": "within_30_days",
+      "salary": {
+        "min": 1000000.0,
+        "max": 1200000.0,
+        "currency": "ARS",
+        "period": "month",
+        "gross": true,
+        "payment_mode": null,
+        "negotiable": false,
+        "adjustment": null,
+        "variable_compensation": [],
+        "visibility": "on_match",
+        "to_agree": false,
+        "notes": null
+      },
+      "relocation_support": false,
+      "travel_availability": "none",
+      "driver_license": [],
+      "own_vehicle": null,
+      "own_equipment": null,
+      "invoicing_status": null,
+      "work_authorization": [],
+      "timezone": null,
+      "timezone_overlap_hours": null
+    },
+    "requirements": {
+      "skills": [
+        {
+          "name": "Docker",
+          "normalized": "docker",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Linux",
+          "normalized": "linux",
+          "level": 3,
+          "kind": "required",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Kubernetes",
+          "normalized": "kubernetes",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "AWS",
+          "normalized": "aws",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        },
+        {
+          "name": "Python",
+          "normalized": "python",
+          "level": 2,
+          "kind": "desired",
+          "years": null,
+          "category": null
+        }
+      ],
+      "languages": [
+        {
+          "name": "Inglés",
+          "normalized": "ingles",
+          "level": "B1",
+          "kind": "required",
+          "certification": null
+        }
+      ],
+      "education": [],
+      "experience": {
+        "min_years": 1.0,
+        "kind": "required",
+        "area": "infraestructura"
+      },
+      "certifications": [],
+      "academic": null
+    },
+    "benefits": [
+      "bono anual",
+      "prepaga",
+      "capacitación en cloud"
+    ],
+    "created_at": "2026-11-01T12:00:00+00:00",
+    "updated_at": "2026-11-01T12:00:00+00:00",
+    "published_at": "2026-11-01T12:00:00+00:00",
+    "expires_at": null,
+    "version": 1
+  }
+]

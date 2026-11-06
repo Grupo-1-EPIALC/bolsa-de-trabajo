@@ -1,0 +1,1056 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "jobs-service",
+    "version": "0.1.0",
+    "description": "Ofertas de trabajo y búsquedas de empresas. Implementa RF-11, RF-12, HU-11, HU-12, UT-JOBS-01 y UT-JOBS-02 del Plan MVP. Autenticación de usuarios con Authorization: Bearer <JWT RS256 de auth-service> validado contra el JWKS; servicios internos (matching-service, mcp-tools, n8n) con X-Service-Token. El gateway borra X-Service-Token en peticiones externas. Errores: {\"error\": {\"code\", \"message\", \"details\"}}. Documentación para el front: contracts/jobs_frontend.md. Documentación para matching/mcp: contracts/jobs_matching.md."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "API Gateway (same-origin para el front)"
+    },
+    {
+      "url": "http://localhost:8000",
+      "description": "jobs-service directo (sólo desarrollo/integración)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "jobs",
+      "description": "Ofertas y búsquedas"
+    },
+    {
+      "name": "companies",
+      "description": "Vista de la empresa autenticada"
+    },
+    {
+      "name": "infra",
+      "description": "Salud del servicio"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["infra"],
+        "summary": "Estado del servicio",
+        "operationId": "health",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Servicio sano",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status", "service", "version"],
+                  "properties": {
+                    "status": { "type": "string", "const": "ok" },
+                    "service": { "type": "string", "const": "jobs-service" },
+                    "version": { "type": "string", "example": "0.1.0" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs": {
+      "get": {
+        "tags": ["jobs"],
+        "summary": "Lista ofertas",
+        "description": "Devuelve ofertas completas, paginadas. `student` y `company` sólo pueden pedir `status=active`; `admin` y el service token pueden pedir `closed` o `all`. `limit` es un alias de `size` para matching-service y mcp-tools.",
+        "operationId": "list_jobs",
+        "security": [
+          { "bearerAuth": [] },
+          { "serviceToken": [] }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filtro por estado. Default: active.",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/JobStatusFilter" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Página 1-based.",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Tamaño de página (1–200). Default: 5.",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 5 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Alias de `size` para matching/mcp. Si viene, gana sobre `size`.",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 200 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobList" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      },
+      "post": {
+        "tags": ["jobs"],
+        "summary": "Crea una oferta (sólo empresa)",
+        "description": "El `company_id` sale del `sub` del JWT. El `company_snapshot` se obtiene de auth-service. La oferta nace `active`, con `version=1`. Publica `job.created` a n8n (best-effort).",
+        "operationId": "create_job",
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobCreate" },
+              "examples": {
+                "backend_junior": { "$ref": "#/components/examples/JobCreateExample" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Oferta creada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobOpportunity" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "parameters": [
+        {
+          "name": "job_id",
+          "in": "path",
+          "required": true,
+          "description": "ID de la oferta (ej. `job-001`).",
+          "schema": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      ],
+      "get": {
+        "tags": ["jobs"],
+        "summary": "Detalle de una oferta",
+        "description": "Una oferta `closed` sólo es visible para la empresa dueña, un `admin` o el service token. Para el resto responde 404.",
+        "operationId": "get_job",
+        "security": [
+          { "bearerAuth": [] },
+          { "serviceToken": [] }
+        ],
+        "responses": {
+          "200": {
+            "description": "Oferta encontrada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobOpportunity" },
+                "examples": {
+                  "job_001": { "$ref": "#/components/examples/JobOpportunityExample" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["jobs"],
+        "summary": "Edita una oferta (sólo empresa dueña)",
+        "description": "Los bloques enviados se reemplazan completos. Cada edición incrementa `version`. `status` sólo acepta `active` y sólo se usa para reabrir una oferta `closed`. Para cerrar se usa DELETE, no PATCH.",
+        "operationId": "update_job",
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Oferta actualizada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobOpportunity" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      },
+      "delete": {
+        "tags": ["jobs"],
+        "summary": "Cierra una oferta (sólo empresa dueña)",
+        "description": "No borra físicamente: pasa `status` a `closed`, actualiza `updated_at` y suma `version`. Es idempotente: si ya estaba cerrada, responde 204.",
+        "operationId": "close_job",
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "responses": {
+          "204": {
+            "description": "Oferta cerrada (o ya estaba cerrada)"
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/companies/me/searches": {
+      "get": {
+        "tags": ["companies"],
+        "summary": "Búsquedas de la empresa autenticada",
+        "description": "Lista las ofertas propias. Default: sólo `active` (AGENTS §4.3). `status=closed|all` habilita el filtro de HU-12 para gestionar el historial.",
+        "operationId": "list_my_searches",
+        "security": [
+          { "bearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/JobStatusFilter" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 5 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Alias de `size`.",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 200 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Búsquedas de la empresa",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JobList" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "access_token de auth-service (RS256). El servicio valida firma, iss, aud, exp y role contra el JWKS."
+      },
+      "serviceToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Service-Token",
+        "description": "Token interno para matching-service, mcp-tools y n8n. Nunca se acepta como Bearer."
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Regla de negocio violada",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Falta el token o es inválido",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Rol incorrecto o recurso de otra empresa",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Oferta inexistente o cerrada para un tercero",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Body o query inválido (incluye UT-JOBS-01)",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "UpstreamError": {
+        "description": "auth-service o n8n no respondieron",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    },
+    "examples": {
+      "JobCreateExample": {
+        "summary": "Oferta de desarrollador backend junior",
+        "value": {
+          "title": "Desarrollador/a Backend Python Jr.",
+          "description": "Desarrollo de microservicios REST con Python, FastAPI y PostgreSQL.",
+          "responsibilities": [
+            "Implementar endpoints REST",
+            "Escribir tests unitarios"
+          ],
+          "area": "software",
+          "seniority": "junior",
+          "vacancies": 1,
+          "location": {
+            "country": "AR",
+            "province": "CABA",
+            "city": "Buenos Aires"
+          },
+          "work_conditions": {
+            "work_schedule": ["full_time"],
+            "work_modality": ["hybrid"],
+            "hybrid_onsite_days": 2,
+            "employment_type": ["employee"],
+            "contract_duration": ["permanent"],
+            "weekly_hours": { "min": 30, "max": 40 },
+            "shifts": ["morning", "afternoon"],
+            "availability_start": "within_15_days",
+            "salary": {
+              "min": 800000,
+              "max": 1000000,
+              "currency": "ARS",
+              "period": "month",
+              "gross": true,
+              "negotiable": false,
+              "visibility": "public",
+              "to_agree": false
+            }
+          },
+          "requirements": {
+            "skills": [
+              { "name": "Python", "level": 3, "kind": "required" },
+              { "name": "FastAPI", "level": 3, "kind": "required" },
+              { "name": "SQL", "level": 3, "kind": "required" },
+              { "name": "Docker", "level": 3, "kind": "desired" }
+            ],
+            "languages": [
+              { "name": "Inglés", "level": "B1", "kind": "required" }
+            ],
+            "education": [
+              {
+                "level": "university",
+                "status": "in_progress",
+                "field": "sistemas",
+                "kind": "required"
+              }
+            ],
+            "experience": {
+              "min_years": 1,
+              "area": "desarrollo backend",
+              "kind": "required"
+            }
+          },
+          "benefits": ["capacitación", "días de estudio"],
+          "expires_at": "2026-12-31T23:59:59Z"
+        }
+      },
+      "JobOpportunityExample": {
+        "summary": "job-001 del seed de demo",
+        "value": {
+          "id": "job-001",
+          "company_id": "22222222-2222-4222-8222-000000000001",
+          "company_snapshot": {
+            "name": "PampaTech S.A.",
+            "industry": "software",
+            "size": "51-200",
+            "logo_url": null
+          },
+          "status": "active",
+          "title": "Desarrollador/a Backend Python Jr.",
+          "description": "Desarrollo de microservicios REST con Python, FastAPI y PostgreSQL.",
+          "responsibilities": [],
+          "area": "software",
+          "seniority": "junior",
+          "vacancies": 1,
+          "location": {
+            "country": "AR",
+            "province": "CABA",
+            "city": "Buenos Aires",
+            "postal_code": null,
+            "zone": null
+          },
+          "work_conditions": {
+            "work_schedule": ["full_time", "part_time"],
+            "work_modality": ["hybrid"],
+            "hybrid_onsite_days": 2,
+            "employment_type": ["employee"],
+            "contract_duration": ["permanent"],
+            "weekly_hours": { "min": 30, "max": 40 },
+            "shifts": ["morning", "afternoon"],
+            "availability_start": "within_15_days",
+            "salary": {
+              "min": 800000,
+              "max": 1000000,
+              "currency": "ARS",
+              "period": "month",
+              "gross": true,
+              "payment_mode": null,
+              "negotiable": false,
+              "adjustment": "quarterly",
+              "variable_compensation": [],
+              "visibility": "public",
+              "to_agree": false,
+              "notes": null
+            },
+            "relocation_support": false,
+            "travel_availability": "none",
+            "driver_license": [],
+            "own_vehicle": null,
+            "own_equipment": null,
+            "invoicing_status": null,
+            "work_authorization": [],
+            "timezone": null,
+            "timezone_overlap_hours": null
+          },
+          "requirements": {
+            "skills": [
+              {
+                "name": "Python",
+                "normalized": "python",
+                "level": 3,
+                "kind": "required",
+                "years": null,
+                "category": null
+              },
+              {
+                "name": "FastAPI",
+                "normalized": "fastapi",
+                "level": 3,
+                "kind": "required",
+                "years": null,
+                "category": null
+              },
+              {
+                "name": "SQL",
+                "normalized": "sql",
+                "level": 3,
+                "kind": "required",
+                "years": null,
+                "category": null
+              },
+              {
+                "name": "Docker",
+                "normalized": "docker",
+                "level": 3,
+                "kind": "desired",
+                "years": null,
+                "category": null
+              }
+            ],
+            "languages": [
+              {
+                "name": "Inglés",
+                "normalized": "ingles",
+                "level": "B1",
+                "kind": "required",
+                "certification": null
+              }
+            ],
+            "education": [
+              {
+                "institution": null,
+                "degree": null,
+                "field": "sistemas",
+                "level": "university",
+                "status": "in_progress",
+                "progress_percent": null,
+                "gpa": null,
+                "kind": "required"
+              }
+            ],
+            "experience": {
+              "min_years": 1,
+              "area": "desarrollo backend",
+              "kind": "required"
+            },
+            "certifications": [],
+            "academic": {
+              "min_progress_percent": 50,
+              "careers": [],
+              "min_current_year": null
+            }
+          },
+          "benefits": ["capacitación", "días de estudio", "prepaga"],
+          "created_at": "2026-11-01T12:00:00Z",
+          "updated_at": "2026-11-01T12:00:00Z",
+          "published_at": "2026-11-01T12:00:00Z",
+          "expires_at": null,
+          "version": 1
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "details"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "examples": ["INVALID_INPUT", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND", "UPSTREAM_ERROR"]
+              },
+              "message": { "type": "string" },
+              "details": {
+                "type": ["object", "null"],
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": ["active", "closed"],
+        "description": "Estado de la oferta. `active` = publicada; `closed` = cerrada (no se borra)."
+      },
+      "JobStatusFilter": {
+        "type": "string",
+        "enum": ["active", "closed", "all"],
+        "description": "Filtro de listado. `all` sólo para admin/service en /jobs y para la empresa dueña en /companies/me/searches."
+      },
+      "RequirementKind": {
+        "type": "string",
+        "enum": ["required", "desired", "excluding"],
+        "description": "Tipo de requisito. Debe haber al menos una skill `required`."
+      },
+      "Seniority": {
+        "type": "string",
+        "enum": ["no_experience", "trainee", "junior", "semi_senior", "senior"]
+      },
+      "WorkSchedule": {
+        "type": "string",
+        "enum": ["full_time", "part_time", "hourly", "flexible"]
+      },
+      "WorkModality": {
+        "type": "string",
+        "enum": ["onsite", "remote", "hybrid"]
+      },
+      "EmploymentType": {
+        "type": "string",
+        "enum": ["employee", "freelance", "internship", "trainee"]
+      },
+      "ContractDuration": {
+        "type": "string",
+        "enum": ["permanent", "fixed_term", "project", "seasonal"]
+      },
+      "AvailabilityStart": {
+        "type": "string",
+        "enum": ["immediate", "within_15_days", "within_30_days", "to_agree"]
+      },
+      "Shift": {
+        "type": "string",
+        "enum": ["morning", "afternoon", "evening", "night", "weekend", "rotating"]
+      },
+      "SkillCategory": {
+        "type": "string",
+        "enum": ["hard", "soft", "tool", "methodology"]
+      },
+      "LanguageLevel": {
+        "type": "string",
+        "enum": ["A1", "A2", "B1", "B2", "C1", "C2", "native"]
+      },
+      "EducationLevel": {
+        "type": "string",
+        "enum": ["secondary", "tertiary", "university", "postgraduate", "course"]
+      },
+      "EducationStatus": {
+        "type": "string",
+        "enum": ["in_progress", "completed", "incomplete"]
+      },
+      "Currency": {
+        "type": "string",
+        "enum": ["ARS", "USD"]
+      },
+      "SalaryPeriod": {
+        "type": "string",
+        "enum": ["hour", "day", "month", "year", "project"]
+      },
+      "SalaryVisibility": {
+        "type": "string",
+        "enum": ["public", "on_match", "hidden"],
+        "description": "`public`: visible para todos. `on_match`/`hidden`: para estudiantes y otras empresas el servicio devuelve salary=null; la empresa dueña, admin y service token ven el valor completo."
+      },
+      "SalaryAdjustment": {
+        "type": "string",
+        "enum": ["none", "monthly", "quarterly", "semiannual", "by_agreement"]
+      },
+      "PaymentCurrencyMode": {
+        "type": "string",
+        "enum": ["local", "usd", "usd_paid_in_local"]
+      },
+      "TravelAvailability": {
+        "type": "string",
+        "enum": ["none", "occasional", "frequent"]
+      },
+      "InvoicingStatus": {
+        "type": "string",
+        "enum": ["monotributo", "responsable_inscripto", "none", "to_register"]
+      },
+      "Location": {
+        "type": "object",
+        "required": ["country", "province", "city"],
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$",
+            "description": "ISO 3166-1 alfa-2.",
+            "examples": ["AR"]
+          },
+          "province": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "city": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "postal_code": { "type": ["string", "null"], "maxLength": 20 },
+          "zone": { "type": ["string", "null"], "maxLength": 120 }
+        }
+      },
+      "VariableCompensation": {
+        "type": "object",
+        "required": ["type"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string", "enum": ["bonus", "commission", "profit_sharing"] },
+          "description": { "type": "string", "maxLength": 500 },
+          "max_percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 }
+        }
+      },
+      "SalaryRange": {
+        "type": "object",
+        "description": "Sueldo ofrecido. Si to_agree=true, min/max pueden faltar. Si hay monto, min es obligatorio y currency/period también. max >= min.",
+        "additionalProperties": false,
+        "properties": {
+          "min": { "type": ["number", "null"], "minimum": 0 },
+          "max": { "type": ["number", "null"], "minimum": 0 },
+          "currency": {
+            "anyOf": [{ "$ref": "#/components/schemas/Currency" }, { "type": "null" }]
+          },
+          "period": {
+            "anyOf": [{ "$ref": "#/components/schemas/SalaryPeriod" }, { "type": "null" }]
+          },
+          "gross": { "type": "boolean", "default": true },
+          "payment_mode": {
+            "anyOf": [{ "$ref": "#/components/schemas/PaymentCurrencyMode" }, { "type": "null" }]
+          },
+          "negotiable": { "type": "boolean", "default": false },
+          "adjustment": {
+            "anyOf": [{ "$ref": "#/components/schemas/SalaryAdjustment" }, { "type": "null" }]
+          },
+          "variable_compensation": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/VariableCompensation" },
+            "default": []
+          },
+          "visibility": {
+            "anyOf": [{ "$ref": "#/components/schemas/SalaryVisibility" }, { "type": "null" }]
+          },
+          "to_agree": { "type": "boolean", "default": false },
+          "notes": { "type": ["string", "null"], "maxLength": 500 }
+        }
+      },
+      "WeeklyHours": {
+        "type": "object",
+        "required": ["min", "max"],
+        "additionalProperties": false,
+        "properties": {
+          "min": { "type": "integer", "minimum": 0, "maximum": 168 },
+          "max": { "type": "integer", "minimum": 0, "maximum": 168 }
+        }
+      },
+      "WorkConditions": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Lo que ofrece el puesto. Todos los campos son opcionales; salary puede ser null.",
+        "properties": {
+          "work_schedule": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WorkSchedule" },
+            "default": []
+          },
+          "work_modality": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WorkModality" },
+            "default": []
+          },
+          "hybrid_onsite_days": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 5
+          },
+          "employment_type": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/EmploymentType" },
+            "default": []
+          },
+          "contract_duration": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ContractDuration" },
+            "default": []
+          },
+          "weekly_hours": {
+            "anyOf": [{ "$ref": "#/components/schemas/WeeklyHours" }, { "type": "null" }]
+          },
+          "shifts": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Shift" },
+            "default": []
+          },
+          "availability_start": {
+            "anyOf": [{ "$ref": "#/components/schemas/AvailabilityStart" }, { "type": "null" }]
+          },
+          "salary": {
+            "anyOf": [{ "$ref": "#/components/schemas/SalaryRange" }, { "type": "null" }]
+          },
+          "relocation_support": { "type": "boolean", "default": false },
+          "travel_availability": {
+            "anyOf": [{ "$ref": "#/components/schemas/TravelAvailability" }, { "type": "null" }]
+          },
+          "driver_license": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": []
+          },
+          "own_vehicle": { "type": ["boolean", "null"] },
+          "own_equipment": { "type": ["boolean", "null"] },
+          "invoicing_status": {
+            "anyOf": [{ "$ref": "#/components/schemas/InvoicingStatus" }, { "type": "null" }]
+          },
+          "work_authorization": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[A-Z]{2}$" },
+            "default": []
+          },
+          "timezone": { "type": ["string", "null"], "maxLength": 64 },
+          "timezone_overlap_hours": { "type": ["integer", "null"], "minimum": 0, "maximum": 24 }
+        }
+      },
+      "CompanySnapshot": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "industry": { "type": ["string", "null"], "maxLength": 160 },
+          "size": {
+            "type": ["string", "null"],
+            "enum": ["1-10", "11-50", "51-200", "201-1000", "1000+", null]
+          },
+          "logo_url": { "type": ["string", "null"], "format": "uri" }
+        }
+      },
+      "SkillRequirement": {
+        "type": "object",
+        "required": ["name", "level", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "normalized": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Lo calcula el servicio: minúsculas, sin acentos y espacios simples. No se envía en el request."
+          },
+          "level": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "kind": { "$ref": "#/components/schemas/RequirementKind" },
+          "years": { "type": ["number", "null"], "minimum": 0 },
+          "category": {
+            "anyOf": [{ "$ref": "#/components/schemas/SkillCategory" }, { "type": "null" }]
+          }
+        }
+      },
+      "LanguageRequirement": {
+        "type": "object",
+        "required": ["name", "level", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "normalized": { "type": "string", "readOnly": true },
+          "level": { "$ref": "#/components/schemas/LanguageLevel" },
+          "kind": { "$ref": "#/components/schemas/RequirementKind" },
+          "certification": { "type": ["string", "null"], "maxLength": 120 }
+        }
+      },
+      "EducationRequirement": {
+        "type": "object",
+        "required": ["level", "status", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "institution": { "type": ["string", "null"], "maxLength": 200 },
+          "degree": { "type": ["string", "null"], "maxLength": 200 },
+          "field": { "type": ["string", "null"], "maxLength": 120 },
+          "level": { "$ref": "#/components/schemas/EducationLevel" },
+          "status": { "$ref": "#/components/schemas/EducationStatus" },
+          "progress_percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+          "gpa": { "type": ["number", "null"], "minimum": 0 },
+          "kind": { "$ref": "#/components/schemas/RequirementKind" }
+        }
+      },
+      "ExperienceRequirement": {
+        "type": "object",
+        "required": ["min_years", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "min_years": { "type": "number", "minimum": 0, "maximum": 60 },
+          "area": { "type": ["string", "null"], "maxLength": 120 },
+          "kind": { "$ref": "#/components/schemas/RequirementKind" }
+        }
+      },
+      "CertificationRequirement": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "kind": { "$ref": "#/components/schemas/RequirementKind" }
+        }
+      },
+      "AcademicRequirement": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "min_progress_percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+          "careers": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "min_current_year": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 }
+        }
+      },
+      "Requirements": {
+        "type": "object",
+        "required": ["skills"],
+        "additionalProperties": false,
+        "properties": {
+          "skills": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/SkillRequirement" }
+          },
+          "languages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/LanguageRequirement" },
+            "default": []
+          },
+          "education": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/EducationRequirement" },
+            "default": []
+          },
+          "experience": {
+            "anyOf": [{ "$ref": "#/components/schemas/ExperienceRequirement" }, { "type": "null" }]
+          },
+          "certifications": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CertificationRequirement" },
+            "default": []
+          },
+          "academic": {
+            "anyOf": [{ "$ref": "#/components/schemas/AcademicRequirement" }, { "type": "null" }]
+          }
+        }
+      },
+      "JobCreate": {
+        "type": "object",
+        "required": ["title", "description", "seniority", "location", "requirements"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 20000 },
+          "responsibilities": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 500 },
+            "maxItems": 50,
+            "default": []
+          },
+          "area": { "type": "string", "maxLength": 120, "default": "" },
+          "seniority": { "$ref": "#/components/schemas/Seniority" },
+          "vacancies": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 1 },
+          "location": { "$ref": "#/components/schemas/Location" },
+          "work_conditions": {
+            "anyOf": [{ "$ref": "#/components/schemas/WorkConditions" }, { "type": "null" }]
+          },
+          "requirements": { "$ref": "#/components/schemas/Requirements" },
+          "benefits": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 200 },
+            "maxItems": 50,
+            "default": []
+          },
+          "expires_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Si viene, debe ser futuro."
+          }
+        }
+      },
+      "JobUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "PATCH parcial. Los bloques enviados se reemplazan completos. No se aceptan company_id, company_snapshot, version ni timestamps. `status` sólo acepta `active` para reabrir una oferta cerrada.",
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 20000 },
+          "responsibilities": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 500 },
+            "maxItems": 50
+          },
+          "area": { "type": "string", "maxLength": 120 },
+          "seniority": { "$ref": "#/components/schemas/Seniority" },
+          "vacancies": { "type": "integer", "minimum": 1, "maximum": 1000 },
+          "location": { "$ref": "#/components/schemas/Location" },
+          "work_conditions": {
+            "anyOf": [{ "$ref": "#/components/schemas/WorkConditions" }, { "type": "null" }]
+          },
+          "requirements": { "$ref": "#/components/schemas/Requirements" },
+          "benefits": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 200 },
+            "maxItems": 50
+          },
+          "expires_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active"],
+            "description": "Sólo para reabrir una oferta closed. Para cerrar: DELETE /api/v1/jobs/{id}."
+          }
+        }
+      },
+      "JobOpportunity": {
+        "type": "object",
+        "required": [
+          "id",
+          "company_id",
+          "company_snapshot",
+          "status",
+          "title",
+          "description",
+          "responsibilities",
+          "area",
+          "seniority",
+          "vacancies",
+          "location",
+          "work_conditions",
+          "requirements",
+          "benefits",
+          "created_at",
+          "updated_at",
+          "published_at",
+          "expires_at",
+          "version"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "readOnly": true },
+          "company_id": { "type": "string", "readOnly": true },
+          "company_snapshot": { "$ref": "#/components/schemas/CompanySnapshot" },
+          "status": { "$ref": "#/components/schemas/JobStatus" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "responsibilities": { "type": "array", "items": { "type": "string" } },
+          "area": { "type": "string" },
+          "seniority": { "$ref": "#/components/schemas/Seniority" },
+          "vacancies": { "type": "integer", "minimum": 1 },
+          "location": { "$ref": "#/components/schemas/Location" },
+          "work_conditions": { "$ref": "#/components/schemas/WorkConditions" },
+          "requirements": { "$ref": "#/components/schemas/Requirements" },
+          "benefits": { "type": "array", "items": { "type": "string" } },
+          "created_at": { "type": "string", "format": "date-time", "readOnly": true },
+          "updated_at": { "type": "string", "format": "date-time", "readOnly": true },
+          "published_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "readOnly": true
+          },
+          "expires_at": { "type": ["string", "null"], "format": "date-time" },
+          "version": { "type": "integer", "minimum": 1, "readOnly": true }
+        }
+      },
+      "JobList": {
+        "type": "object",
+        "required": ["items", "total", "page", "size", "pages"],
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/JobOpportunity" }
+          },
+          "total": { "type": "integer", "minimum": 0 },
+          "page": { "type": "integer", "minimum": 1 },
+          "size": { "type": "integer", "minimum": 1, "maximum": 200 },
+          "pages": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}
