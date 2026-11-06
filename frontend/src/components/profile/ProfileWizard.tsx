@@ -85,19 +85,17 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
 
       // 4. Limpiar undefineds con JavaScript nativo (reemplaza a compact y evita errores de TS)
       const finalPayload = Object.fromEntries(
-        Object.entries(rawPayload).filter(([_, v]) => v !== undefined)
+        Object.entries(rawPayload).filter(([_, v]) => v !== undefined),
       ) as ProfileSections;
-      
-      
+
       // 5. Enviar a la API
       const updated = await profileService.update(finalPayload);
       onProfileChange(updated);
-      
+
       if (step === 'cv') setUseDraft(false);
       const next = STEP_ORDER[stepIndex + 1];
       if (next) goTo(next);
       else onDone();
-      
     } catch (err) {
       setError({ message: errorMessage(err), items: validationMessages(err) });
       window.scrollTo({ top: 0, behavior: 'smooth' });

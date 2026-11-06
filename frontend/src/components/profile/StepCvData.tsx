@@ -148,7 +148,7 @@ export const StepCvData: React.FC<StepCvDataProps> = ({
       experience,
       languages,
     });
-    
+
     if (form.summary && form.summary.trim() !== '') {
       cleanPayload.summary = form.summary.trim();
     }
@@ -247,7 +247,7 @@ export const StepCvData: React.FC<StepCvDataProps> = ({
             required
             multiline
             maxLength={2000}
-            value={form.summary === 'COMPLETAR_MANUALMENTE' ? '' : (form.summary || '')}
+            value={form.summary === 'COMPLETAR_MANUALMENTE' ? '' : form.summary || ''}
             review={isReview('summary')}
             onChange={(v) => setForm((f) => ({ ...f, summary: v }))}
           />
