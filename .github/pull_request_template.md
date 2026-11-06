@@ -6,6 +6,7 @@ HU-XX — <título>
 
 ## Cómo probar
 ```bash
+sh infra/scripts/create-volumes.sh   # sólo la primera vez
 docker compose up -d --build
 ```
 1.

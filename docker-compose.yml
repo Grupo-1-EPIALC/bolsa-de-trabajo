@@ -65,8 +65,12 @@ services:
   n8n:
     <<: *common
     image: n8nio/n8n:latest
-    depends_on: *depends-db
-    environment:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      n8n-init:
+        condition: service_completed_successfully
+    environment: &n8n-env
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
       DB_POSTGRESDB_PORT: "5432"
@@ -102,6 +106,24 @@ services:
       timeout: 3s
       start_period: 60s
       retries: 3
+
+  # Arranque de n8n: importa la credencial de NVIDIA (desde .env) y los workflows de
+  # n8n/workflows, y los publica. Corre en cada `up`, así una base nueva nunca queda vacía.
+  # El repo es la fuente de verdad: los cambios hechos sólo en la UI se pisan al reiniciar.
+  n8n-init:
+    image: n8nio/n8n:latest
+    restart: "no"
+    depends_on: *depends-db
+    entrypoint: ["/bin/sh", "/n8n-init/bootstrap.sh"]
+    environment:
+      <<: *n8n-env
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
+    networks: [backend]
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+      - ./n8n/init:/n8n-init:ro
 
   # ------------------------------------------------------------- servicios ---
   auth-service:
@@ -222,7 +244,19 @@ networks:
   backend:       # gateway ↔ APIs REST de negocio ↔ infra
   mcp_internal:  # canal directo y exclusivo n8n ↔ mcp-tools (sin pasar por gateway Nginx)
 
+# Datos persistentes FUERA de los contenedores y de compose: volúmenes externos.
+# Sobreviven a recrear contenedores/imágenes y también a `docker compose down -v`.
+# Se crean una sola vez con infra/scripts/create-volumes.sh (o los comandos del README).
+#   bolsa_pg_data    → Postgres: bases de todos los servicios, base de n8n y logos de empresas
+#   bolsa_n8n_data   → configuración de n8n (/home/node/.n8n)
+#   bolsa_cv_storage → CVs subidos por los estudiantes
 volumes:
   pg_data:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME:-bolsa}_pg_data
   n8n_data:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME:-bolsa}_n8n_data
   cv_storage:
+    external: true
+    name: ${COMPOSE_PROJECT_NAME:-bolsa}_cv_storage
