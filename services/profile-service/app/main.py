@@ -3,34 +3,36 @@
 Arquitectura en capas: api/ -> application/ -> domain/ <- infrastructure/ (AGENTS.md §2.1 y §4.2).
 """
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
-from app.api.routes import router as profiles_router
-from app.domain.errors import ProfileDomainError
+from fastapi import FastAPI
+
+from app.api.deps import get_container
+from app.api.errors import install_error_handlers
+from app.api.routes import router as cv_compat_router
+from app.api.routes_companies import router as companies_router
+from app.api.routes_profiles import router as profiles_router
 
 SERVICE_NAME = "profile-service"
-SERVICE_VERSION = "0.1.0"
+SERVICE_VERSION = "0.2.0"
 
-app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION)
+
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
+    """Crea el schema y carga el seed al arrancar (salvo que un test inyecte el contenedor)."""
+    if get_container not in application.dependency_overrides:
+        get_container()
+    yield
+
+
+app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION, lifespan=lifespan)
+install_error_handlers(app)
+# Primero las rutas fijas (`/cv-test`, `/cv-extract/...`, `/companies/...`) y después
+# `/{profile_id}` del perfil de estudiante.
+app.include_router(cv_compat_router)
+app.include_router(companies_router)
 app.include_router(profiles_router)
-
-
-@app.exception_handler(ProfileDomainError)
-def handle_profile_domain_error(
-    _request: Request,
-    exc: ProfileDomainError,
-) -> JSONResponse:
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": {
-                "code": exc.code,
-                "message": exc.message,
-                "details": exc.details,
-            }
-        },
-    )
 
 
 @app.get("/health", tags=["infra"])

@@ -134,8 +134,11 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Validar MIME + extensión (`.pdf`, `.docx`, `.doc`, `.md`), máx. 5 MB, nombre aleatorio. Guardar en `CV_STORAGE_PATH`.
 - Lo extraído del CV vía webhook a `n8n` (`POST /webhook/cv-extract`) se devuelve/guarda como **sugerencia** (`cv_suggestions`, con `"COMPLETAR_MANUALMENTE"` en campos escalares faltantes y `[]` en listas vacías, sin `null`) — nunca sobrescribe el perfil sin confirmación del usuario.
 - `SkillExtractor` con diccionario + sinónimos (`data/skills_catalog.json`).
-- Generar CV PDF con WeasyPrint + plantilla Jinja2 (`templates/cv.html`). Las librerías de sistema ya están en el Dockerfile.
+- Generar un CV nuevo "IA friendly" (una columna, texto real, títulos estándar, metadatos con palabras clave) **por reglas** con los datos confirmados: PDF con WeasyPrint + plantilla Jinja2 (`app/templates/cv.html`), DOCX con python-docx y vista previa HTML, detrás del puerto `CvRenderer`. Sin año de nacimiento, inclusión ni sueldo.
 - Emitir webhooks `cv.uploaded` / `/webhook/cv-extract` y `profile.updated` a n8n mediante puertos inyectados (`CvWebhookGateway` / `EventPublisher`).
+- Perfil completo de la estructura común §5 en el schema `profile`. `PATCH /profiles/me` reemplaza secciones y rechaza `"COMPLETAR_MANUALMENTE"`. La completitud se calcula por reglas (`origin: "RULES"`) en 3 pasos (`cv`, `preferences`, `privacy`). Las sugerencias de WF-01 se devuelven como `profile_draft` + `review_fields`.
+- Autenticar con el JWT RS256 de auth-service (JWKS) y servicios sólo con `X-Service-Token`. Sólo `student` tiene `/me`; un perfil ajeno da 404. Exponer el pool para matching (`GET /profiles`, sólo perfiles buscables) con vistas que minimizan datos (sin teléfono, inclusión ni consentimientos). Contratos: `contracts/profile_frontend.md` y `contracts/profiles_matching.md`.
+- Perfil de empresa (`/api/v1/profiles/companies/...`): marca empleadora (nombre comercial, logo PNG/JPEG/WebP ≤ 1 MB validado por firma y servido público, rubro, tamaño, sede, descripción, links, beneficios, contacto), con razón social/CUIT/actividad como copia de sólo lectura de auth-service y `snapshot` con la forma de `company_snapshot` para jobs-service. **Las búsquedas no van en profile-service**: son de jobs-service y el front las pide ahí. Contratos: `contracts/company_profile_frontend.md` y `contracts/company_profiles_jobs.md`.
 **Tests mínimos:** UT-PROF-01 a UT-PROF-07.
 
 ### 4.3 Agente `jobs-agent` — jobs-service (FastAPI)

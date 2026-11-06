@@ -138,6 +138,11 @@ services:
     environment:
       <<: *python-env
       DATABASE_URL: postgresql://profile_svc:${PROFILE_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PROFILE_DB_SCHEMA: profile
+      # Pool de perfiles ficticios (mismos ids que los mocks de matching). false en producción.
+      PROFILE_SEED_DEMO: ${PROFILE_SEED_DEMO:-true}
+      # Para precargar email y datos legales de la empresa con GET /api/v1/auth/me
+      AUTH_SERVICE_URL: http://auth-service:3000
       CV_STORAGE_PATH: ${CV_STORAGE_PATH}
       CV_MAX_SIZE_MB: ${CV_MAX_SIZE_MB}
     volumes:

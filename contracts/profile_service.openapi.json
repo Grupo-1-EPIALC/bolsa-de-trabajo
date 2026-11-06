@@ -1,0 +1,3738 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "profile-service",
+    "version": "0.2.0"
+  },
+  "paths": {
+    "/api/v1/profiles/cv-test": {
+      "get": {
+        "tags": [
+          "cv-extract (compatibilidad)"
+        ],
+        "summary": "Formulario de prueba para subir CV",
+        "description": "Interfaz HTML de prueba: sube un CV con tu JWT y muestra el JSON extraído vía n8n.",
+        "operationId": "cv_test_form_api_v1_profiles_cv_test_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/cv-extract/async": {
+      "post": {
+        "tags": [
+          "cv-extract (compatibilidad)"
+        ],
+        "summary": "[compat] Iniciar extracción asíncrona de CV (usar POST /me/cv)",
+        "operationId": "start_async_extract_cv_endpoint_api_v1_profiles_cv_extract_async_post",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegacyCvExtractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/cv-extract/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "cv-extract (compatibilidad)"
+        ],
+        "summary": "[compat] Progreso de una extracción de CV (usar GET /me/cv/jobs/{job_id})",
+        "operationId": "get_extract_cv_job_status_api_v1_profiles_cv_extract_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Extract Cv Job Status Api V1 Profiles Cv Extract Jobs  Job Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/cv-extract": {
+      "post": {
+        "tags": [
+          "cv-extract (compatibilidad)"
+        ],
+        "summary": "[compat · interno] Extracción síncrona de CV vía n8n (sólo servicio o admin)",
+        "operationId": "extract_cv_endpoint_api_v1_profiles_cv_extract_post",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegacyCvExtractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Extract Cv Endpoint Api V1 Profiles Cv Extract Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/companies/me": {
+      "get": {
+        "tags": [
+          "company-profiles"
+        ],
+        "summary": "Perfil de mi empresa + completitud + búsquedas activas",
+        "operationId": "get_my_company_api_v1_profiles_companies_me_get",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get My Company Api V1 Profiles Companies Me Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "company-profiles"
+        ],
+        "summary": "Crear el perfil de mi empresa (se precarga con los datos de auth-service)",
+        "operationId": "create_my_company_api_v1_profiles_companies_me_post",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CompanyProfilePatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create My Company Api V1 Profiles Companies Me Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "company-profiles"
+        ],
+        "summary": "Guardar secciones del perfil de mi empresa",
+        "operationId": "update_my_company_api_v1_profiles_companies_me_patch",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyProfilePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update My Company Api V1 Profiles Companies Me Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/companies/me/logo": {
+      "put": {
+        "tags": [
+          "company-profiles"
+        ],
+        "summary": "Subir o reemplazar el logo (PNG, JPEG o WebP · máx. 1 MB)",
+        "operationId": "upload_my_logo_api_v1_profiles_companies_me_logo_put",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_my_logo_api_v1_profiles_companies_me_logo_put"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Upload My Logo Api V1 Profiles Companies Me Logo Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "company-profiles"
+        ],
+        "summary": "Quitar el logo de mi empresa",
+        "operationId": "delete_my_logo_api_v1_profiles_companies_me_logo_delete",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/companies": {
+      "get": {
+        "tags": [
+          "company-profiles"
+        ],
+        "summary": "[interno] Perfiles de empresa (service o admin)",
+        "operationId": "list_companies_api_v1_profiles_companies_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Companies Api V1 Profiles Companies Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/companies/{company_id}": {
+      "get": {
+        "tags": [
+          "company-profiles"
+        ],
+        "summary": "Perfil de una empresa (público para estudiantes; con `snapshot` para servicios)",
+        "operationId": "get_company_api_v1_profiles_companies__company_id__get",
+        "parameters": [
+          {
+            "name": "company_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Company Id"
+            }
+          },
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Company Api V1 Profiles Companies  Company Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/companies/{company_id}/logo": {
+      "get": {
+        "tags": [
+          "company-profiles"
+        ],
+        "summary": "Logo de la empresa (público, para usar en <img>)",
+        "operationId": "get_company_logo_api_v1_profiles_companies__company_id__logo_get",
+        "parameters": [
+          {
+            "name": "company_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Company Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "image/png": {},
+              "image/jpeg": {},
+              "image/webp": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/me": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Mi perfil (estudiante) con el estado de completitud",
+        "operationId": "get_my_profile_api_v1_profiles_me_get",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get My Profile Api V1 Profiles Me Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Crear mi perfil a mano (borrador). El email se precarga desde auth-service",
+        "operationId": "create_my_profile_api_v1_profiles_me_post",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ProfilePatch"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create My Profile Api V1 Profiles Me Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Guardar secciones de mi perfil (cada sección se reemplaza completa)",
+        "operationId": "update_my_profile_api_v1_profiles_me_patch",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update My Profile Api V1 Profiles Me Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/me/cv": {
+      "post": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Subir mi CV (multipart) y extraer los datos con IA en segundo plano (WF-01)",
+        "operationId": "upload_my_cv_api_v1_profiles_me_cv_post",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_my_cv_api_v1_profiles_me_cv_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Upload My Cv Api V1 Profiles Me Cv Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/me/cv/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Progreso y resultado de la extracción de mi CV",
+        "operationId": "get_my_cv_job_api_v1_profiles_me_cv_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get My Cv Job Api V1 Profiles Me Cv Jobs  Job Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/me/cv-suggestions": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Últimas sugerencias de la IA sobre mi CV (borrador)",
+        "operationId": "get_my_cv_suggestions_api_v1_profiles_me_cv_suggestions_get",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get My Cv Suggestions Api V1 Profiles Me Cv Suggestions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Descartar las sugerencias de la IA",
+        "operationId": "discard_my_cv_suggestions_api_v1_profiles_me_cv_suggestions_delete",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/me/cv.pdf": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Descargar un CV nuevo en PDF generado con mis datos (IA friendly)",
+        "operationId": "download_cv_pdf_api_v1_profiles_me_cv_pdf_get",
+        "parameters": [
+          {
+            "name": "inline",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "true = abrir en el navegador",
+              "default": false,
+              "title": "Inline"
+            },
+            "description": "true = abrir en el navegador"
+          },
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/me/cv.docx": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Descargar un CV nuevo en DOCX (Word) generado con mis datos",
+        "operationId": "download_cv_docx_api_v1_profiles_me_cv_docx_get",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/me/cv.html": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Vista previa en HTML del CV que se va a generar",
+        "operationId": "preview_cv_html_api_v1_profiles_me_cv_html_get",
+        "parameters": [
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "[interno] Pool de perfiles para matching / mcp-tools (service o admin)",
+        "operationId": "list_profiles_api_v1_profiles_get",
+        "parameters": [
+          {
+            "name": "skills",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Competencias separadas por coma",
+              "title": "Skills"
+            },
+            "description": "Competencias separadas por coma"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 200,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Size"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "include_all",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Incluir borradores, ocultos y quienes no buscan",
+              "default": false,
+              "title": "Include All"
+            },
+            "description": "Incluir borradores, ocultos y quienes no buscan"
+          },
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Profiles Api V1 Profiles Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/{profile_id}": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Perfil por id (vista según rol: servicio, admin, empresa)",
+        "operationId": "get_profile_api_v1_profiles__profile_id__get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          },
+          {
+            "name": "x-service-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Service-Token"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Profile Api V1 Profiles  Profile Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "infra"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AcademicStatusIn": {
+        "properties": {
+          "institution": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution"
+          },
+          "career": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Career"
+          },
+          "current_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Year"
+          },
+          "progress_percent": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress Percent"
+          },
+          "expected_graduation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}(-(0[1-9]|1[0-2]))?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Graduation"
+          },
+          "student_shift": {
+            "items": {
+              "$ref": "#/components/schemas/Shift"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Student Shift"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AcademicStatusIn"
+      },
+      "AvailabilityStart": {
+        "type": "string",
+        "enum": [
+          "immediate",
+          "within_15_days",
+          "within_30_days",
+          "to_agree"
+        ],
+        "title": "AvailabilityStart"
+      },
+      "Body_upload_my_cv_api_v1_profiles_me_cv_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": ".pdf, .docx, .doc o .md · máx. 5 MB"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_my_cv_api_v1_profiles_me_cv_post"
+      },
+      "Body_upload_my_logo_api_v1_profiles_companies_me_logo_put": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "PNG, JPEG o WebP · máx. 1 MB"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_my_logo_api_v1_profiles_companies_me_logo_put"
+      },
+      "CertificationIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2100.0,
+                "minimum": 1980.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "pattern": "^https?://\\S+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CertificationIn"
+      },
+      "CompanyContactIn": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320,
+                "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9+()\\-\\s]{6,30}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "public": {
+            "type": "boolean",
+            "title": "Public",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CompanyContactIn"
+      },
+      "CompanyLinkIn": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/CompanyLinkType"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 300,
+            "pattern": "^https?://\\S+$",
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "url"
+        ],
+        "title": "CompanyLinkIn"
+      },
+      "CompanyLinkType": {
+        "type": "string",
+        "enum": [
+          "linkedin",
+          "instagram",
+          "x",
+          "facebook",
+          "youtube",
+          "github",
+          "other"
+        ],
+        "title": "CompanyLinkType"
+      },
+      "CompanyProfilePatch": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "tagline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 140
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagline"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 3000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanySize"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "founded_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2100.0,
+                "minimum": 1800.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Founded Year"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offices": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LocationIn"
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offices"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "pattern": "^https?://\\S+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CompanyLinkIn"
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyContactIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work_modalities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkModality"
+                },
+                "type": "array",
+                "maxItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Modalities"
+          },
+          "benefits": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benefits"
+          },
+          "values": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values"
+          },
+          "hiring": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HiringIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inclusive_hiring": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InclusiveHiringIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyVisibility"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CompanyProfilePatch"
+      },
+      "CompanySize": {
+        "type": "string",
+        "enum": [
+          "1-10",
+          "11-50",
+          "51-200",
+          "201-1000",
+          "1000+"
+        ],
+        "title": "CompanySize",
+        "description": "Mismos valores que `company_snapshot.size` de jobs-service (§6)."
+      },
+      "CompanyVisibility": {
+        "type": "string",
+        "enum": [
+          "public",
+          "hidden"
+        ],
+        "title": "CompanyVisibility"
+      },
+      "ConsentsIn": {
+        "properties": {
+          "data_processing": {
+            "type": "boolean",
+            "title": "Data Processing"
+          },
+          "ai_processing": {
+            "type": "boolean",
+            "title": "Ai Processing",
+            "default": false
+          },
+          "contact_by_email": {
+            "type": "boolean",
+            "title": "Contact By Email",
+            "default": false
+          },
+          "accepted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_processing"
+        ],
+        "title": "ConsentsIn"
+      },
+      "ContractDuration": {
+        "type": "string",
+        "enum": [
+          "permanent",
+          "fixed_term",
+          "project",
+          "seasonal"
+        ],
+        "title": "ContractDuration"
+      },
+      "Currency": {
+        "type": "string",
+        "enum": [
+          "ARS",
+          "USD"
+        ],
+        "title": "Currency"
+      },
+      "DataSource": {
+        "type": "string",
+        "enum": [
+          "cv_ai",
+          "manual"
+        ],
+        "title": "DataSource"
+      },
+      "EducationIn": {
+        "properties": {
+          "institution": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Institution"
+          },
+          "degree": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Degree"
+          },
+          "level": {
+            "$ref": "#/components/schemas/EducationLevel"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EducationStatus"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}(-(0[1-9]|1[0-2]))?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}(-(0[1-9]|1[0-2]))?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "progress_percent": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress Percent"
+          },
+          "current_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Year"
+          },
+          "gpa": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 10.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gpa"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "institution",
+          "degree",
+          "level",
+          "status"
+        ],
+        "title": "EducationIn"
+      },
+      "EducationLevel": {
+        "type": "string",
+        "enum": [
+          "secondary",
+          "tertiary",
+          "university",
+          "postgraduate",
+          "course"
+        ],
+        "title": "EducationLevel"
+      },
+      "EducationStatus": {
+        "type": "string",
+        "enum": [
+          "in_progress",
+          "completed",
+          "incomplete"
+        ],
+        "title": "EducationStatus"
+      },
+      "EmploymentType": {
+        "type": "string",
+        "enum": [
+          "employee",
+          "freelance",
+          "internship",
+          "trainee"
+        ],
+        "title": "EmploymentType"
+      },
+      "ExperienceIn": {
+        "properties": {
+          "company": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Company"
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Role"
+          },
+          "start": {
+            "type": "string",
+            "pattern": "^\\d{4}(-(0[1-9]|1[0-2]))?$",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "pattern": "^(\\d{4}(-(0[1-9]|1[0-2]))?|actual)$",
+            "title": "End",
+            "default": "actual"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Description",
+            "default": ""
+          },
+          "area": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "employment_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmploymentType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work_modality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkModality"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "skills_used": {
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "type": "array",
+            "title": "Skills Used"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "company",
+          "role",
+          "start"
+        ],
+        "title": "ExperienceIn"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HiringIn": {
+        "properties": {
+          "areas": {
+            "items": {
+              "type": "string",
+              "maxLength": 80,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 15,
+            "title": "Areas"
+          },
+          "hires_students": {
+            "type": "boolean",
+            "title": "Hires Students",
+            "default": true
+          },
+          "internship_program": {
+            "type": "boolean",
+            "title": "Internship Program",
+            "default": false
+          },
+          "internship_agreements": {
+            "items": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Internship Agreements"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HiringIn"
+      },
+      "InclusionIn": {
+        "properties": {
+          "disability_certificate": {
+            "type": "boolean",
+            "title": "Disability Certificate",
+            "default": false
+          },
+          "accessibility_needs": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accessibility Needs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "InclusionIn"
+      },
+      "InclusiveHiringIn": {
+        "properties": {
+          "accepts_disability_certificate": {
+            "type": "boolean",
+            "title": "Accepts Disability Certificate",
+            "default": false
+          },
+          "accessible_workplace": {
+            "type": "boolean",
+            "title": "Accessible Workplace",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "InclusiveHiringIn"
+      },
+      "InvoicingStatus": {
+        "type": "string",
+        "enum": [
+          "monotributo",
+          "responsable_inscripto",
+          "none",
+          "to_register"
+        ],
+        "title": "InvoicingStatus"
+      },
+      "JobSearchStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "open_to_offers",
+          "not_looking"
+        ],
+        "title": "JobSearchStatus"
+      },
+      "LanguageIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "level": {
+            "$ref": "#/components/schemas/LanguageLevel"
+          },
+          "certification": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certification"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "level"
+        ],
+        "title": "LanguageIn"
+      },
+      "LanguageLevel": {
+        "type": "string",
+        "enum": [
+          "A1",
+          "A2",
+          "B1",
+          "B2",
+          "C1",
+          "C2",
+          "native"
+        ],
+        "title": "LanguageLevel"
+      },
+      "LegacyCvExtractRequest": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id",
+            "default": "prof-estudiante-01"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "default": "cv.pdf"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "default": ""
+          },
+          "content_base64": {
+            "type": "string",
+            "title": "Content Base64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_base64"
+        ],
+        "title": "LegacyCvExtractRequest",
+        "description": "Cuerpo de los endpoints `cv-extract` (compatibilidad con la página de prueba)."
+      },
+      "LinkIn": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/LinkType"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 300,
+            "pattern": "^https?://\\S+$",
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "url"
+        ],
+        "title": "LinkIn"
+      },
+      "LinkType": {
+        "type": "string",
+        "enum": [
+          "linkedin",
+          "github",
+          "portfolio",
+          "other"
+        ],
+        "title": "LinkType"
+      },
+      "LocationIn": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$",
+            "title": "Country"
+          },
+          "province": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Province"
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "City"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "country",
+          "province",
+          "city"
+        ],
+        "title": "LocationIn"
+      },
+      "PaymentMode": {
+        "type": "string",
+        "enum": [
+          "local",
+          "usd",
+          "usd_paid_in_local"
+        ],
+        "title": "PaymentMode"
+      },
+      "PersonalIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9+()\\-\\s]{6,30}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "birth_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2015.0,
+                "minimum": 1940.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Year"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocationIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "email"
+        ],
+        "title": "PersonalIn"
+      },
+      "ProfilePatch": {
+        "properties": {
+          "personal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonalIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 140
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "academic_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AcademicStatusIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TargetIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work_conditions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkConditionsIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "skills": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SkillIn"
+                },
+                "type": "array",
+                "maxItems": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skills"
+          },
+          "experience": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ExperienceIn"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experience"
+          },
+          "education": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EducationIn"
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Education"
+          },
+          "languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LanguageIn"
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages"
+          },
+          "certifications": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CertificationIn"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certifications"
+          },
+          "projects": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProjectIn"
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projects"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LinkIn"
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          },
+          "volunteering": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/VolunteeringIn"
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volunteering"
+          },
+          "references_available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "References Available"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProfileVisibility"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "job_search_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobSearchStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "consents": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConsentsIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inclusion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InclusionIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ProfilePatch",
+        "description": "Secciones editables del perfil. Las que no se envían no cambian."
+      },
+      "ProfileVisibility": {
+        "type": "string",
+        "enum": [
+          "public_to_companies",
+          "only_applied",
+          "hidden"
+        ],
+        "title": "ProfileVisibility"
+      },
+      "ProjectIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Description",
+            "default": ""
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300,
+                "pattern": "^https?://\\S+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "skills_used": {
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "type": "array",
+            "title": "Skills Used"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProjectIn"
+      },
+      "SalaryIn": {
+        "properties": {
+          "min": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Currency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SalaryPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gross": {
+            "type": "boolean",
+            "title": "Gross",
+            "default": true
+          },
+          "payment_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "negotiable": {
+            "type": "boolean",
+            "title": "Negotiable",
+            "default": false
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/SalaryVisibility",
+            "default": "on_match"
+          },
+          "to_agree": {
+            "type": "boolean",
+            "title": "To Agree",
+            "default": false
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SalaryIn"
+      },
+      "SalaryPeriod": {
+        "type": "string",
+        "enum": [
+          "hour",
+          "day",
+          "month",
+          "year",
+          "project"
+        ],
+        "title": "SalaryPeriod"
+      },
+      "SalaryVisibility": {
+        "type": "string",
+        "enum": [
+          "public",
+          "on_match",
+          "hidden"
+        ],
+        "title": "SalaryVisibility"
+      },
+      "Seniority": {
+        "type": "string",
+        "enum": [
+          "no_experience",
+          "trainee",
+          "junior",
+          "semi_senior",
+          "senior"
+        ],
+        "title": "Seniority"
+      },
+      "Shift": {
+        "type": "string",
+        "enum": [
+          "morning",
+          "afternoon",
+          "evening",
+          "night",
+          "weekend",
+          "rotating"
+        ],
+        "title": "Shift"
+      },
+      "SkillCategory": {
+        "type": "string",
+        "enum": [
+          "hard",
+          "soft",
+          "tool",
+          "methodology"
+        ],
+        "title": "SkillCategory"
+      },
+      "SkillIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "level": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Level"
+          },
+          "years": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 50.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkillCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_used": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DataSource",
+            "default": "manual"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "level"
+        ],
+        "title": "SkillIn"
+      },
+      "TargetIn": {
+        "properties": {
+          "roles": {
+            "items": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Roles"
+          },
+          "areas": {
+            "items": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Areas"
+          },
+          "seniority": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Seniority"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TargetIn"
+      },
+      "TravelAvailability": {
+        "type": "string",
+        "enum": [
+          "none",
+          "occasional",
+          "frequent"
+        ],
+        "title": "TravelAvailability"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VolunteeringIn": {
+        "properties": {
+          "organization": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Organization"
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Role"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}(-(0[1-9]|1[0-2]))?$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(\\d{4}(-(0[1-9]|1[0-2]))?|actual)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "organization",
+          "role"
+        ],
+        "title": "VolunteeringIn"
+      },
+      "WeeklyHoursIn": {
+        "properties": {
+          "min": {
+            "type": "integer",
+            "maximum": 80.0,
+            "minimum": 1.0,
+            "title": "Min"
+          },
+          "max": {
+            "type": "integer",
+            "maximum": 80.0,
+            "minimum": 1.0,
+            "title": "Max"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "WeeklyHoursIn"
+      },
+      "WorkConditionsIn": {
+        "properties": {
+          "work_schedule": {
+            "items": {
+              "$ref": "#/components/schemas/WorkSchedule"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Work Schedule"
+          },
+          "work_modality": {
+            "items": {
+              "$ref": "#/components/schemas/WorkModality"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Work Modality"
+          },
+          "hybrid_onsite_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hybrid Onsite Days"
+          },
+          "employment_type": {
+            "items": {
+              "$ref": "#/components/schemas/EmploymentType"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Employment Type"
+          },
+          "contract_duration": {
+            "items": {
+              "$ref": "#/components/schemas/ContractDuration"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Contract Duration"
+          },
+          "weekly_hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeeklyHoursIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shifts": {
+            "items": {
+              "$ref": "#/components/schemas/Shift"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Shifts"
+          },
+          "availability_start": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AvailabilityStart"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "salary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SalaryIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "willing_to_relocate": {
+            "type": "boolean",
+            "title": "Willing To Relocate",
+            "default": false
+          },
+          "max_commute_km": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 500.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Commute Km"
+          },
+          "travel_availability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TravelAvailability"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "driver_license": {
+            "items": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "type": "array",
+            "title": "Driver License"
+          },
+          "own_vehicle": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Own Vehicle"
+          },
+          "own_equipment": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Own Equipment"
+          },
+          "invoicing_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InvoicingStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work_authorization": {
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$"
+            },
+            "type": "array",
+            "title": "Work Authorization"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorkConditionsIn"
+      },
+      "WorkModality": {
+        "type": "string",
+        "enum": [
+          "onsite",
+          "remote",
+          "hybrid"
+        ],
+        "title": "WorkModality"
+      },
+      "WorkSchedule": {
+        "type": "string",
+        "enum": [
+          "full_time",
+          "part_time",
+          "hourly",
+          "flexible"
+        ],
+        "title": "WorkSchedule"
+      }
+    }
+  }
+}

@@ -1,0 +1,528 @@
+{
+  "version": "1.0.0",
+  "description": "Catálogo de competencias + sinónimos. Claves = las de matching-service.",
+  "skills": [
+    {
+      "key": "python",
+      "label": "Python",
+      "category": "hard",
+      "synonyms": [
+        "py",
+        "python3"
+      ]
+    },
+    {
+      "key": "javascript",
+      "label": "JavaScript",
+      "category": "hard",
+      "synonyms": [
+        "ecmascript",
+        "js"
+      ]
+    },
+    {
+      "key": "typescript",
+      "label": "TypeScript",
+      "category": "hard",
+      "synonyms": [
+        "ts"
+      ]
+    },
+    {
+      "key": "java",
+      "label": "Java",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "c#",
+      "label": "C#",
+      "category": "hard",
+      "synonyms": [
+        "c sharp",
+        "csharp"
+      ]
+    },
+    {
+      "key": ".net",
+      "label": ".NET",
+      "category": "hard",
+      "synonyms": [
+        "dotnet"
+      ]
+    },
+    {
+      "key": "go",
+      "label": "Go",
+      "category": "hard",
+      "synonyms": [
+        "golang"
+      ]
+    },
+    {
+      "key": "php",
+      "label": "PHP",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "ruby",
+      "label": "Ruby",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "kotlin",
+      "label": "Kotlin",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "swift",
+      "label": "Swift",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "c++",
+      "label": "C++",
+      "category": "hard",
+      "synonyms": [
+        "cpp"
+      ]
+    },
+    {
+      "key": "html",
+      "label": "HTML",
+      "category": "hard",
+      "synonyms": [
+        "html5"
+      ]
+    },
+    {
+      "key": "css",
+      "label": "CSS",
+      "category": "hard",
+      "synonyms": [
+        "css3"
+      ]
+    },
+    {
+      "key": "sass",
+      "label": "Sass",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "tailwind",
+      "label": "Tailwind CSS",
+      "category": "tool",
+      "synonyms": [
+        "tailwind css",
+        "tailwindcss"
+      ]
+    },
+    {
+      "key": "bootstrap",
+      "label": "Bootstrap",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "react",
+      "label": "React",
+      "category": "hard",
+      "synonyms": [
+        "react.js",
+        "reactjs"
+      ]
+    },
+    {
+      "key": "react native",
+      "label": "React Native",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "next.js",
+      "label": "Next.js",
+      "category": "hard",
+      "synonyms": [
+        "nextjs"
+      ]
+    },
+    {
+      "key": "angular",
+      "label": "Angular",
+      "category": "hard",
+      "synonyms": [
+        "angularjs"
+      ]
+    },
+    {
+      "key": "vue",
+      "label": "Vue",
+      "category": "hard",
+      "synonyms": [
+        "vue.js",
+        "vuejs"
+      ]
+    },
+    {
+      "key": "node.js",
+      "label": "Node.js",
+      "category": "hard",
+      "synonyms": [
+        "node",
+        "nodejs"
+      ]
+    },
+    {
+      "key": "express",
+      "label": "Express",
+      "category": "hard",
+      "synonyms": [
+        "express.js",
+        "expressjs"
+      ]
+    },
+    {
+      "key": "nestjs",
+      "label": "NestJS",
+      "category": "hard",
+      "synonyms": [
+        "nest.js"
+      ]
+    },
+    {
+      "key": "fastapi",
+      "label": "FastAPI",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "django",
+      "label": "Django",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "flask",
+      "label": "Flask",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "spring",
+      "label": "Spring Boot",
+      "category": "hard",
+      "synonyms": [
+        "spring boot",
+        "springboot"
+      ]
+    },
+    {
+      "key": "laravel",
+      "label": "Laravel",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "sql",
+      "label": "SQL",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "postgresql",
+      "label": "PostgreSQL",
+      "category": "hard",
+      "synonyms": [
+        "postgres",
+        "psql"
+      ]
+    },
+    {
+      "key": "mysql",
+      "label": "MySQL",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "sql server",
+      "label": "SQL Server",
+      "category": "hard",
+      "synonyms": [
+        "ms sql",
+        "mssql"
+      ]
+    },
+    {
+      "key": "mongodb",
+      "label": "MongoDB",
+      "category": "hard",
+      "synonyms": [
+        "mongo"
+      ]
+    },
+    {
+      "key": "redis",
+      "label": "Redis",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "rest",
+      "label": "APIs REST",
+      "category": "hard",
+      "synonyms": [
+        "api rest",
+        "apis rest",
+        "rest api",
+        "rest apis",
+        "restful"
+      ]
+    },
+    {
+      "key": "graphql",
+      "label": "GraphQL",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "docker",
+      "label": "Docker",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "kubernetes",
+      "label": "Kubernetes",
+      "category": "tool",
+      "synonyms": [
+        "k8s"
+      ]
+    },
+    {
+      "key": "aws",
+      "label": "AWS",
+      "category": "tool",
+      "synonyms": [
+        "amazon web services",
+        "aws cloud"
+      ]
+    },
+    {
+      "key": "azure",
+      "label": "Azure",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "gcp",
+      "label": "Google Cloud",
+      "category": "tool",
+      "synonyms": [
+        "google cloud platform"
+      ]
+    },
+    {
+      "key": "linux",
+      "label": "Linux",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "git",
+      "label": "Git",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "github",
+      "label": "GitHub",
+      "category": "tool",
+      "synonyms": [
+        "git hub"
+      ]
+    },
+    {
+      "key": "ci/cd",
+      "label": "CI/CD",
+      "category": "methodology",
+      "synonyms": [
+        "ci cd",
+        "github actions",
+        "integracion continua"
+      ]
+    },
+    {
+      "key": "testing",
+      "label": "Testing",
+      "category": "methodology",
+      "synonyms": [
+        "pruebas unitarias",
+        "testing unitario",
+        "unit testing"
+      ]
+    },
+    {
+      "key": "pytest",
+      "label": "Pytest",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "jest",
+      "label": "Jest",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "selenium",
+      "label": "Selenium",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "qa",
+      "label": "QA manual",
+      "category": "hard",
+      "synonyms": [
+        "qa manual",
+        "quality assurance",
+        "testing manual"
+      ]
+    },
+    {
+      "key": "scrum",
+      "label": "Scrum",
+      "category": "methodology",
+      "synonyms": [
+        "agile",
+        "metodologias agiles"
+      ]
+    },
+    {
+      "key": "kanban",
+      "label": "Kanban",
+      "category": "methodology",
+      "synonyms": []
+    },
+    {
+      "key": "jira",
+      "label": "Jira",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "figma",
+      "label": "Figma",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "ux",
+      "label": "Diseño UX",
+      "category": "hard",
+      "synonyms": [
+        "diseno ux",
+        "ui/ux",
+        "ux/ui"
+      ]
+    },
+    {
+      "key": "excel",
+      "label": "Excel",
+      "category": "tool",
+      "synonyms": [
+        "excel avanzado",
+        "ms excel"
+      ]
+    },
+    {
+      "key": "power bi",
+      "label": "Power BI",
+      "category": "tool",
+      "synonyms": [
+        "powerbi"
+      ]
+    },
+    {
+      "key": "tableau",
+      "label": "Tableau",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "pandas",
+      "label": "pandas",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "machine learning",
+      "label": "Machine Learning",
+      "category": "hard",
+      "synonyms": [
+        "aprendizaje automatico",
+        "ml"
+      ]
+    },
+    {
+      "key": "data analysis",
+      "label": "Análisis de datos",
+      "category": "hard",
+      "synonyms": [
+        "analisis de datos",
+        "data analytics"
+      ]
+    },
+    {
+      "key": "sap",
+      "label": "SAP",
+      "category": "tool",
+      "synonyms": []
+    },
+    {
+      "key": "contabilidad",
+      "label": "Contabilidad",
+      "category": "hard",
+      "synonyms": []
+    },
+    {
+      "key": "atencion al cliente",
+      "label": "Atención al cliente",
+      "category": "soft",
+      "synonyms": []
+    },
+    {
+      "key": "comunicacion",
+      "label": "Comunicación efectiva",
+      "category": "soft",
+      "synonyms": [
+        "comunicacion efectiva"
+      ]
+    },
+    {
+      "key": "trabajo en equipo",
+      "label": "Trabajo en equipo",
+      "category": "soft",
+      "synonyms": [
+        "teamwork"
+      ]
+    },
+    {
+      "key": "liderazgo",
+      "label": "Liderazgo",
+      "category": "soft",
+      "synonyms": []
+    },
+    {
+      "key": "resolucion de problemas",
+      "label": "Resolución de problemas",
+      "category": "soft",
+      "synonyms": []
+    }
+  ]
+}

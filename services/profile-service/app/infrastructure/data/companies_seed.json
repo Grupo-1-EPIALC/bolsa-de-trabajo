@@ -1,0 +1,409 @@
+[
+  {
+    "id": "comp-001",
+    "company_id": "22222222-2222-4222-8222-000000000001",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "PampaTech S.A.",
+      "cuit": "",
+      "activity": "software"
+    },
+    "display_name": "PampaTech S.A.",
+    "tagline": "PampaTech S.A.: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro software creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "software",
+    "size": "51-200",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires"
+    },
+    "website": "https://pampatechsa.example.com",
+    "contact": {
+      "email": "rrhh@pampatechsa.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "hybrid"
+    ],
+    "benefits": [
+      "capacitación",
+      "días de estudio",
+      "prepaga"
+    ],
+    "hiring": {
+      "areas": [
+        "desarrollo backend"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-002",
+    "company_id": "22222222-2222-4222-8222-000000000002",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Andes Digital S.R.L.",
+      "cuit": "",
+      "activity": "software"
+    },
+    "display_name": "Andes Digital S.R.L.",
+    "tagline": "Andes Digital S.R.L.: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro software creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "software",
+    "size": "11-50",
+    "location": {
+      "country": "AR",
+      "province": "Mendoza",
+      "city": "Mendoza"
+    },
+    "website": "https://andesdigitalsrl.example.com",
+    "contact": {
+      "email": "rrhh@andesdigitalsrl.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "remote"
+    ],
+    "benefits": [
+      "horario flexible",
+      "equipo provisto",
+      "pago en USD"
+    ],
+    "hiring": {
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-003",
+    "company_id": "22222222-2222-4222-8222-000000000003",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Río Plata Analytics S.A.",
+      "cuit": "",
+      "activity": "datos"
+    },
+    "display_name": "Río Plata Analytics S.A.",
+    "tagline": "Río Plata Analytics S.A.: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro datos creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "datos",
+    "size": "201-1000",
+    "location": {
+      "country": "AR",
+      "province": "Buenos Aires",
+      "city": "Vicente López"
+    },
+    "website": "https://ríoplataanalyticssa.example.com",
+    "contact": {
+      "email": "rrhh@ríoplataanalyticssa.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "onsite",
+      "hybrid"
+    ],
+    "benefits": [
+      "bono anual",
+      "prepaga",
+      "capacitación en cloud"
+    ],
+    "hiring": {
+      "areas": [
+        "datos",
+        "infraestructura"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-004",
+    "company_id": "22222222-2222-4222-8222-000000000004",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Nube Austral S.A.",
+      "cuit": "",
+      "activity": "software"
+    },
+    "display_name": "Nube Austral S.A.",
+    "tagline": "Nube Austral S.A.: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro software creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "software",
+    "size": "51-200",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires"
+    },
+    "website": "https://nubeaustralsa.example.com",
+    "contact": {
+      "email": "rrhh@nubeaustralsa.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "remote"
+    ],
+    "benefits": [
+      "mentoría",
+      "días de estudio",
+      "equipo provisto"
+    ],
+    "hiring": {
+      "areas": [
+        "desarrollo"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-005",
+    "company_id": "22222222-2222-4222-8222-000000000005",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Ceibo Software S.R.L.",
+      "cuit": "",
+      "activity": "software"
+    },
+    "display_name": "Ceibo Software S.R.L.",
+    "tagline": "Ceibo Software S.R.L.: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro software creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "software",
+    "size": "11-50",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires"
+    },
+    "website": "https://ceibosoftwaresrl.example.com",
+    "contact": {
+      "email": "rrhh@ceibosoftwaresrl.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "hybrid"
+    ],
+    "benefits": [
+      "capacitación",
+      "prepaga"
+    ],
+    "hiring": {
+      "areas": [
+        "testing"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-006",
+    "company_id": "22222222-2222-4222-8222-000000000006",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Datos del Sur S.A.",
+      "cuit": "",
+      "activity": "datos"
+    },
+    "display_name": "Datos del Sur S.A.",
+    "tagline": "Datos del Sur S.A.: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro datos creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "datos",
+    "size": "201-1000",
+    "location": {
+      "country": "AR",
+      "province": "Córdoba",
+      "city": "Córdoba"
+    },
+    "website": "https://datosdelsursa.example.com",
+    "contact": {
+      "email": "rrhh@datosdelsursa.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "remote"
+    ],
+    "benefits": [
+      "bono anual",
+      "home office",
+      "prepaga"
+    ],
+    "hiring": {
+      "areas": [
+        "datos"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-007",
+    "company_id": "22222222-2222-4222-8222-000000000007",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Litoral Sistemas S.A.",
+      "cuit": "",
+      "activity": "servicios IT"
+    },
+    "display_name": "Litoral Sistemas S.A.",
+    "tagline": "Litoral Sistemas S.A.: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro servicios IT creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "servicios IT",
+    "size": "51-200",
+    "location": {
+      "country": "AR",
+      "province": "Santa Fe",
+      "city": "Rosario"
+    },
+    "website": "https://litoralsistemassa.example.com",
+    "contact": {
+      "email": "rrhh@litoralsistemassa.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "onsite"
+    ],
+    "benefits": [
+      "viáticos",
+      "capacitación"
+    ],
+    "hiring": {
+      "areas": [
+        "soporte"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-008",
+    "company_id": "22222222-2222-4222-8222-000000000009",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Laboratorio Universidad-Empresa",
+      "cuit": "",
+      "activity": "educación"
+    },
+    "display_name": "Laboratorio Universidad-Empresa",
+    "tagline": "Laboratorio Universidad-Empresa: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro educación creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "educación",
+    "size": "11-50",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires"
+    },
+    "website": "https://laboratoriouniversid.example.com",
+    "contact": {
+      "email": "rrhh@laboratoriouniversid.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "hybrid"
+    ],
+    "benefits": [
+      "convenio de pasantía",
+      "días de estudio"
+    ],
+    "hiring": {
+      "areas": [
+        "frontend"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-009",
+    "company_id": "22222222-2222-4222-8222-000000000010",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Estudio Paraná & Asociados",
+      "cuit": "",
+      "activity": "servicios profesionales"
+    },
+    "display_name": "Estudio Paraná & Asociados",
+    "tagline": "Estudio Paraná & Asociados: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro servicios profesionales creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "servicios profesionales",
+    "size": "11-50",
+    "location": {
+      "country": "AR",
+      "province": "CABA",
+      "city": "Buenos Aires"
+    },
+    "website": "https://estudioparanáasociad.example.com",
+    "contact": {
+      "email": "rrhh@estudioparanáasociad.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "hybrid"
+    ],
+    "benefits": [
+      "prepaga",
+      "días de examen"
+    ],
+    "hiring": {
+      "areas": [
+        "contabilidad"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  },
+  {
+    "id": "comp-010",
+    "company_id": "22222222-2222-4222-8222-000000000011",
+    "created_at": "2026-10-15T12:00:00+00:00",
+    "updated_at": "2026-10-15T12:00:00+00:00",
+    "legal": {
+      "legal_name": "Mate Creativo",
+      "cuit": "",
+      "activity": "marketing"
+    },
+    "display_name": "Mate Creativo",
+    "tagline": "Mate Creativo: empresa ficticia del pool de pruebas",
+    "description": "Empresa ficticia del rubro marketing creada para probar la bolsa de trabajo. Busca estudiantes y graduados recientes.",
+    "industry": "marketing",
+    "size": "1-10",
+    "location": {
+      "country": "AR",
+      "province": "Córdoba",
+      "city": "Córdoba"
+    },
+    "website": "https://matecreativo.example.com",
+    "contact": {
+      "email": "rrhh@matecreativo.example.com",
+      "public": true
+    },
+    "work_modalities": [
+      "remote"
+    ],
+    "benefits": [
+      "horario flexible"
+    ],
+    "hiring": {
+      "areas": [
+        "marketing"
+      ],
+      "hires_students": true
+    },
+    "visibility": "public"
+  }
+]
