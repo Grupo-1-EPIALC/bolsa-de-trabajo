@@ -1,9 +1,11 @@
 """Caso de uso: subir CV, validar formato/tamaño, guardar y disparar webhook n8n."""
 
 import base64
+import logging
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import PurePath
 from typing import Any
 
@@ -16,6 +18,8 @@ from app.domain.models import (
     UploadedCvFile,
 )
 from app.domain.ports import CvStoragePort, CvWebhookGateway
+
+logger = logging.getLogger(__name__)
 
 
 class CvExtractionJobStore:
@@ -210,13 +214,24 @@ class UploadAndExtractCvUseCase:
         content: bytes,
         mime_type: str = "",
         run_in_background: bool = True,
+        on_stored: Callable[[UploadedCvFile], None] | None = None,
+        on_completed: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        """Valida, guarda y dispara la extracción en segundo plano.
+
+        - `on_stored`: se llama apenas el archivo quedó guardado (p. ej. para registrarlo en
+          el perfil).
+        - `on_completed`: recibe el resultado de n8n y devuelve el que se publica en el job
+          (p. ej. con el borrador de perfil agregado). Si falla, se publica el original.
+        """
         clean_profile_id, uploaded_cv = self.validate_and_store(
             profile_id=profile_id,
             filename=filename,
             content=content,
             mime_type=mime_type,
         )
+        if on_stored is not None:
+            on_stored(uploaded_cv)
         job = self._job_store.create(
             profile_id=clean_profile_id,
             filename=uploaded_cv.original_filename,
@@ -229,7 +244,13 @@ class UploadAndExtractCvUseCase:
                     profile_id=clean_profile_id,
                     cv_file=uploaded_cv,
                 )
-                self._job_store.mark_completed(job.job_id, res.to_dict())
+                result = res.to_dict()
+                if on_completed is not None:
+                    try:
+                        result = on_completed(result)
+                    except Exception:
+                        logger.exception("No se pudo procesar el resultado del CV %s", job.job_id)
+                self._job_store.mark_completed(job.job_id, result)
             except ProfileDomainError as exc:
                 self._job_store.mark_failed(
                     job.job_id,
@@ -248,6 +269,9 @@ class UploadAndExtractCvUseCase:
             _worker()
 
         return self._job_store.get_snapshot(job.job_id)
+
+    def job_profile_id(self, job_id: str) -> str:
+        return str(self._job_store.get_snapshot(job_id)["profile_id"])
 
     def get_job_status(self, job_id: str) -> dict[str, Any]:
         return self._job_store.get_snapshot(job_id)

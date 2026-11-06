@@ -11,8 +11,8 @@ info:
 paths:
   /api/v1/profiles:
     get:
-      summary: Lista paginada de perfiles de estudiantes para servicio
-      x-status: mock
+      summary: Lista paginada de perfiles buscables (complete, visibles, buscando) para servicio
+      x-status: implemented  # profile-service v0.2.0 · ver contracts/profiles_matching.md
       parameters:
         - in: query
           name: skills
@@ -26,8 +26,8 @@ paths:
           description: Lista de perfiles
   /api/v1/profiles/{profile_id}:
     get:
-      summary: Detalle de perfil de estudiante
-      x-status: mock
+      summary: Detalle de perfil de estudiante (vista de servicio)
+      x-status: implemented  # profile-service v0.2.0
       parameters:
         - in: path
           name: profile_id
