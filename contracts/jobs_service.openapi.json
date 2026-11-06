@@ -77,9 +77,9 @@
           {
             "name": "page",
             "in": "query",
-            "description": "Página 1-based.",
+            "description": "Página 1-based. Máximo 1.000.000 (offset acotado).",
             "required": false,
-            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+            "schema": { "type": "integer", "minimum": 1, "maximum": 1000000, "default": 1 }
           },
           {
             "name": "size",
@@ -138,7 +138,6 @@
               }
             }
           },
-          "400": { "$ref": "#/components/responses/BadRequest" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "422": { "$ref": "#/components/responses/ValidationError" },
@@ -206,10 +205,10 @@
               }
             }
           },
-          "400": { "$ref": "#/components/responses/BadRequest" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
           "422": { "$ref": "#/components/responses/ValidationError" }
         }
       },
@@ -227,7 +226,8 @@
           },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
         }
       }
     },
@@ -251,7 +251,7 @@
             "name": "page",
             "in": "query",
             "required": false,
-            "schema": { "type": "integer", "minimum": 1, "default": 1 }
+            "schema": { "type": "integer", "minimum": 1, "maximum": 1000000, "default": 1 }
           },
           {
             "name": "size",
@@ -299,16 +299,16 @@
       }
     },
     "responses": {
-      "BadRequest": {
-        "description": "Regla de negocio violada",
+      "Unauthorized": {
+        "description": "Falta el token o es inválido",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Error" }
           }
         }
       },
-      "Unauthorized": {
-        "description": "Falta el token o es inválido",
+      "Conflict": {
+        "description": "Otra escritura ganó la carrera de versiones (lock optimista): releer la oferta y reintentar",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Error" }
@@ -332,7 +332,7 @@
         }
       },
       "ValidationError": {
-        "description": "Body o query inválido (incluye UT-JOBS-01)",
+        "description": "Body, query o regla de negocio inválida (incluye Pydantic y UT-JOBS-01)",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Error" }
@@ -560,7 +560,7 @@
             "properties": {
               "code": {
                 "type": "string",
-                "examples": ["INVALID_INPUT", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND", "UPSTREAM_ERROR"]
+                "examples": ["INVALID_INPUT", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND", "CONFLICT", "UPSTREAM_ERROR"]
               },
               "message": { "type": "string" },
               "details": {

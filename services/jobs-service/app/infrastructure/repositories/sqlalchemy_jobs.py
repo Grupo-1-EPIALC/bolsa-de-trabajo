@@ -59,13 +59,17 @@ class SqlAlchemyJobRepository:
         with self._engine.begin() as connection:
             connection.execute(self._table.insert().values(**_row(job)))
 
-    def update(self, job: JobOpportunity) -> None:
+    def update(self, job: JobOpportunity, *, expected_version: int) -> bool:
+        """Guarda sólo si la fila sigue en `expected_version`; devuelve False si la superaron."""
         values = _row(job)
         values.pop("id")
         with self._engine.begin() as connection:
-            connection.execute(
-                self._table.update().where(self._table.c.id == job.id).values(**values)
+            result = connection.execute(
+                self._table.update()
+                .where(self._table.c.id == job.id, self._table.c.version == expected_version)
+                .values(**values)
             )
+        return bool(result.rowcount)
 
     def get(self, job_id: str) -> JobOpportunity | None:
         with self._engine.connect() as connection:

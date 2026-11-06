@@ -12,11 +12,17 @@ from typing import Any
 from app.application.commands import JobDraft
 from app.domain.auth import Principal
 from app.domain.enums import JobStatus
-from app.domain.errors import InvalidInputError, NotFoundError, UnauthorizedError
-from app.domain.models import JobOpportunity, WorkConditions
+from app.domain.errors import (
+    ConflictError,
+    InvalidInputError,
+    NotFoundError,
+    UnauthorizedError,
+)
+from app.domain.models import CompanySnapshot, JobOpportunity, WorkConditions
 from app.domain.ports import Clock, CompanyDirectory, EventPublisher, IdGenerator, JobRepository
 from app.domain.rules import (
     can_view,
+    ensure_company_snapshot,
     ensure_owner,
     parse_status_filter,
     public_list_status,
@@ -131,11 +137,15 @@ class JobService:
             raise UnauthorizedError("No se pudo identificar la empresa para crear la oferta")
 
         now = self._now()
-        snapshot = self._directory.snapshot_for(access_token)
-        job = JobOpportunity(
+        # Validamos el payload ANTES de llamar a auth-service: un body inválido
+        # responde 422 aclarado por campo, sin depender de que el upstream esté vivo
+        # (y sin obligar a auth-service a procesar pedidos que ya son inválidos).
+        provisional = JobOpportunity(
             id=self._ids.new_id(),
             company_id=principal.subject,
-            company_snapshot=snapshot,
+            company_snapshot=CompanySnapshot(
+                name="", industry=None, size=None, logo_url=None
+            ),  # placeholder: se completa con auth-service; `validate_job` no lo usa
             status=JobStatus.ACTIVE,
             title=draft.title,
             description=draft.description,
@@ -153,7 +163,10 @@ class JobService:
             expires_at=_utc_or_none(draft.expires_at),
             version=1,
         )
-        validate_job(job, now=now, check_expiry=True)
+        validate_job(provisional, now=now, check_expiry=True)
+        snapshot = self._directory.snapshot_for(access_token)
+        ensure_company_snapshot(snapshot)
+        job = replace(provisional, company_snapshot=snapshot)
         self._repository.add(job)
         self._publish_created(job)
         return job
@@ -204,7 +217,13 @@ class JobService:
             version=job.version + 1,
         )
         validate_job(updated, now=now, check_expiry="expires_at" in updates)
-        self._repository.update(updated)
+        if not self._repository.update(updated, expected_version=job.version):
+            # Alguien más editó mientras validábamos: pedimos releer la oferta
+            # (409 + reintentar). Sin esto se perdía un cambio entre procesos.
+            raise ConflictError(
+                "La oferta fue modificada mientras la editabas; volvé a leerla y reintentá",
+                {"job_id": job_id},
+            )
         return updated
 
     def close(self, principal: Principal, job_id: str) -> JobOpportunity:
@@ -219,7 +238,16 @@ class JobService:
             updated_at=now,
             version=job.version + 1,
         )
-        self._repository.update(closed)
+        if not self._repository.update(closed, expected_version=job.version):
+            # Si otra escritura ganó la carrera pero ya dejó la oferta cerrada,
+            # el cierre sigue siendo idempotente; un cambio distinto es conflicto.
+            fresh = self._get_raw(job_id)
+            if fresh.status is JobStatus.CLOSED:
+                return fresh
+            raise ConflictError(
+                "La oferta fue modificada mientras la cerrabas; volvé a leerla y reintentá",
+                {"job_id": job_id},
+            )
         return closed
 
     # ------------------------------------------------------------- helpers ---
