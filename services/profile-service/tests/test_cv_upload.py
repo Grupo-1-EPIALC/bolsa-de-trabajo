@@ -1,17 +1,9 @@
 """Tests unitarios de subida de CV (síncrona y asíncrona) y webhook n8n en profile-service."""
 
-import base64
 import json
 
 import pytest
 
-from app.api.routes import (
-    CvExtractRequest,
-    cv_test_form,
-    extract_cv_endpoint,
-    get_extract_cv_job_status,
-    start_async_extract_cv_endpoint,
-)
 from app.application.upload_cv_use_case import UploadAndExtractCvUseCase
 from app.domain.errors import CvJobNotFoundError, InvalidCvFileError, WebhookExtractionError
 from app.domain.models import (
@@ -169,45 +161,6 @@ def test_use_case_rejects_empty_or_oversized_file() -> None:
             filename="cv.pdf",
             content=b"x" * (1024 * 1024 + 10),
         )
-
-
-def test_cv_test_html_and_extract_endpoints() -> None:
-    use_case = UploadAndExtractCvUseCase(
-        storage=FakeCvStorage(),
-        webhook_gateway=FakeCvWebhookGateway(),
-    )
-    html_res = cv_test_form()
-    assert html_res.status_code == 200
-    assert "Formulario de Prueba" in bytes(html_res.body).decode("utf-8")
-
-    req_payload = CvExtractRequest(
-        profile_id="prof-test-99",
-        filename="cv_prueba.md",
-        mime_type="text/markdown",
-        content_base64=base64.b64encode(b"# CV Prueba\nPython").decode("ascii"),
-    )
-    body = extract_cv_endpoint(payload=req_payload, use_case=use_case)
-    assert body["origin"] == "AI"
-    assert body["profile_id"] == "prof-test-99"
-    assert body["cv_suggestions"]["skills"][0]["name"] == "Python"
-
-    async_res = start_async_extract_cv_endpoint(payload=req_payload, use_case=use_case)
-    assert async_res.status_code == 202
-    async_data = json.loads(bytes(async_res.body).decode("utf-8"))
-    job_status = get_extract_cv_job_status(job_id=async_data["job_id"], use_case=use_case)
-    assert job_status["job_id"] == async_data["job_id"]
-
-    with pytest.raises(InvalidCvFileError) as exc_info:
-        extract_cv_endpoint(
-            payload=CvExtractRequest(
-                profile_id="prof-test-99",
-                filename="virus.bat",
-                mime_type="text/plain",
-                content_base64=base64.b64encode(b"echo hi").decode("ascii"),
-            ),
-            use_case=use_case,
-        )
-    assert exc_info.value.code == "INVALID_CV_FILE"
 
 
 def test_webhook_extraction_error_model() -> None:

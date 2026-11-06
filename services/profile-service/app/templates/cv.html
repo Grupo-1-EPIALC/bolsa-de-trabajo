@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ doc.full_name }} · CV</title>
+  <meta name="author" content="{{ doc.full_name }}" />
+  <meta name="description" content="{{ doc.headline }}" />
+  <meta name="keywords" content="{{ doc.keywords | join(', ') }}" />
+  <meta name="generator" content="Bolsa de Trabajo · profile-service · plantilla {{ doc.template_version }}" />
+  <meta name="dcterms.created" content="{{ doc.generated_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" />
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 17mm 16mm 17mm;
+      @bottom-right {
+        content: "{{ doc.full_name }} · " counter(page) " / " counter(pages);
+        font: 7.5pt "Inter", "DejaVu Sans", sans-serif;
+        color: #94a3b8;
+      }
+    }
+    :root {
+      --ink: #0f172a;
+      --text: #334155;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --accent: {{ accent }};
+      --accent-soft: {{ accent_soft }};
+    }
+    * { box-sizing: border-box; }
+    html { font-size: 9.6pt; }
+    body {
+      margin: 0;
+      font-family: "Inter", "DejaVu Sans", "Helvetica", "Arial", sans-serif;
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      padding-bottom: 10pt;
+      margin-bottom: 4pt;
+      border-bottom: 2.2pt solid var(--accent);
+    }
+    h1 {
+      margin: 0;
+      font-size: 24pt;
+      line-height: 1.1;
+      font-weight: 800;
+      color: var(--ink);
+    }
+    .headline {
+      margin: 4pt 0 0;
+      font-size: 11.5pt;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .contact {
+      margin: 7pt 0 0;
+      padding: 0;
+      list-style: none;
+      font-size: 8.6pt;
+      color: var(--muted);
+    }
+    .contact li { display: inline; }
+    .contact li + li::before { content: "  ·  "; color: #cbd5e1; }
+    .contact a { color: var(--text); text-decoration: none; }
+    .contact .k { font-weight: 600; color: var(--ink); }
+    section { margin-top: 11pt; }
+    h2 {
+      margin: 0 0 6pt;
+      padding-bottom: 3pt;
+      /* Sin letter-spacing: los extractores de texto (ATS / IA) lo leen como "P E R F I L". */
+      font-size: 9.5pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--accent);
+      border-bottom: 0.7pt solid var(--line);
+    }
+    p { margin: 0; }
+    .summary { font-size: 9.8pt; color: var(--text); }
+    .availability {
+      margin-top: 6pt;
+      padding: 5pt 8pt;
+      border-left: 2.5pt solid var(--accent);
+      background: var(--accent-soft);
+      font-size: 8.8pt;
+      color: var(--ink);
+    }
+    .entry { margin-bottom: 8pt; page-break-inside: avoid; }
+    .entry:last-child { margin-bottom: 0; }
+    .entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10pt; }
+    .entry-title { font-weight: 700; color: var(--ink); font-size: 10pt; }
+    .entry-org { font-weight: 500; color: var(--text); }
+    .entry-period { flex-shrink: 0; font-size: 8.6pt; color: var(--muted); white-space: nowrap; }
+    .entry-details { font-size: 8.6pt; color: var(--muted); margin-top: 1pt; }
+    ul.bullets { margin: 3pt 0 0; padding-left: 12pt; }
+    ul.bullets li { margin: 1pt 0; }
+    ul.bullets li::marker { color: var(--accent); }
+    .tags { margin-top: 3pt; font-size: 8.3pt; color: var(--muted); }
+    .tags b { color: var(--text); font-weight: 600; }
+    .skill-group { margin-bottom: 5pt; }
+    .skill-group:last-child { margin-bottom: 0; }
+    .skill-label {
+      display: inline-block;
+      min-width: 92pt;
+      font-weight: 700;
+      font-size: 8.8pt;
+      color: var(--ink);
+    }
+    .chip {
+      display: inline-block;
+      margin: 0 3pt 3pt 0;
+      padding: 1.5pt 6pt;
+      border-radius: 8pt;
+      background: var(--accent-soft);
+      color: var(--ink);
+      font-size: 8.6pt;
+      font-weight: 600;
+    }
+    .chip .lvl { font-weight: 400; color: var(--muted); }
+    .line { margin-bottom: 3pt; }
+    .line b { color: var(--ink); }
+    .line .muted { color: var(--muted); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ doc.full_name }}</h1>
+    {% if doc.headline %}<p class="headline">{{ doc.headline }}</p>{% endif %}
+    {% if doc.contact %}
+    <ul class="contact">
+      {% for item in doc.contact %}
+      <li><span class="k">{{ item.label }}:</span> {% if item.url %}<a href="{{ item.url }}">{{ item.value }}</a>{% else %}{{ item.value }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </header>
+
+  {% if doc.summary %}
+  <section>
+    <h2>Perfil profesional</h2>
+    <p class="summary">{{ doc.summary }}</p>
+    {% if doc.availability %}<p class="availability"><b>Disponibilidad:</b> {{ doc.availability }}</p>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if doc.skill_groups %}
+  <section>
+    <h2>Competencias</h2>
+    {% for group in doc.skill_groups %}
+    <div class="skill-group">
+      <span class="skill-label">{{ group.label }}</span>
+      {% for s in group.skills %}<span class="chip">{{ s.name }} <span class="lvl">({{ s.level_label }})</span></span>{% endfor %}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% macro entries(items) %}
+    {% for e in items %}
+    <div class="entry">
+      <div class="entry-head">
+        <div><span class="entry-title">{{ e.title }}</span>{% if e.organization %} <span class="entry-org">· {{ e.organization }}</span>{% endif %}</div>
+        {% if e.period %}<div class="entry-period">{{ e.period }}</div>{% endif %}
+      </div>
+      {% if e.details %}<div class="entry-details">{{ e.details }}</div>{% endif %}
+      {% if e.bullets %}
+      <ul class="bullets">{% for b in e.bullets %}<li>{{ b }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if e.tags %}<div class="tags"><b>Tecnologías:</b> {{ e.tags | join(', ') }}</div>{% endif %}
+      {% if e.url %}<div class="tags"><a href="{{ e.url }}">{{ e.url }}</a></div>{% endif %}
+    </div>
+    {% endfor %}
+  {% endmacro %}
+
+  {% if doc.experience %}
+  <section>
+    <h2>Experiencia</h2>
+    {{ entries(doc.experience) }}
+  </section>
+  {% endif %}
+
+  {% if doc.projects %}
+  <section>
+    <h2>Proyectos</h2>
+    {{ entries(doc.projects) }}
+  </section>
+  {% endif %}
+
+  {% if doc.education %}
+  <section>
+    <h2>Educación</h2>
+    {{ entries(doc.education) }}
+  </section>
+  {% endif %}
+
+    {% if doc.languages %}
+    <section>
+      <h2>Idiomas</h2>
+      {% for l in doc.languages %}
+      <p class="line"><b>{{ l.name }}</b> — {{ l.level_label }}{% if l.certification %} <span class="muted">({{ l.certification }})</span>{% endif %}</p>
+      {% endfor %}
+    </section>
+    {% endif %}
+    {% if doc.certifications %}
+    <section>
+      <h2>Certificaciones</h2>
+      {% for c in doc.certifications %}
+      <p class="line"><b>{{ c.name }}</b>{% if c.detail %} <span class="muted">· {{ c.detail }}</span>{% endif %}</p>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+  {% if doc.volunteering %}
+  <section>
+    <h2>Voluntariado</h2>
+    {{ entries(doc.volunteering) }}
+  </section>
+  {% endif %}
+</body>
+</html>

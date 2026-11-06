@@ -1,56 +1,28 @@
 # ruff: noqa: E501
-"""Endpoints REST y formulario de prueba de extracción asíncrona de CV en profile-service."""
+"""Endpoints de compatibilidad de extracción de CV y página de prueba (`/cv-test`).
+
+Para el frontend usar `POST /api/v1/profiles/me/cv` (multipart). Estos endpoints se mantienen
+para la página de prueba y para n8n/servicios, pero ahora piden autenticación:
+
+- JWT de estudiante: la extracción se asocia a **su** perfil (se ignora `profile_id`).
+- `X-Service-Token`: comportamiento anterior (sin perfil asociado), para pruebas internas.
+"""
 
 import base64
-from functools import lru_cache
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from fastapi.responses import HTMLResponse, JSONResponse
-from pydantic import BaseModel
 
-from app.application.upload_cv_use_case import CvExtractionJobStore, UploadAndExtractCvUseCase
-from app.domain.errors import InvalidCvFileError
-from app.infrastructure.config import ProfileSettings
-from app.infrastructure.n8n_client import HttpN8nCvWebhookGateway
-from app.infrastructure.storage_fs import FileSystemCvStorage
+from app.api.deps import ContainerDep, PrincipalDep
+from app.api.schemas import LegacyCvExtractRequest
+from app.domain.auth import Principal, Role
+from app.domain.errors import ForbiddenError, InvalidCvFileError
 
-router = APIRouter(prefix="/api/v1/profiles", tags=["profiles"])
+router = APIRouter(prefix="/api/v1/profiles", tags=["cv-extract (compatibilidad)"])
 
-
-class CvExtractRequest(BaseModel):
-    profile_id: str = "prof-estudiante-01"
-    filename: str = "cv.pdf"
-    mime_type: str = ""
-    content_base64: str
-
-
-@lru_cache
-def get_settings() -> ProfileSettings:
-    return ProfileSettings.from_env()
-
-
-@lru_cache
-def get_job_store() -> CvExtractionJobStore:
-    return CvExtractionJobStore()
-
-
-def get_upload_cv_use_case(
-    settings: Annotated[ProfileSettings, Depends(get_settings)],
-    job_store: Annotated[CvExtractionJobStore, Depends(get_job_store)],
-) -> UploadAndExtractCvUseCase:
-    storage = FileSystemCvStorage(base_path=settings.cv_storage_path)
-    webhook_gateway = HttpN8nCvWebhookGateway(
-        webhook_base_url=settings.n8n_webhook_base_url,
-        service_token=settings.service_token,
-        timeout_seconds=300,
-    )
-    return UploadAndExtractCvUseCase(
-        storage=storage,
-        webhook_gateway=webhook_gateway,
-        max_size_mb=settings.cv_max_size_mb,
-        job_store=job_store,
-    )
+# Alias para compatibilidad con código/tests que importaban el modelo desde acá.
+CvExtractRequest = LegacyCvExtractRequest
 
 
 def _decode_base64_cv(b64: str) -> bytes:
@@ -59,6 +31,11 @@ def _decode_base64_cv(b64: str) -> bytes:
         return base64.b64decode(cleaned, validate=False) if cleaned else b""
     except Exception as exc:
         raise InvalidCvFileError("El contenido base64 del CV es inválido.") from exc
+
+
+def _require_service_or_student(principal: Principal) -> None:
+    if principal.role not in (Role.SERVICE, Role.STUDENT, Role.ADMIN):
+        raise ForbiddenError("Sólo estudiantes o servicios internos pueden subir un CV")
 
 
 CV_TEST_HTML = """<!doctype html>
@@ -204,7 +181,7 @@ CV_TEST_HTML = """<!doctype html>
             <form id="cv-form">
               <div class="mb-3">
                 <label for="profile_id" class="form-label fw-semibold small">
-                  ID de Perfil del Estudiante (profile_id)
+                  ID de Perfil (sólo con token de servicio; con JWT de estudiante se usa tu perfil)
                 </label>
                 <input
                   id="profile_id"
@@ -212,6 +189,21 @@ CV_TEST_HTML = """<!doctype html>
                   type="text"
                   class="form-control bg-dark text-light border-secondary"
                   value="prof-estudiante-01"
+                  required
+                />
+              </div>
+
+              <div class="mb-3">
+                <label for="access_token" class="form-label fw-semibold small">
+                  Access token (JWT de estudiante, de <code>POST /api/v1/auth/token</code>)
+                </label>
+                <input
+                  id="access_token"
+                  name="access_token"
+                  type="password"
+                  autocomplete="off"
+                  class="form-control bg-dark text-light border-secondary"
+                  placeholder="eyJhbGciOiJSUzI1NiIs..."
                   required
                 />
               </div>
@@ -340,6 +332,8 @@ CV_TEST_HTML = """<!doctype html>
     const form = document.getElementById('cv-form');
     const fileInput = document.getElementById('cv_file');
     const profileInput = document.getElementById('profile_id');
+    const tokenInput = document.getElementById('access_token');
+    const authHeaders = () => ({ Authorization: `Bearer ${tokenInput.value.trim()}` });
     const btnSample = document.getElementById('btn-sample');
     const btnSubmit = document.getElementById('btn-submit');
     const btnCopy = document.getElementById('btn-copy');
@@ -520,7 +514,7 @@ Desarrolladora Full Stack / Backend Python
 
         const startRes = await fetch('/api/v1/profiles/cv-extract/async', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(payload),
         });
         const startData = await startRes.json();
@@ -539,7 +533,7 @@ Desarrolladora Full Stack / Backend Python
 
         while (true) {
           await sleep(1200);
-          const pollRes = await fetch(`/api/v1/profiles/cv-extract/jobs/${encodeURIComponent(jobId)}`);
+          const pollRes = await fetch(`/api/v1/profiles/cv-extract/jobs/${encodeURIComponent(jobId)}`, { headers: authHeaders() });
           const job = await pollRes.json();
           const localSec = (performance.now() - t0) / 1000;
 
@@ -584,53 +578,58 @@ Desarrolladora Full Stack / Backend Python
 
 @router.get("/cv-test", response_class=HTMLResponse, summary="Formulario de prueba para subir CV")
 def cv_test_form() -> HTMLResponse:
-    """Devuelve la interfaz HTML de prueba para subir un CV y ver el JSON extraído vía n8n."""
+    """Interfaz HTML de prueba: sube un CV con tu JWT y muestra el JSON extraído vía n8n."""
     return HTMLResponse(content=CV_TEST_HTML)
 
 
 @router.post(
     "/cv-extract/async",
     status_code=202,
-    summary="Iniciar extracción asíncrona de CV vía webhook n8n",
+    summary="[compat] Iniciar extracción asíncrona de CV (usar POST /me/cv)",
 )
 def start_async_extract_cv_endpoint(
-    payload: CvExtractRequest,
-    use_case: Annotated[UploadAndExtractCvUseCase, Depends(get_upload_cv_use_case)],
+    payload: LegacyCvExtractRequest, container: ContainerDep, principal: PrincipalDep
 ) -> JSONResponse:
-    """Valida y guarda el CV inmediatamente, lanza el webhook a n8n en segundo plano y devuelve 202 con job_id."""
+    _require_service_or_student(principal)
     content = _decode_base64_cv(payload.content_base64)
-    snapshot = use_case.start_async(
-        profile_id=payload.profile_id,
-        filename=payload.filename,
-        content=content,
-        mime_type=payload.mime_type,
-    )
+    if principal.role is Role.STUDENT:
+        snapshot = container.profiles.start_cv_extraction(
+            principal, filename=payload.filename, content=content, mime_type=payload.mime_type
+        )
+    else:
+        snapshot = container.cv_upload.start_async(
+            profile_id=payload.profile_id,
+            filename=payload.filename,
+            content=content,
+            mime_type=payload.mime_type,
+        )
     return JSONResponse(status_code=202, content=snapshot)
 
 
 @router.get(
     "/cv-extract/jobs/{job_id}",
-    summary="Consultar progreso y resultado de una extracción asíncrona de CV",
+    summary="[compat] Progreso de una extracción de CV (usar GET /me/cv/jobs/{job_id})",
 )
 def get_extract_cv_job_status(
-    job_id: str,
-    use_case: Annotated[UploadAndExtractCvUseCase, Depends(get_upload_cv_use_case)],
+    job_id: str, container: ContainerDep, principal: PrincipalDep
 ) -> dict[str, Any]:
-    """Devuelve el estado de avance (`processing | completed | failed`) y el JSON final cuando termina."""
-    return use_case.get_job_status(job_id)
+    _require_service_or_student(principal)
+    if principal.role is Role.STUDENT:
+        return container.profiles.get_cv_job(principal, job_id)
+    return container.cv_upload.get_job_status(job_id)
 
 
 @router.post(
     "/cv-extract",
-    summary="Subir CV, guardar en storage y extraer sugerencias vía webhook n8n (síncrono)",
+    summary="[compat · interno] Extracción síncrona de CV vía n8n (sólo servicio o admin)",
 )
 def extract_cv_endpoint(
-    payload: CvExtractRequest,
-    use_case: Annotated[UploadAndExtractCvUseCase, Depends(get_upload_cv_use_case)],
+    payload: LegacyCvExtractRequest, container: ContainerDep, principal: PrincipalDep
 ) -> dict[str, Any]:
-    """Recibe el CV, lo almacena en CV_STORAGE_PATH y consulta `POST /webhook/cv-extract` en n8n."""
+    if principal.role not in (Role.SERVICE, Role.ADMIN):
+        raise ForbiddenError("La extracción síncrona es interna; usá POST /api/v1/profiles/me/cv")
     content = _decode_base64_cv(payload.content_base64)
-    result = use_case.execute(
+    result = container.cv_upload.execute(
         profile_id=payload.profile_id,
         filename=payload.filename,
         content=content,

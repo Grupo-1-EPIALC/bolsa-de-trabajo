@@ -1,5 +1,7 @@
 # Contrato de Reconocimiento de CV e Instrucciones para `profile-agent` (`profile-service`)
 
+> **Actualización v0.2.0 (P-011):** para el frontend usar `POST /api/v1/profiles/me/cv` (multipart) y `GET /api/v1/profiles/me/cv/jobs/{job_id}`, documentados en [`profile_frontend.md`](profile_frontend.md). Los endpoints `cv-extract*` de este documento siguen funcionando por compatibilidad, pero **ahora piden autenticación**: JWT de estudiante (la extracción se asocia a su perfil y se ignora `profile_id`) o `X-Service-Token`. La versión síncrona (`POST /cv-extract`) es sólo para servicio o admin. El webhook hacia n8n (§2.2) no cambia.
+
 > Documento de integración para la persona responsable de **`services/profile-service`** (Integrante 2) y su asistente de IA de código (**`profile-agent`**).
 > Incluye todos los endpoints del cargador de CV, sus tipos exactos de entrada y ejemplos reales de salida (tanto del cargador en `profile-service` como del webhook de `n8n`).
 

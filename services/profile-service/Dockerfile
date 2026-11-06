@@ -11,11 +11,14 @@ RUN pip install .
 
 # ---------------------------------------------------------------- runtime ---
 FROM python:3.12-slim AS runtime
-# Librerías de sistema para WeasyPrint (CV en PDF)
+# Librerías de sistema para WeasyPrint (CV en PDF) y fuente Inter para la plantilla
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libfontconfig1 fonts-dejavu-core \
+    libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libharfbuzz-subset0 libfontconfig1 fonts-dejavu-core fonts-inter \
+  && fc-cache -f \
   && rm -rf /var/lib/apt/lists/*
-ENV PATH="/opt/venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+# Fontconfig necesita una caché escribible para el usuario sin privilegios
+ENV PATH="/opt/venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
+    XDG_CACHE_HOME=/tmp/.cache
 RUN groupadd --system app && useradd --system --gid app --home /app app
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
