@@ -1,58 +1,93 @@
-import { apiFetch } from './api';
-import { MOCK_STUDENT_PROFILE } from './mockData';
-import { StudentProfile } from '../types/profile';
+// profile-service · /api/v1/profiles (contracts/profile_frontend.md)
+import { ApiError, apiFetch, apiRequest } from './api';
+import type { CvJob, CvResult, ProfileSections, ProfileView } from '../types/profile';
 
-const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
+export type CvFormat = 'pdf' | 'docx';
+
+export const CV_ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.md'];
+export const CV_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Valida el archivo antes de subirlo (el servicio vuelve a validar MIME y tamaño). */
+export function validateCvFile(file: File): string | null {
+  const name = file.name.toLowerCase();
+  if (!CV_ALLOWED_EXTENSIONS.some((ext) => name.endsWith(ext))) {
+    return 'Formato no permitido. Usá PDF, DOCX, DOC o MD.';
+  }
+  if (file.size === 0) return 'El archivo está vacío.';
+  if (file.size > CV_MAX_BYTES) return 'El archivo supera el máximo de 5 MB.';
+  return null;
+}
 
 export const profileService = {
-  // GET /api/v1/profiles/me
-  getProfile: async (): Promise<StudentProfile> => {
-    if (USE_MOCKS) {
-      return Promise.resolve(MOCK_STUDENT_PROFILE);
+  /** GET /profiles/me · devuelve null si el estudiante todavía no tiene perfil (404). */
+  async getMine(): Promise<ProfileView | null> {
+    try {
+      return await apiFetch<ProfileView>('/profiles/me');
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'PROFILE_NOT_FOUND') return null;
+      throw err;
     }
-    return apiFetch<StudentProfile>('/profiles/me');
   },
 
-  // PUT /api/v1/profiles/me
-  updateProfile: async (profile: Partial<StudentProfile>): Promise<StudentProfile> => {
-    if (USE_MOCKS) {
-      console.log('[MOCK] Actualizando perfil:', profile);
-      return Promise.resolve({ ...MOCK_STUDENT_PROFILE, ...profile });
-    }
-    return apiFetch<StudentProfile>('/profiles/me', {
-      method: 'PUT',
-      body: JSON.stringify(profile),
-    });
-  },
-
-  // POST /api/v1/profiles/me/cv
-  uploadCV: async (file: File): Promise<{ message: string; filename: string }> => {
-    if (USE_MOCKS) {
-      console.log('[MOCK] Simulando subida de CV:', file.name);
-      return Promise.resolve({
-        message: 'CV subido y simulado exitosamente (MODO MOCK)',
-        filename: file.name,
-      });
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const token = localStorage.getItem('access_token');
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
-
-    const response = await fetch(`${baseUrl}/profiles/me/cv`, {
+  /** POST /profiles/me · alta manual del perfil. */
+  create(sections: ProfileSections = {}): Promise<ProfileView> {
+    return apiFetch<ProfileView>('/profiles/me', {
       method: 'POST',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: formData,
+      body: JSON.stringify(sections),
     });
+  },
 
-    if (!response.ok) {
-      throw new Error('Error al subir el archivo de CV al servidor');
+  /** PATCH /profiles/me · cada sección enviada se reemplaza completa. */
+  update(sections: ProfileSections): Promise<ProfileView> {
+    return apiFetch<ProfileView>('/profiles/me', {
+      method: 'PATCH',
+      body: JSON.stringify(sections),
+    });
+  },
+
+  /** POST /profiles/me/cv (multipart) → 202 con el trabajo de extracción. */
+  uploadCv(file: File): Promise<CvJob> {
+    const form = new FormData();
+    form.append('file', file);
+    return apiFetch<CvJob>('/profiles/me/cv', { method: 'POST', body: form });
+  },
+
+  /** GET /profiles/me/cv/jobs/{job_id} · progreso de la extracción. */
+  getCvJob(jobId: string): Promise<CvJob> {
+    return apiFetch<CvJob>(`/profiles/me/cv/jobs/${encodeURIComponent(jobId)}`);
+  },
+
+  /** GET /profiles/me/cv-suggestions · última extracción guardada (o null). */
+  async getSuggestions(): Promise<CvResult | null> {
+    try {
+      return await apiFetch<CvResult>('/profiles/me/cv-suggestions');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
     }
+  },
 
-    return response.json();
+  /** DELETE /profiles/me/cv-suggestions · descarta la extracción. */
+  discardSuggestions(): Promise<void> {
+    return apiFetch<void>('/profiles/me/cv-suggestions', { method: 'DELETE' });
+  },
+
+  /** Descarga el CV generado (PDF o Word) usando un blob (la descarga necesita el JWT). */
+  async downloadCv(format: CvFormat): Promise<void> {
+    const res = await apiRequest(`/profiles/me/cv.${format}`);
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const name = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? `CV.${format}`;
+    const url = URL.createObjectURL(await res.blob());
+    const link = Object.assign(document.createElement('a'), { href: url, download: name });
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+
+  /** GET /profiles/me/cv.html · vista previa autocontenida del CV. */
+  async previewHtml(): Promise<string> {
+    const res = await apiRequest('/profiles/me/cv.html');
+    return res.text();
   },
 };
