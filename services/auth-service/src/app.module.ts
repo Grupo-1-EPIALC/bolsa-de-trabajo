@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { InitialAuthSchema1710000000000 } from './database/migrations/1710000000000-InitialAuthSchema';
+import { AccountStatusAndSoftDelete1793900000000 } from './database/migrations/1793900000000-AccountStatusAndSoftDelete';
 import { HealthController } from './health/health.controller';
 
 function databaseOptions() {
@@ -20,12 +22,12 @@ function databaseOptions() {
     autoLoadEntities: true,
     synchronize: false,
     migrationsRun: true,
-    migrations: [InitialAuthSchema1710000000000],
+    migrations: [InitialAuthSchema1710000000000, AccountStatusAndSoftDelete1793900000000],
   };
 }
 
 @Module({
-  imports: [TypeOrmModule.forRoot(databaseOptions()), AuthModule],
+  imports: [TypeOrmModule.forRoot(databaseOptions()), AuthModule, AdminModule],
   controllers: [HealthController],
 })
 export class AppModule {}

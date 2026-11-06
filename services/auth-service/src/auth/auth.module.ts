@@ -56,5 +56,6 @@ function readPublicKey(): string {
     SmtpEmailNotifier,
     { provide: EMAIL_NOTIFIER, useExisting: SmtpEmailNotifier },
   ],
+  exports: [AuthService, JwtAuthGuard],
 })
 export class AuthModule {}

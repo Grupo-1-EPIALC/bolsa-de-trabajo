@@ -14,6 +14,8 @@ import * as argon2 from 'argon2';
 import { createHash, createPublicKey, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { DataSource, IsNull, MoreThan, Repository } from 'typeorm';
+import { AccountStatus } from '../users/account-status';
+import { accountSuspendedError } from '../users/account-errors';
 import { Company } from '../users/company.entity';
 import { User } from '../users/user.entity';
 import { UserRole } from '../users/user-role';
@@ -96,8 +98,9 @@ export class AuthService {
       if (!input.company || !isValidCuit(input.company.cuit)) {
         throw new BadRequestException('El CUIT de la empresa no es válido');
       }
+      // Sólo cuentan las empresas no borradas: un CUIT borrado puede volver a registrarse.
       const companyExists = await this.companies.exists({
-        where: { cuit: input.company.cuit },
+        where: { cuit: input.company.cuit, deletedAt: IsNull() },
       });
       if (companyExists) {
         throw new ConflictException('El CUIT ya está registrado');
@@ -144,6 +147,8 @@ export class AuthService {
     if (!user || !(await argon2.verify(user.passwordHash, input.password))) {
       throw new UnauthorizedException('Email o contraseña incorrectos');
     }
+    // Las cuentas borradas ya no aparecen (borrado lógico). Las suspendidas no pueden entrar.
+    this.assertActive(user);
 
     return { user: this.toPublicUser(user), ...(await this.issueTokens(user)) };
   }
@@ -175,6 +180,7 @@ export class AuthService {
       if (!user) {
         throw new UnauthorizedException('Refresh token inválido o expirado');
       }
+      this.assertActive(user);
       return user;
     });
     return this.issueTokens(result);
@@ -188,6 +194,7 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
+    this.assertActive(user);
     return this.toPublicUser(user);
   }
 
@@ -237,17 +244,27 @@ export class AuthService {
       return GENERIC_RESET_RESPONSE;
     }
 
-    const token = await this.persistActionToken(user.id, ActionTokenPurpose.PASSWORD_RESET);
+    await this.sendPasswordResetLink(user.id, user.email);
+    return GENERIC_RESET_RESPONSE;
+  }
+
+  /**
+   * Genera un token de recuperación y manda el link por mail.
+   * Devuelve false si el mail no se pudo enviar (el token queda creado igual).
+   */
+  async sendPasswordResetLink(userId: string, email: string): Promise<boolean> {
+    const token = await this.persistActionToken(userId, ActionTokenPurpose.PASSWORD_RESET);
     const url = `${this.frontendUrl}/auth/password/reset/confirm?token=${encodeURIComponent(token)}`;
     try {
-      await this.emailNotifier.sendPasswordReset(user.email, url);
+      await this.emailNotifier.sendPasswordReset(email, url);
+      return true;
     } catch (error) {
       this.logger.error(
         'Password reset email delivery failed',
         error instanceof Error ? error.stack : String(error),
       );
+      return false;
     }
-    return GENERIC_RESET_RESPONSE;
   }
 
   async confirmPasswordReset(input: PasswordResetConfirmDto): Promise<{ message: string }> {
@@ -469,6 +486,12 @@ export class AuthService {
       };
     }
     return result;
+  }
+
+  private assertActive(user: User): void {
+    if (user.status === AccountStatus.SUSPENDED) {
+      throw accountSuspendedError();
+    }
   }
 
   private normalizeEmail(email: string): string {

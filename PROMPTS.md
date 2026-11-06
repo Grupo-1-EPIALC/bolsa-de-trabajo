@@ -31,7 +31,8 @@
 | P-013 | 2026-11-06 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.2.0-estilo-bootstrap` | Implementar en el front `profile_frontend.md` y `company_profile_frontend.md`: sin login ve el home; estudiante sin perfil → importar CV o carga manual; con perfil → recomendaciones de ofertas, modificar perfil y descargar CV PDF/Word; empresa → alta y perfil | Cliente API con refresh y error común, login/registro reales (tokens `access_token`, empresa anidada), alta de perfil (CV con polling y precarga `profile_draft`/`COMPLETAR_MANUALMENTE`, o manual) en 3 pasos, panel con ofertas (reglas + IA separadas, pedido a WF-06), edición y descarga/vista previa del CV; área de empresa (alta precargada, 2 pasos, logo, búsquedas activas); 12 tests; E2E con Playwright | pendiente de revisión |
 | P-014 | 2026-11-06 | Andres | Claude Code (`devops-agent` + `n8n-agent`) | `feature/frontend/v0.2.0-estilo-bootstrap` | Revisar por qué desaparecieron los workflows de n8n, asegurar que persistan y que bases, configuración y media queden fuera de los contenedores | Causa: volúmenes recreados el 2026-11-03 (README sugería `down -v`) y la importación de workflows era manual. Volúmenes `bolsa_pg_data`/`bolsa_n8n_data`/`bolsa_cv_storage` pasan a externos (sobreviven a `down -v`) + `infra/scripts/create-volumes.sh`; servicio `n8n-init` que importa credencial NVIDIA (opcional, `NVIDIA_API_KEY`) y workflows y los publica en cada arranque; README actualizado | pendiente de revisión |
 | P-015 | 2026-11-06 | Andres | Claude Code (`auth-agent`) | `docs/auth/v0.0.2-contrato-auth` | Buscar el contrato de auth y ponerlo en `contracts/` | `services/auth-service/AUTH-RESPONSES.md` (sólo register/login) se mueve a `contracts/auth_frontend.md` y se completa con los 10 endpoints, pedidos, sesión/refresh de un solo uso, JWT/JWKS, flujos por mail y errores reales, verificados contra el servicio en Docker; AGENTS §4.1 enlaza el contrato | pendiente de revisión |
-| P-016 | | | | | | | |
+| P-016 | 2026-11-06 | Andres | Claude Code (`auth-agent`) | `feature/auth/v0.1.0-admin-cuentas` | Panel de admin: listar usuarios y empresas, editarlos, resetear la clave, cambiar el correo, suspender y soft delete (el borrado desaparece de los listados y permite re-alta con el mismo email/CUIT; el suspendido se ve pero no entra ni matchea). Back transversal en un core-service nuevo, postulaciones para después, por fases con un PR por servicio | Fase 1 en auth-service v0.1.0: migración con `status`/`deleted_at` e índices únicos parciales de email y CUIT, login/refresh/`me` bloquean suspendidos (`403 ACCOUNT_SUSPENDED`), `/admin/users` con `RolesGuard` (listar con filtros y paginado, editar, forzar reset, suspender, reactivar, borrar), eventos de cuenta a `ACCOUNT_EVENT_WEBHOOKS`; contratos `auth_frontend.md` §7 y `account_events.md`; 26 tests y prueba E2E | pendiente de revisión |
+| P-017 | | | | | | | |
 
 ---
 
@@ -216,7 +217,20 @@
 - **Archivos afectados:** `contracts/auth_frontend.md` (antes `services/auth-service/AUTH-RESPONSES.md`), `services/auth-service/package.json`, `services/auth-service/package-lock.json`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 1, dueño de auth-service). Pendiente en el front: pantallas para los links `/auth/password/reset/confirm` y `/auth/email/confirm`.
 
-- ### P-016 — (plantilla)
+### P-016 — Panel de admin, fase 1: cuentas y empresas en auth-service
+- **Fecha:** 2026-11-06 · **Autor:** Andres · **Agente:** Claude Code (`auth-agent`) · **Rama:** `feature/auth/v0.1.0-admin-cuentas` · **HU:** administración de cuentas
+- **Prompt (resumido):**
+  > Quiero armar el admin panel; no sé bien dónde tiene que vivir el back. Debería poder listar usuarios, editarlos, resetear la clave, cambiar el correo, hacer soft delete y suspender una cuenta (el soft delete desaparece de los listados y permite una nueva alta con el mismo email; el suspendido se ve en los listados pero no puede acceder ni matchear). Lo mismo con las empresas, ver sus búsquedas activas, configurar los resultados del match, ver la salud de los servicios y un panel de eventos con alertas por eventos críticos o suma de fallos. Decisiones: core-service nuevo en FastAPI para lo transversal (y eventualmente lógica de negocio), postulaciones para después, unicidad por email/CUIT (sin DNI), por fases con un PR por servicio.
+- **Resumen de la respuesta:**
+  - Reparto: cuentas y empresas en auth-service (dueño); bloqueo del suspendido/borrado en profile y jobs por eventos; búsquedas por empresa en jobs; configuración del match en matching; salud, eventos y alertas en core-service. Postulaciones no existen todavía.
+  - auth-service v0.1.0: migración `AccountStatusAndSoftDelete` (`status`, `suspended_at`, `suspension_reason`, `deleted_at`; email y CUIT únicos sólo entre no borrados). `@DeleteDateColumn` hace que login, refresh y registro ignoren las cuentas borradas; las suspendidas reciben `403 ACCOUNT_SUSPENDED` después de validar la clave.
+  - `AdminUsersController` (`/api/v1/auth/admin/users`) con `JwtAuthGuard` + `RolesGuard`: listar (rol, estado, búsqueda, `include_deleted`, paginado), ver, editar email/empresa, forzar reset (invalida la clave, cierra sesiones y manda el link), suspender, reactivar y borrar. Un admin no puede suspenderse ni borrarse.
+  - Puerto `AccountEventPublisher` con implementación HTTP best effort a `ACCOUNT_EVENT_WEBHOOKS` (`X-Service-Token`).
+  - Contratos: `auth_frontend.md` §7 y nuevo `account_events.md`. 26 tests Jest (13 nuevos) y E2E contra el stack: suspensión, reactivación, cambio de email, reset con mail en Mailpit, soft delete y re-alta con el mismo email y CUIT.
+- **Archivos afectados:** `services/auth-service/` (migración, entidades, `admin/`, `roles.guard.ts`, `auth.service.ts`, tests, versión 0.1.0), `contracts/auth_frontend.md`, `contracts/account_events.md`, `docker-compose.yml`, `.env.example`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 1). Siguen en la fase 1 los receptores de eventos en profile-service y jobs-service.
+
+- ### P-017 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
