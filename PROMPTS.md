@@ -30,7 +30,8 @@
 | P-012 | 2026-11-06 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.2.0-estilo-bootstrap` | Adaptar el diseño del front (Bootstrap + Bootstrap Icons) al estilo de udelaciudad.edu.ar —magenta dominante, violeta en detalles, fondos blancos— y usar la foto adjunta como portada cuando el usuario no se autenticó | Tailwind/lucide → Bootstrap 5.3 + Bootstrap Icons con tema propio (Montserrat, magenta `#BA3995`, violeta `#682CAD`), portada pública con hero de foto y rótulo magenta, página de acceso con la foto de fondo, cabecera/footer institucionales, `resolveView` (sin sesión no se ven vistas privadas) con tests; paneles RULES/IA conservados | pendiente de revisión |
 | P-013 | 2026-11-06 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.2.0-estilo-bootstrap` | Implementar en el front `profile_frontend.md` y `company_profile_frontend.md`: sin login ve el home; estudiante sin perfil → importar CV o carga manual; con perfil → recomendaciones de ofertas, modificar perfil y descargar CV PDF/Word; empresa → alta y perfil | Cliente API con refresh y error común, login/registro reales (tokens `access_token`, empresa anidada), alta de perfil (CV con polling y precarga `profile_draft`/`COMPLETAR_MANUALMENTE`, o manual) en 3 pasos, panel con ofertas (reglas + IA separadas, pedido a WF-06), edición y descarga/vista previa del CV; área de empresa (alta precargada, 2 pasos, logo, búsquedas activas); 12 tests; E2E con Playwright | pendiente de revisión |
 | P-014 | 2026-11-06 | Andres | Claude Code (`devops-agent` + `n8n-agent`) | `feature/frontend/v0.2.0-estilo-bootstrap` | Revisar por qué desaparecieron los workflows de n8n, asegurar que persistan y que bases, configuración y media queden fuera de los contenedores | Causa: volúmenes recreados el 2026-11-03 (README sugería `down -v`) y la importación de workflows era manual. Volúmenes `bolsa_pg_data`/`bolsa_n8n_data`/`bolsa_cv_storage` pasan a externos (sobreviven a `down -v`) + `infra/scripts/create-volumes.sh`; servicio `n8n-init` que importa credencial NVIDIA (opcional, `NVIDIA_API_KEY`) y workflows y los publica en cada arranque; README actualizado | pendiente de revisión |
-| P-015 | | | | | | | |
+| P-015 | 2026-11-06 | Andres | Claude Code (`auth-agent`) | `docs/auth/v0.0.2-contrato-auth` | Buscar el contrato de auth y ponerlo en `contracts/` | `services/auth-service/AUTH-RESPONSES.md` (sólo register/login) se mueve a `contracts/auth_frontend.md` y se completa con los 10 endpoints, pedidos, sesión/refresh de un solo uso, JWT/JWKS, flujos por mail y errores reales, verificados contra el servicio en Docker; AGENTS §4.1 enlaza el contrato | pendiente de revisión |
+| P-016 | | | | | | | |
 
 ---
 
@@ -203,7 +204,19 @@
 - **Archivos afectados:** `docker-compose.yml`, `n8n/init/bootstrap.sh`, `infra/scripts/create-volumes.sh`, `.env.example`, `README.md`, `.github/pull_request_template.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 4 por compose). Falta cargar la credencial de NVIDIA (UI o `NVIDIA_API_KEY`).
 
-- ### P-015 — (plantilla)
+### P-015 — Contrato de auth-service en `contracts/`
+- **Fecha:** 2026-11-06 · **Autor:** Andres · **Agente:** Claude Code (`auth-agent`) · **Rama:** `docs/auth/v0.0.2-contrato-auth` · **HU:** HU-01, HU-02, HU-03 (contrato)
+- **Prompt (resumido):**
+  > Revisá si encontrás el contrato del auth y ponelo en `contracts`.
+- **Resumen de la respuesta:**
+  - El único documento era `services/auth-service/AUTH-RESPONSES.md` (PR #9), que cubría sólo `register` y `login`. Se movió a `contracts/auth_frontend.md`, siguiendo el nombre de los otros contratos para el front.
+  - Se completó con lo que hace el código: los 10 endpoints (incluidos `token/refresh`, `me`, cambio/recuperación de clave, cambio de email y JWKS), reglas de los pedidos, refresh de un solo uso, revocación al cambiar la clave, claims del JWT, links de los mails al front y la tabla de errores.
+  - Todo verificado contra el servicio en Docker. Detalles que no estaban: en validación `message` es una lista (también en `details.validation_errors`); sin Bearer el código es `HTTP_401`.
+  - AGENTS §4.1 enlaza el contrato. auth-service pasa a 0.0.2.
+- **Archivos afectados:** `contracts/auth_frontend.md` (antes `services/auth-service/AUTH-RESPONSES.md`), `services/auth-service/package.json`, `services/auth-service/package-lock.json`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 1, dueño de auth-service). Pendiente en el front: pantallas para los links `/auth/password/reset/confirm` y `/auth/email/confirm`.
+
+- ### P-016 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

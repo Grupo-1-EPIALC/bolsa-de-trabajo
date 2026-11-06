@@ -123,6 +123,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - DTOs con `class-validator`; controllers delgados; lógica en services; emails vía interfaz `EmailNotifier` inyectada por token (implementación SMTP → Mailpit en dev).
 - Publicar la clave pública JWT en `/api/v1/auth/.well-known/jwks.json` para que los servicios FastAPI validen localmente.
 - Errores con el formato común `{"error": {...}}` mediante un `ExceptionFilter` global.
+- Contrato para el front y los servicios que validan el JWT en [`contracts/auth_frontend.md`](contracts/auth_frontend.md): actualizarlo en el mismo PR si cambia un endpoint o una respuesta.
 **No debe:** guardar claves en texto plano, devolver si un email existe, mezclar lógica de perfiles.
 **Tests mínimos:** UT-AUTH-01 a UT-AUTH-07 (Jest).
 
