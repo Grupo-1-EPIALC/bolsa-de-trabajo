@@ -4,9 +4,11 @@ from dataclasses import replace
 
 import pytest
 
+from app.application.job_service import JobService
 from app.domain.auth import Principal, Role
-from app.domain.enums import JobStatus, SalaryVisibility
+from app.domain.enums import JobStatus, RequirementKind, SalaryVisibility
 from app.domain.errors import (
+    ConflictError,
     ForbiddenError,
     InvalidInputError,
     NotFoundError,
@@ -23,9 +25,17 @@ from tests.builders import (
     conditions,
     draft,
     job,
+    requirements,
     salary,
+    skill,
 )
-from tests.fakes import FixedClock, RecordingPublisher
+from tests.fakes import (
+    FakeCompanyDirectory,
+    FixedClock,
+    RaceLoserRepository,
+    RecordingPublisher,
+    SequentialIds,
+)
 from tests.jwt_helpers import COMPANY_001 as JWT_COMPANY_001
 
 COMPANY = Principal(
@@ -80,6 +90,74 @@ def test_directory_failure_aborts_create(container, repository) -> None:
     with pytest.raises(UpstreamError):
         container.jobs.create(broken, draft(), access_token=broken.access_token)
     assert repository.count() == 0
+
+
+def test_create_validates_payload_before_contacting_auth(container, directory) -> None:
+    """Un payload inválido falla 422 sin depender de auth-service (ni gastarle una llamada)."""
+    base = requirements()
+    sin_required = skill("Python", kind=RequirementKind.DESIRED)  # sin ningún `required`
+    inconsistent = replace(base, skills=(sin_required,))
+
+    with pytest.raises(InvalidInputError):
+        container.jobs.create(
+            COMPANY, draft(job_requirements=inconsistent), access_token=COMPANY.access_token
+        )
+    assert directory.calls == []
+
+
+def test_create_rejects_a_company_profile_without_name(container, repository, directory) -> None:
+    """Garantía 1 de `jobs_matching.md`: `company_snapshot.name` nunca vacío."""
+    directory.snapshot = replace(directory.snapshot, name="")
+
+    with pytest.raises(InvalidInputError) as error:
+        container.jobs.create(COMPANY, draft(), access_token=COMPANY.access_token)
+
+    assert error.value.details["field"] == "company_snapshot.name"
+    assert repository.count() == 0
+
+
+def _racing_service(offer, *, replacement=None) -> JobService:
+    """Servicio con un repositorio que siempre pierde la carrera de versiones."""
+    return JobService(
+        repository=RaceLoserRepository(offer, replacement=replacement),
+        directory=FakeCompanyDirectory(),
+        publisher=RecordingPublisher(),
+        clock=FixedClock(),
+        ids=SequentialIds(),
+    )
+
+
+def test_update_conflict_when_another_write_wins() -> None:
+    """Lock optimista: si la versión que leímos ya no es la guardada, 409 en vez de perdida."""
+    offer = job(job_id="job-900")
+    racing = _racing_service(offer)
+
+    with pytest.raises(ConflictError):
+        racing.update(COMPANY, offer.id, {"title": "Edición tardía"})
+
+
+def test_close_conflict_when_another_edit_wins() -> None:
+    offer = job(job_id="job-901")
+    racing = _racing_service(
+        offer,
+        replacement=replace(offer, title="Editada por otra pestaña", version=2),
+    )
+
+    with pytest.raises(ConflictError):
+        racing.close(COMPANY, offer.id)
+
+
+def test_close_conflict_stays_idempotent_if_offer_is_already_closed() -> None:
+    """Si el otro escritor también cerró la oferta, el cierre sigue siendo exitoso."""
+    offer = job(job_id="job-902")
+    racing = _racing_service(
+        offer,
+        replacement=replace(offer, status=JobStatus.CLOSED, version=2),
+    )
+
+    closed = racing.close(COMPANY, offer.id)
+
+    assert closed.status is JobStatus.CLOSED
 
 
 def test_publisher_failure_does_not_break_create(
@@ -141,6 +219,21 @@ def test_update_can_clear_work_conditions(container, repository) -> None:
     updated = container.jobs.update(COMPANY, offer.id, {"work_conditions": None})
 
     assert updated.work_conditions == WorkConditions()
+
+
+def test_update_replaces_responsibility_and_benefit_lists(container, repository) -> None:
+    offer = job()
+    repository.add(offer)
+
+    updated = container.jobs.update(
+        COMPANY,
+        offer.id,
+        {"responsibilities": ["Nueva tarea"], "benefits": ["Nuevo beneficio"]},
+    )
+
+    assert updated.responsibilities == ("Nueva tarea",)
+    assert updated.benefits == ("Nuevo beneficio",)
+    assert updated.version == 2
 
 
 def test_update_rejects_past_expiry(container, repository) -> None:

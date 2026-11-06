@@ -97,12 +97,12 @@
 
 ### Garantías del contrato
 
-1. `company_snapshot.name` siempre está presente y no vacío.
+1. `company_snapshot.name` siempre está presente y no vacío (jobs-service lo valida al crear y al cargar el seed).
 2. `requirements.skills` tiene al menos una `required`.
 3. `level` de skill siempre está entre 1 y 5.
 4. `kind` siempre es `required`, `desired` o `excluding`.
 5. Los enums respetan `estructura_comun_perfil_oferta_match.md` §3.
-6. `requirements.experience` existe en la respuesta (puede tener `min_years: 0`).
+6. `requirements.experience` está presente como campo (objeto o `null`; matching lo trata como un mínimo de 0 años).
 7. `requirements.languages` y `requirements.education` existen (pueden ser `[]`).
 8. `version` se incrementa en cada edición, cierre o reapertura.
 9. `salary` viaja completo con service token, incluso si `visibility` es `on_match` o `hidden`.
@@ -282,7 +282,7 @@ curl -H "X-Service-Token: $SERVICE_TOKEN" \
 ## 10. Checklist de integración
 
 - [ ] `GET /api/v1/jobs?status=active&limit=200` con `X-Service-Token` devuelve `total: 12`.
-- [ ] Cada item trae `company_snapshot.name`, `requirements.skills` y `requirements.experience`.
+- [ ] Cada item trae `company_snapshot.name` y `requirements.skills`; `requirements.experience` va como objeto o `null`.
 - [ ] `JobMapper.to_domain` mapea los 12 jobs sin excepciones.
 - [ ] `GET /api/v1/jobs/job-004` devuelve el detalle completo.
 - [ ] Una oferta cerrada no aparece en `status=active`.

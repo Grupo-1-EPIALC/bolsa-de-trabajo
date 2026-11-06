@@ -25,8 +25,23 @@ def test_memory_repository_roundtrip_and_update() -> None:
     assert repository.count() == 1
 
     updated = job(title="Actualizado", version=2)
-    repository.update(updated)
+    assert repository.update(updated, expected_version=1) is True
     assert repository.get(original.id) == updated
+
+
+def test_memory_repository_optimistic_lock_rejects_stale_version() -> None:
+    """El guard de versión evita el lost-update: la fila se quedó atrás y no se persiste."""
+    repository = InMemoryJobRepository()
+    original = job()
+    repository.add(original)
+
+    stale = job(title="Lento", version=2)
+    assert repository.update(stale, expected_version=3) is False
+    assert repository.get(original.id) == original
+
+    fresh = job(title="Ganador", version=3)
+    assert repository.update(fresh, expected_version=1) is True
+    assert repository.get(original.id) == fresh
 
 
 def test_memory_repository_filters_and_order() -> None:
@@ -56,9 +71,26 @@ def test_sqlalchemy_repository_roundtrip() -> None:
         assert repository.count() == 1
 
         updated = job(title="Actualizado en SQL", version=2)
-        repository.update(updated)
+        assert repository.update(updated, expected_version=1) is True
         assert repository.get(original.id) == updated
         assert repository.get("job-999") is None
+    finally:
+        repository.dispose()
+
+
+def test_sqlalchemy_repository_optimistic_lock_rejects_stale_version() -> None:
+    """UPDATE con guard de versión: UPDATE ... WHERE version = expected; rowcount → False."""
+    repository = SqlAlchemyJobRepository("sqlite+pysqlite:///:memory:", schema=None)
+    try:
+        original = job()
+        repository.add(original)
+
+        rival = job(title="Edición ganadora", version=2)
+        assert repository.update(rival, expected_version=1) is True
+
+        perdedor = job(title="Edición perdedora", version=2)
+        assert repository.update(perdedor, expected_version=1) is False
+        assert repository.get(original.id).title == "Edición ganadora"  # type: ignore[union-attr]
     finally:
         repository.dispose()
 
