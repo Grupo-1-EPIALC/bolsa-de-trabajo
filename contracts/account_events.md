@@ -14,8 +14,11 @@ Cuando un admin edita o borra una cuenta, auth-service avisa a cada servicio par
   - `http://jobs-service:8000/api/v1/jobs/internal/account-events`
 - Header `X-Service-Token: <SERVICE_TOKEN>`. El receptor rechaza cualquier otro pedido con `401`/`403`.
 - `Content-Type: application/json`. Timeout de 5 s por suscriptor.
-- **Best effort:** si un suscriptor falla o no responde, auth-service lo registra en su log y sigue. La operación del admin no se revierte.
-- El receptor responde `2xx` rápido y **tiene que ser idempotente**: el mismo evento puede llegar dos veces.
+- **Outbox con reintentos (al menos una vez):** el evento se guarda en `auth.account_event_deliveries` **en la misma transacción** que el cambio de la cuenta (una fila por suscriptor). Si no se puede guardar, el cambio no se confirma. Después del commit se intenta entregar enseguida; si falla (servicio caído, timeout o respuesta que no es `2xx`), se reintenta **sin límite** con backoff exponencial: 5 s, 10 s, 20 s… hasta 10 min entre intentos. Sobrevive a reinicios de auth-service: una entrega cortada a mitad de camino vuelve a la cola al minuto (lease).
+- **Orden:** los eventos de una misma cuenta llegan a cada suscriptor en el orden en que ocurrieron (un `account.updated` viejo nunca llega después del `account.deleted`). Un suscriptor caído no frena a los demás.
+- El receptor responde `2xx` rápido y **tiene que ser idempotente**: el mismo evento puede llegar más de una vez (mismo `event_id`). Un `4xx` también se reintenta: hay que corregir el receptor o la configuración.
+- Configuración opcional de auth-service: `ACCOUNT_EVENT_RETRY_INTERVAL_MS` (cada cuánto revisa la cola, 5000), `ACCOUNT_EVENT_RETRY_BASE_MS` (primer reintento, 5000) y `ACCOUNT_EVENT_RETRY_MAX_MS` (tope, 600000).
+- **Auditoría:** `SELECT event_type, subscriber, attempts, delivered_at, last_error FROM auth.account_event_deliveries WHERE delivered_at IS NULL` lista lo pendiente y el último error.
 - Ruta de cada receptor: `POST /api/v1/<recurso>/internal/account-events` (interna, nunca para usuarios; el gateway borra `X-Service-Token`).
 - Respuesta del receptor: `200` con `{ "event", "user_id", "result" }`, donde `result` es `archived`, `updated`, `registered` o `ignored`.
 
@@ -25,6 +28,7 @@ Cuando un admin edita o borra una cuenta, auth-service avisa a cada servicio par
 
 ```json
 {
+  "event_id": "6b3c5343-5fcd-4b3c-a579-7c80dbd34a67",
   "event": "account.deleted",
   "user_id": "64e3d052-54f4-458e-af3f-82f81cadaed7",
   "role": "student",
@@ -43,6 +47,7 @@ Para empresas se agrega `company`:
 
 | Campo | Descripción |
 |---|---|
+| `event_id` | UUID del evento. Es el mismo en cada reintento y para todos los suscriptores: sirve para deduplicar y rastrear (opcional para el receptor) |
 | `event` | `account.deleted` · `account.updated` |
 | `user_id` | `sub` del JWT. Para empresas es el `company_id` de jobs-service y de `/profiles/companies` |
 | `role` | `student`, `company` o `admin` |
@@ -68,5 +73,5 @@ En los listados del admin, un borrado sólo se ve con `include_deleted=true`.
 
 ## 4. Seguridad y límites
 
-- El access token (JWT) de una cuenta borrada sigue siendo válido hasta que vence (15 min): auth-service revoca los refresh tokens, así no puede renovarlo. Por eso profile-service y jobs-service rechazan ese token con `401 ACCOUNT_DELETED` apenas reciben `account.deleted`.
-- Si un evento se pierde (servicio caído), hoy no hay reintento automático. Lo va a cubrir core-service (registro de eventos y alertas, fase 3 del panel de admin).
+- Al borrar, auth-service revoca los refresh tokens y sube la `token_version` de la cuenta: en auth-service el access token deja de valer al instante (`401 TOKEN_REVOKED`, [`auth_frontend.md`](auth_frontend.md) §4). profile-service y jobs-service validan el JWT localmente, así que lo rechazan con `401 ACCOUNT_DELETED` cuando reciben `account.deleted`: normalmente en milisegundos y, si estaban caídos, apenas vuelven (outbox, §1).
+- Un evento no se pierde aunque el receptor esté caído: queda pendiente en el outbox hasta que responde `2xx`. Alertas sobre entregas que llevan mucho tiempo pendientes: core-service (fase 3 del panel de admin).

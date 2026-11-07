@@ -15,7 +15,7 @@
 | `POST /login` · alias `POST /token` | — | Iniciar sesión | `200` `AuthResponse` |
 | `POST /token/refresh` | — | Renovar el par de tokens (rota el refresh) | `200` `TokenPair` |
 | `GET /me` | Bearer | Datos públicos de la cuenta | `200` `PublicUser` |
-| `POST /password/change` | Bearer | Cambiar la clave (cierra todas las sesiones) | `200` `Message` |
+| `POST /password/change` | Bearer | Cambiar la clave (cierra todas las sesiones y el access token actual deja de valer) | `200` `Message` |
 | `POST /password/reset` | — | Pedir el mail de recuperación | `200` `Message` (siempre igual) |
 | `POST /password/reset/confirm` | — | Fijar clave nueva con el token del mail | `200` `Message` |
 | `POST /email/change` | Bearer | Pedir cambio de email (manda mail al nuevo) | `200` `Message` |
@@ -118,7 +118,7 @@ Ejemplo de registro de empresa:
 - **El registro ya inicia sesión:** devuelve los tokens, no hace falta llamar a `login` después.
 - **Refresh de un solo uso:** cada `token/refresh` devuelve un refresh nuevo y revoca el anterior. Reusar uno viejo → `401`. Si dos pedidos renuevan a la vez, compartir una sola llamada (como hace `src/services/api.ts`).
 - **Ante un `401`** en cualquier API: renovar una vez y reintentar; si el refresh también falla, cerrar la sesión y volver al login.
-- **Cambiar o restablecer la clave revoca todos los refresh tokens** de la cuenta: hay que volver a iniciar sesión.
+- **Cambiar o restablecer la clave revoca todos los refresh tokens** de la cuenta y **también los access tokens ya emitidos** (`token_version`, ver abajo): en auth-service el token actual recibe `401 TOKEN_REVOKED` al instante. Hay que volver a iniciar sesión.
 - **Logout:** no hay endpoint; el front borra los tokens. El access token sigue siendo válido hasta que vence (15 min).
 
 ### JWT (access token)
@@ -128,10 +128,12 @@ Header: `{ "alg": "RS256", "typ": "JWT", "kid": "bolsa-auth-1" }`
 Payload:
 
 ```json
-{ "sub": "<user.id>", "role": "student", "iat": 1794000271, "exp": 1794001171, "iss": "bolsa-auth", "aud": "bolsa-api" }
+{ "sub": "<user.id>", "role": "student", "tv": 0, "iat": 1794000271, "exp": 1794001171, "iss": "bolsa-auth", "aud": "bolsa-api" }
 ```
 
 Los servicios FastAPI lo validan localmente con el JWKS: firma RS256, `iss = JWT_ISSUER` (`bolsa-auth`), `aud = JWT_AUDIENCE` (`bolsa-api`), `exp` y `role`.
+
+**`tv` (token version):** auth-service además compara `tv` con la `token_version` de la cuenta en **cada request** propio (`/me`, `/password/change`, `/admin/users`…). La versión sube con el reset forzado y el borrado del admin, el cambio de clave y la recuperación de clave: los access tokens emitidos antes reciben `401 TOKEN_REVOKED` sin esperar los 15 min. También da `TOKEN_REVOKED` si la cuenta fue borrada o cambió de rol. Un token sin `tv` (emitido antes de este cambio) vale como versión `0`. Los demás servicios no consultan a auth en cada request: una cuenta borrada la cortan con el evento `account.deleted` (`401 ACCOUNT_DELETED`, [`account_events.md`](account_events.md) §4).
 
 ### JWKS
 
@@ -182,6 +184,7 @@ En los errores de validación `message` es **una lista** y se repite en `details
 | 400 | `BAD_REQUEST` | Validación (lista en `details.validation_errors`), CUIT inválido, clave nueva igual a la actual, email nuevo igual al actual, token de recuperación o de email inválido o vencido |
 | 401 | `UNAUTHORIZED` | Email o contraseña incorrectos (mismo mensaje para ambos) · clave actual incorrecta · refresh inválido, vencido o ya usado |
 | 401 | `HTTP_401` | Falta el Bearer o el access token es inválido o venció (`message: "Unauthorized"`) |
+| 401 | `TOKEN_REVOKED` | El access token fue revocado: reset o cambio de clave, cuenta borrada o rol distinto. Si la clave cambió, renovar no sirve: volver al login |
 | 403 | `FORBIDDEN` | Un usuario que no es admin usa `/admin/...` · un admin intenta borrar su propia cuenta |
 | 404 | `NOT_FOUND` | `/admin/users/{id}` inexistente o borrado |
 | 409 | `CONFLICT` | Email o CUIT ya registrado (entre cuentas no borradas) · email pendiente de confirmación en otra cuenta |
@@ -237,9 +240,9 @@ Orden: más nuevas primero. Un parámetro desconocido da `400`.
 | Acción | Efecto |
 |---|---|
 | **Editar** | `{ "email"?: string, "company"?: { "legal_name"?, "cuit"?, "activity"? } }`. El email cambia **sin confirmación** y se normaliza; el CUIT se valida con dígito verificador. `company` sólo para cuentas de empresa. Email/CUIT repetidos → `409` |
-| **Forzar cambio de clave** | Invalida la clave actual, cierra todas las sesiones y manda el link de recuperación (§5) al email de la cuenta. `email_sent: false` si el mail no salió |
-| **Borrar** | Desaparece de los listados (salvo `include_deleted=true`) y no puede entrar (login `401`, como un email inexistente). Se cierran sus sesiones. El **email y el CUIT quedan libres**: se puede hacer una nueva alta con los mismos datos, que es una cuenta nueva (otro `id`). La cuenta vieja queda para auditoría |
+| **Forzar cambio de clave** | Invalida la clave actual, cierra todas las sesiones, corta los access tokens vigentes (`401 TOKEN_REVOKED`) y manda el link de recuperación (§5) al email de la cuenta. `email_sent: false` si el mail no salió |
+| **Borrar** | Desaparece de los listados (salvo `include_deleted=true`) y no puede entrar (login `401`, como un email inexistente). Se cierran sus sesiones y sus access tokens dejan de valer en auth-service al instante (`401 TOKEN_REVOKED`). El **email y el CUIT quedan libres**: se puede hacer una nueva alta con los mismos datos, que es una cuenta nueva (otro `id`). La cuenta vieja queda para auditoría |
 
 - Un admin no puede borrar su propia cuenta (`403`).
 - Editar y borrar avisan a los demás servicios con un evento de cuenta: ver [`account_events.md`](account_events.md).
-- El access token de una cuenta borrada sigue siendo válido hasta que vence (15 min); no se puede renovar.
+- En auth-service, el access token de una cuenta borrada o reseteada deja de valer al instante. En profile-service y jobs-service se corta cuando reciben `account.deleted`, que llega aunque estén caídos un rato (outbox con reintentos, [`account_events.md`](account_events.md) §1).
