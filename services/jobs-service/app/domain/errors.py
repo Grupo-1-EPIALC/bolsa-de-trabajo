@@ -27,6 +27,16 @@ class NotFoundError(JobsError):
     status_code = 404
 
 
+class AccountDeletedError(JobsError):
+    """La cuenta fue dada de baja en auth-service; su access token todavía no venció."""
+
+    code = "ACCOUNT_DELETED"
+    status_code = 401
+
+    def __init__(self) -> None:
+        super().__init__("La cuenta fue dada de baja")
+
+
 class ForbiddenError(JobsError):
     code = "FORBIDDEN"
     status_code = 403

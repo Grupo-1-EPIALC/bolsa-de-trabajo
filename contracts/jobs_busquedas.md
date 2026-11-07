@@ -327,6 +327,7 @@ Formato común:
 | HTTP | `code` | Cuándo | Qué hace el consumidor |
 |---|---|---|---|
 | 401 | `UNAUTHORIZED` | Falta el token o es inválido | Renovar sesión / redirigir a login |
+| 401 | `ACCOUNT_DELETED` | La cuenta fue dada de baja y el token todavía no venció | Cerrar la sesión |
 | 403 | `FORBIDDEN` | Rol incorrecto, recurso de otra empresa o `status=closed` sin permiso | Ocultar la acción y avisar |
 | 404 | `NOT_FOUND` | Oferta inexistente, o cerrada y el usuario no es dueño/admin/service | Tratarla como inexistente |
 | 405 | `METHOD_NOT_ALLOWED` | Método no soportado en la ruta | — |

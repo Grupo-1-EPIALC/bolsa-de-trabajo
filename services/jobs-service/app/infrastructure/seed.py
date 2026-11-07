@@ -1,6 +1,7 @@
 """Carga del seed de demo (12 ofertas ficticias) y validación previa."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 from app.domain.errors import InvalidInputError
@@ -44,8 +45,15 @@ def validate_seed(jobs: list[JobOpportunity]) -> None:
             raise SeedError(f"La oferta {job.id} del seed es inválida: {exc.message}") from exc
 
 
-def seed_repository(repository: JobRepository, path: str | Path) -> int:
+def seed_repository(
+    repository: JobRepository,
+    path: str | Path,
+    *,
+    is_deleted: Callable[[str], bool] = lambda _company_id: False,
+) -> int:
     """Carga el seed sólo si el repositorio está vacío. Devuelve cuántas cargó.
+
+    Las ofertas de empresas dadas de baja (`is_deleted`) no se vuelven a cargar.
 
     Si otra réplica arranca a la vez, el insert del mismo id choca contra la clave
     primaria; en ese caso se salta la oferta (otro proceso la cargó) y el seed queda
@@ -57,6 +65,8 @@ def seed_repository(repository: JobRepository, path: str | Path) -> int:
     validate_seed(jobs)
     loaded = 0
     for job in jobs:
+        if is_deleted(job.company_id):
+            continue
         try:
             repository.add(job)
         except Exception:

@@ -329,6 +329,7 @@ Formato:
 | HTTP | `code` | Cuándo | Qué muestra la UI |
 |---|---|---|---|
 | 401 | `UNAUTHORIZED` | Sin token / token vencido | Redirigir a login o refrescar |
+| 401 | `ACCOUNT_DELETED` | Un admin dio de baja la cuenta y el access token todavía no venció (hasta 15 min) | Cerrar la sesión y volver al home |
 | 403 | `FORBIDDEN` | Estudiante creando, otra empresa editando/cerrando | "No tenés permiso para esta acción" |
 | 404 | `NOT_FOUND` | Oferta inexistente o cerrada de otra empresa | "No encontramos esta búsqueda" |
 | 409 | `CONFLICT` | La oferta cambió mientras la editabas/cerrabas (lock optimista); la nueva versión se relee con `GET` | "Alguien más editó la búsqueda": recargar la oferta y re-aplicar el cambio |

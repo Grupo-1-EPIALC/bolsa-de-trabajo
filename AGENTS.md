@@ -150,7 +150,8 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Sólo la empresa dueña edita/cierra (403 si no). Validar que haya ≥ 1 requisito obligatorio.
 - `GET /companies/me/searches` = ofertas activas de la empresa.
 - Emitir `job.created` a n8n.
-**Tests mínimos:** UT-JOBS-01, UT-JOBS-02.
+- Recibir los eventos de cuenta de auth-service (`POST /api/v1/jobs/internal/account-events`, sólo `X-Service-Token`, idempotente): `account.deleted` archiva todas las ofertas de la empresa (salen de listados, detalle, búsquedas y matching; el JWT vigente recibe `401 ACCOUNT_DELETED`). Contrato: `contracts/jobs_matching.md` §11.
+**Tests mínimos:** UT-JOBS-01, UT-JOBS-02 y UT-JOBS-03 (eventos de cuenta).
 
 ### 4.4 Agente `matching-agent` — matching-service (FastAPI)
 **Debe:**
