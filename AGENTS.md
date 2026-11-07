@@ -124,6 +124,8 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Publicar la clave pública JWT en `/api/v1/auth/.well-known/jwks.json` para que los servicios FastAPI validen localmente.
 - Errores con el formato común `{"error": {...}}` mediante un `ExceptionFilter` global.
 - Contrato para el front y los servicios que validan el JWT en [`contracts/auth_frontend.md`](contracts/auth_frontend.md): actualizarlo en el mismo PR si cambia un endpoint o una respuesta.
+- Administración de cuentas (`/api/v1/auth/admin/users`, sólo `admin`): listar, editar email/empresa, forzar cambio de clave y borrado lógico (`deleted_at`). Email y CUIT son únicos sólo entre cuentas no borradas; una cuenta borrada no inicia sesión. Cada cambio se avisa con un evento de cuenta a `ACCOUNT_EVENT_WEBHOOKS` ([`contracts/account_events.md`](contracts/account_events.md)) mediante un **outbox transaccional** (`auth.account_event_deliveries`) con reintentos y orden por cuenta: nunca publicar fuera de la transacción del cambio.
+- `token_version` por cuenta (claim `tv`): reset, borrado y cambio/recuperación de clave la suben y `JwtStrategy` la compara en cada request (`401 TOKEN_REVOKED`).
 **No debe:** guardar claves en texto plano, devolver si un email existe, mezclar lógica de perfiles.
 **Tests mínimos:** UT-AUTH-01 a UT-AUTH-07 (Jest).
 
