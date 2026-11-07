@@ -162,6 +162,39 @@ export const COMPANY_LINK_TYPE = [
   ['other', 'Otro'],
 ] as const;
 
+// ---- Búsquedas (contracts/jobs_frontend.md §10) ----
+
+export const JOB_STATUS = [
+  ['active', 'Activa'],
+  ['closed', 'Cerrada'],
+] as const;
+
+export const JOB_STATUS_FILTER = [
+  ['active', 'Activas'],
+  ['closed', 'Cerradas'],
+  ['all', 'Todas'],
+] as const;
+
+export const REQUIREMENT_KIND = [
+  ['required', 'Obligatorio'],
+  ['desired', 'Deseable'],
+  ['excluding', 'Excluyente'],
+] as const;
+
+export const CONTRACT_DURATION = [
+  ['permanent', 'Indefinido'],
+  ['fixed_term', 'Plazo fijo'],
+  ['project', 'Por proyecto'],
+  ['seasonal', 'Temporada'],
+] as const;
+
+/** Visibilidad del sueldo de una búsqueda (la ve la empresa al publicar). */
+export const JOB_SALARY_VISIBILITY = [
+  ['public', 'Público'],
+  ['on_match', 'Sólo para los que hacen match'],
+  ['hidden', 'Oculto (sólo lo usa el motor)'],
+] as const;
+
 /** Etiqueta de un valor dentro de una lista de opciones (o el valor si no está). */
 export function labelOf(options: Options, value: unknown): string {
   return options.find(([v]) => v === value)?.[1] ?? String(value ?? '');

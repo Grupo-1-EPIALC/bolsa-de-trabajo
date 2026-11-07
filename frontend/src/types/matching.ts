@@ -102,6 +102,21 @@ export interface StudentAIItem {
 export type AIStatus =
   'not_requested' | 'pending' | 'processing' | 'ready' | 'completed' | 'failed';
 
+/** Bloque de IA (origin AI): nunca trae score; `items` se une por id con el bloque por reglas. */
+export interface AIBlock<T> {
+  origin: 'AI';
+  status: AIStatus;
+  request_id?: string | null;
+  error?: ApiErrorBody | null;
+  summary?: string;
+  model?: string;
+  prompt_version?: string;
+  generated_at?: string;
+  disclaimer?: string;
+  verified?: boolean;
+  items?: T[];
+}
+
 /** Vista del estudiante (§4.1). */
 export interface StudentRecommendationsView {
   profile_id: string;
@@ -113,19 +128,65 @@ export interface StudentRecommendationsView {
     excluded_incompatible: number;
     items: StudentRuleItem[];
   };
-  ai_recommendations: {
-    origin: 'AI';
-    status: AIStatus;
-    request_id?: string | null;
-    error?: ApiErrorBody | null;
-    summary?: string;
-    model?: string;
-    prompt_version?: string;
-    generated_at?: string;
-    disclaimer?: string;
-    verified?: boolean;
-    items?: StudentAIItem[];
+  ai_recommendations: AIBlock<StudentAIItem>;
+}
+
+/** Candidato anonimizado (§4.2): sin nombre, email, teléfono ni dirección. */
+export interface CandidateSnapshot {
+  profile_id: string;
+  headline?: string | null;
+  location?: Partial<Location> | null;
+  years_experience?: number | null;
+  skills?: Array<{ name: string; level: number }>;
+  languages?: Array<{ name: string; level: string }>;
+  education?: Array<{
+    level: string;
+    status: string;
+    degree?: string | null;
+    field?: string | null;
+  }>;
+  academic_status?: {
+    career?: string | null;
+    current_year?: number | null;
+    progress_percent?: number | null;
+  } | null;
+  target_roles?: string[];
+  work_conditions?: WorkConditions;
+  [extra: string]: unknown;
+}
+
+export interface CompanyRuleItem {
+  rank: number;
+  candidate: CandidateSnapshot;
+  match: Match;
+}
+
+export interface CompanyAIItem {
+  profile_id: string;
+  content: {
+    priority?: Priority;
+    justification?: string;
+    strengths?: string[];
+    gaps?: string[];
+    conditions_alerts?: string[];
+    interview_questions?: string[];
   };
+}
+
+/** Vista de la empresa (§4.2): candidatos para una búsqueda propia. */
+export interface CompanyRecommendationsView {
+  job_id: string;
+  rule_based: {
+    origin: 'RULES';
+    engine_version: string;
+    rules_version?: string;
+    job_id: string;
+    job?: JobSnapshot;
+    evaluated: number;
+    excluded_incompatible: number;
+    items: CompanyRuleItem[];
+  };
+  ai_recommendations: AIBlock<CompanyAIItem>;
 }
 
 /** Pedido de análisis con IA (§4.3). */

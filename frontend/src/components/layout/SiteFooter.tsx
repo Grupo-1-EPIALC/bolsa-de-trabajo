@@ -46,6 +46,7 @@ export const SiteFooter: React.FC<SiteFooterProps> = ({ user, onNavigate, onSect
                 <FooterLink onClick={() => onSection('recommendations')}>
                   Ofertas para vos
                 </FooterLink>
+                <FooterLink onClick={() => onSection('jobs')}>Todas las ofertas</FooterLink>
                 <FooterLink onClick={() => onSection('profile')}>Mi perfil</FooterLink>
               </>
             )}
@@ -59,6 +60,7 @@ export const SiteFooter: React.FC<SiteFooterProps> = ({ user, onNavigate, onSect
             {user?.role === 'company' && (
               <>
                 <FooterLink onClick={() => onSection('panel')}>Mi empresa</FooterLink>
+                <FooterLink onClick={() => onSection('searches')}>Búsquedas</FooterLink>
                 <FooterLink onClick={() => onSection('profile')}>Perfil de la empresa</FooterLink>
               </>
             )}
