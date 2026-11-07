@@ -6,10 +6,11 @@ import { ProfileWizard } from '../components/profile/ProfileWizard';
 import { ProfileDashboard } from '../components/profile/ProfileDashboard';
 import { JobRecommendations } from '../components/matching/JobRecommendations';
 import { profileService } from '../services/profileService';
-import { errorMessage } from '../services/api';
+import { ApiError, errorMessage } from '../services/api';
 import { firstIncompleteStep } from '../profile/draft';
 import type { StudentSection } from '../navigation';
 import type { CvResult, ProfileStep, ProfileView } from '../types/profile';
+
 
 interface StudentAreaProps {
   section: StudentSection;
@@ -117,13 +118,23 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
     }
   };
 
+  // 💡 PASO 2.1: Handler inmutable para descartar sugerencias de IA de inmediato
   const discardSuggestions = async () => {
+    setActionError(null); // 1. Limpiamos cualquier cartel de error previo al iniciar
     try {
       await profileService.discardSuggestions();
-      setProfile((p) => (p ? { ...p, has_cv_suggestions: false } : p));
     } catch (err) {
-      setActionError(errorMessage(err));
+      // 2. 💡 EL CERROJO DEL 404: Si el backend dice que ya no existen, lo ignoramos pacíficamente
+      if (err instanceof ApiError && err.status === 404) {
+        console.warn('Las sugerencias ya fueron descartadas previamente.');
+      } else {
+        // Solo mostramos errores reales (ej. 500, 502)
+        setActionError(errorMessage(err));
+        return;
+      }
     }
+    // 3. Forzamos el estado limpio en React para la UI
+    setProfile((prev) => (prev ? { ...prev, has_cv_suggestions: false } : prev));
   };
 
   const header = onboarding
@@ -176,7 +187,18 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
         profile={profile}
         initialStep={wizardStep}
         cvResult={cvResult}
-        onProfileChange={setProfile}
+        // 💡 EL CERROJO: Ignora el "true" fantasma del backend en pasos posteriores
+        onProfileChange={(updated) => {
+          setProfile((prev) =>
+            prev
+              ? {
+                  ...updated,
+                  has_cv_suggestions:
+                    prev.has_cv_suggestions === false ? false : updated.has_cv_suggestions,
+                }
+              : updated
+          );
+        }}
         onDiscardSuggestions={discardSuggestions}
         onDone={() => {
           setCvResult(null);

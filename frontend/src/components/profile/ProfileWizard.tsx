@@ -41,11 +41,22 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Descarte explícito de sugerencias en la API
+  const handleDiscard = async () => {
+    setUseDraft(false);
+    try {
+      await profileService.discardSuggestions();
+    } catch (e) {
+      // Ignorar si no existían sugerencias
+    }
+    onDiscardSuggestions?.();
+  };
+
   const save = async (sections: ProfileSections) => {
     setSaving(true);
     setError(null);
     try {
-      // 1. Limpiar las listas de propiedades calculadas por el backend (normalized, months)
+      // 1. Limpieza de propiedades calculadas
       const cleanSkills = sections.skills?.map(({ normalized, ...s }: any) => ({
         ...s,
         level: Number(s.level),
@@ -56,8 +67,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
       const cleanExperience = sections.experience?.map(({ months, ...x }: any) => x);
       const cleanLanguages = sections.languages?.map(({ normalized, ...l }: any) => l);
 
-      // 2. Construir manualmente el objeto SOLO con los campos editables permitidos
-      // Esto descarta automáticamente id, user_id, completion, created_at, etc.
+      // 2. Construcción del payload
       const rawPayload: any = {
         personal: sections.personal,
         headline: sections.headline,
@@ -78,21 +88,33 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
         consents: sections.consents,
       };
 
-      // 3. Procesar el resumen: si tiene texto lo agregamos limpio
       if (sections.summary && sections.summary.trim() !== '') {
         rawPayload.summary = sections.summary.trim();
       }
 
-      // 4. Limpiar undefineds con JavaScript nativo (reemplaza a compact y evita errores de TS)
       const finalPayload = Object.fromEntries(
         Object.entries(rawPayload).filter(([_, v]) => v !== undefined),
       ) as ProfileSections;
 
-      // 5. Enviar a la API
+      // 3. Envío al servicio de perfiles
       const updated = await profileService.update(finalPayload);
+
+      // 4. Limpieza del estado de sugerencias de IA si guardamos el paso 'cv'
+      if (step === 'cv') {
+        setUseDraft(false);
+        try {
+          await profileService.discardSuggestions();
+        } catch (e) {
+          // Ignorar si no había sugerencias pendientes
+        }
+        // Desactivación local para actualizar la UI en tiempo real
+        updated.has_cv_suggestions = false;
+        onDiscardSuggestions?.();
+      }
+
+      // 5. Propagar el perfil con has_cv_suggestions en false al componente padre
       onProfileChange(updated);
 
-      if (step === 'cv') setUseDraft(false);
       const next = STEP_ORDER[stepIndex + 1];
       if (next) goTo(next);
       else onDone();
@@ -109,7 +131,6 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
   return (
     <div className="card card-elevated">
       <div className="card-body p-4 p-md-5">
-        {/* Pasos */}
         <ol
           className="nav nav-pills nav-fill gap-2 mb-4 list-unstyled"
           aria-label="Pasos del perfil"
@@ -148,7 +169,8 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
           </div>
         )}
 
-        {step === 'cv' && draft && cvResult && (
+        {/* Mantiene el cartel visible SOLO si hay sugerencias activas sin confirmar */}
+        {step === 'cv' && draft && cvResult && profile?.has_cv_suggestions && (
           <div className="panel-ai rounded-3 p-3 mb-4 small">
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
               <span className="badge badge-ai text-uppercase">
@@ -158,20 +180,16 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
               <button
                 type="button"
                 className="btn btn-sm btn-link text-danger p-0"
-                onClick={() => {
-                  setUseDraft(false);
-                  onDiscardSuggestions?.();
-                }}
+                onClick={handleDiscard}
               >
                 No usar estos datos
               </button>
             </div>
-            <p className="mb-1">
+            <p className="mb-0">
               Precargamos el formulario con lo que detectamos en{' '}
               <strong>{cvResult.file?.filename ?? 'tu CV'}</strong>. Revisá cada dato: podés
               editarlo o quitarlo. Los campos resaltados no estaban en el CV.
             </p>
-            <p className="mb-0 text-body-secondary">{cvResult.disclaimer}</p>
           </div>
         )}
 

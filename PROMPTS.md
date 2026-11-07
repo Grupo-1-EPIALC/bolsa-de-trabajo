@@ -238,3 +238,25 @@
   - El MD lista lo que búsquedas consume de otros servicios pero **no especifica internos** de auth/profile/matching/n8n/gateway (alcance pedido).
 - **Archivos afectados:** `contracts/jobs_busquedas.md`, `PROMPTS.md`.
 - **Decisión:** aceptado.
+
+##### P-018 — Arreglos y estabilización del Frontend (Bootstrap y sincronización)
+*   **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Copilot / Gemini (frontend-agent) · **Rama:** `feature/frontend/v0.2.1-estilo-bootstrap` · **HU:** Correcciones transversales de UI, flujos de sesión y sanitización de payloads (PATCH)
+*   **Prompt (resumido):**
+    > Corrige fallos de integración y errores 422 en el envío de formularios de perfil mediante la limpieza de propiedades calculadas por el backend (como `normalized` o `months`), estabilizar la visualización de componentes en Bootstrap y asegurar la compatibilidad de los flujos de estudiante y empresa con la arquitectura actual.
+*   **Resumen de la respuesta:**
+    * Sanitización del objeto de envío en `ProfileWizard.tsx` excluyendo atributos de solo lectura o calculados (`normalized`, `months`, etc.) para evitar conflictos de validación estricta con Pydantic/FastAPI en el backend.
+    * Verificación y soporte de la estructura SPA basada en Bootstrap 5, manteniendo la separación visual estricta entre reglas (`origin: "RULES"`, badges verdes) y sugerencias de IA (`origin: "AI"`, badges ámbar con disclaimer)[cite: 1, 3, 5].
+    * Ajustes en la navegación y control de vistas privadas según los roles de usuario (`student`, `company`, `admin`)[cite: 1, 5].
+*   **Archivos afectados:** frontend/src/components/profile/ProfileWizard.tsx, frontend/src/components/profile/StepCvData.tsx, PROMPTS.md.
+*   **Decisión:** aceptado.
+
+##### P-019 — Sincronización de estado y manejo de excepciones 404 en sugerencias de CV
+*   **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Gemini (frontend-agent) · **Rama:** `feature/frontend/v0.2.2-estilo-bootstrap` · **HU:** Correcciones de     sincronización de UI y flujos de perfil de estudiante cuando se completa un perfil a reaiz de sugerencia de IA.
+*   **Prompt (resumen):**
+    > Corrige la persistencia del cartel de sugerencias de IA en el dashboard y perfil cuando ya no hay sugerencias, o fueron reeemplazadas manualmente, este cartel persiste y se debe refrescar la pantalla (F5) para que desaparezca, este error se causa por la respuesta 404 del backend al descartar sugerencias o haberlas sobreescrito.
+*   **Resumen de la respuesta:**
+    * Actualización inmutable del estado `profile` en `StudentArea.tsx` mediante `setProfile((prev) => ({ ...prev, has_cv_suggestions: false }))` para forzar un re-render inmediato en la UI sin requerir recarga manual (`F5`).
+    * Ajuste en `ProfileWizard.tsx` para mutar explícitamente `updated.has_cv_suggestions = false` al guardar el paso del CV y conectar el evento de descarte con la API.
+    * Incorporación de un bloque de control para atrapar la excepción `ApiError` con estado `404` (`CV_SUGGESTIONS_NOT_FOUND`), evitando que se renderice una alerta de error global en la interfaz cuando las sugerencias ya habían sido borradas previamente.
+*   **Archivos afectados:** frontend/src/pages/StudentArea.tsx, frontend/src/components/profile/ProfileWizard.tsx, PROMPTS.md.
+*   **Decisión:** aceptado.

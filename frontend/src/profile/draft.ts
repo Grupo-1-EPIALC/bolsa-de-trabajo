@@ -83,15 +83,21 @@ export function mergeDraft(
   draft: Record<string, unknown> | null,
 ): ProfileSections {
   const base: Record<string, unknown> = {};
+  
   for (const key of CV_STEP_SECTIONS) {
+    const fromProfile = profile?.[key as keyof ProfileView];
     const fromDraft = draft?.[key];
-    const fromProfile = profile?.[key];
-    base[key] = fromDraft !== undefined ? stripPlaceholders(fromDraft) : fromProfile;
+
+    // 💡 LÓGICA DE COMPARATIVA:
+    // Si el usuario YA TIENE un dato persistido/confirmado en el perfil real, 
+    // se respeta su dato. Si el campo en el perfil está vacío, se muestra la sugerencia de la IA.
+    if (fromProfile !== undefined && fromProfile !== null && fromProfile !== '') {
+      base[key] = fromProfile;
+    } else if (fromDraft !== undefined) {
+      base[key] = stripPlaceholders(fromDraft);
+    }
   }
-  // El email de la cuenta manda si la IA no lo encontró.
-  const personal = (base.personal ?? {}) as Record<string, unknown>;
-  if (!personal.email && profile?.personal?.email) personal.email = profile.personal.email;
-  base.personal = personal;
+
   return base as ProfileSections;
 }
 
