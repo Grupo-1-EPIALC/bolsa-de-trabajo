@@ -85,11 +85,7 @@ export function firstIncompleteStep(completion: Completion | undefined): Profile
 function mergeValues(profile: unknown, draft: unknown): unknown {
   if (draft === undefined) return profile;
 
-  if (
-    profile === undefined ||
-    profile === null ||
-    profile === ''
-  ) {
+  if (profile === undefined || profile === null || profile === '') {
     return stripPlaceholders(draft);
   }
 
