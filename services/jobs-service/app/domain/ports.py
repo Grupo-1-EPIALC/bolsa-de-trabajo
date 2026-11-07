@@ -35,6 +35,20 @@ class JobRepository(Protocol):
 
     def count(self) -> int: ...
 
+    def archive_company(self, company_id: str, deleted_at: datetime) -> int:
+        """Mueve todas las ofertas de la empresa al archivo. Devuelve cuántas movió."""
+        ...
+
+
+class DeletedAccounts(Protocol):
+    """Cuentas dadas de baja en auth-service (soft delete)."""
+
+    def mark(self, user_id: str, role: str, deleted_at: datetime) -> bool:
+        """Registra la baja. False si ya estaba registrada (evento repetido)."""
+        ...
+
+    def contains(self, user_id: str) -> bool: ...
+
 
 class CompanyDirectory(Protocol):
     def snapshot_for(self, access_token: str) -> CompanySnapshot: ...

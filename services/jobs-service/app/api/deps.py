@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import Depends, Header, Query
 
 from app.domain.auth import SERVICE_PRINCIPAL, Principal
-from app.domain.errors import UnauthorizedError
+from app.domain.errors import AccountDeletedError, UnauthorizedError
 from app.infrastructure.config import JobsSettings
 from app.infrastructure.container import Container, build_container
 
@@ -27,6 +27,8 @@ def get_principal(
 
     - `X-Service-Token`: matching-service / mcp-tools / n8n por la red interna.
     - `Authorization: Bearer <JWT>`: usuarios del frontend, validado con el JWKS de auth-service.
+      El JWT de una cuenta dada de baja sigue siendo válido hasta que vence (15 min): se
+      rechaza con `401 ACCOUNT_DELETED` (lo avisa auth-service con `account.deleted`).
     """
     if x_service_token is not None:
         expected = container.settings.service_token
@@ -36,7 +38,10 @@ def get_principal(
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
         if token:
-            return container.tokens.verify(token)
+            principal = container.tokens.verify(token)
+            if container.deleted_accounts.contains(principal.subject):
+                raise AccountDeletedError()
+            return principal
     raise UnauthorizedError("Falta el token de acceso (Authorization: Bearer <JWT>)")
 
 

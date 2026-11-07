@@ -11,10 +11,11 @@ from fastapi import FastAPI
 from app.api.deps import get_container
 from app.api.errors import install_error_handlers
 from app.api.routes_companies import router as companies_router
+from app.api.routes_internal import router as internal_router
 from app.api.routes_jobs import router as jobs_router
 
 SERVICE_NAME = "jobs-service"
-SERVICE_VERSION = "0.1.0"
+SERVICE_VERSION = "0.2.0"
 
 
 @asynccontextmanager
@@ -27,6 +28,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION, lifespan=lifespan)
 install_error_handlers(app)
+app.include_router(internal_router)
 app.include_router(jobs_router)
 app.include_router(companies_router)
 
