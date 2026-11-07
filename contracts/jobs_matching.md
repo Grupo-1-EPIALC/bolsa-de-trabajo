@@ -231,6 +231,7 @@
 
 ```env
 MATCHING_USE_MOCKS=false   # true = pool ficticio de app/data/mock
+MCP_USE_MOCKS=false        # mcp-tools: tiene que coincidir (WF-06 rankea por MCP)
 JOBS_SERVICE_URL=http://jobs-service:8000
 SERVICE_TOKEN=...
 ```
@@ -281,5 +282,5 @@ curl -H "X-Service-Token: $SERVICE_TOKEN" \
 - [ ] `GET /api/v1/jobs/job-004` devuelve el detalle completo.
 - [ ] Una oferta cerrada no aparece en `status=active`.
 - [x] Con `MATCHING_USE_MOCKS=false` (default), el ranking de matching usa los jobs reales.
-- [ ] `mcp-tools` con `MCP_USE_MOCKS=false` obtiene los mismos jobs.
+- [x] `mcp-tools` con `MCP_USE_MOCKS=false` (default) obtiene los mismos jobs: `rank_jobs_for_student` y `rank_candidates_for_job` devuelven el mismo ranking que matching por REST, con ofertas y perfiles reales (UUID / `prof-…`).
 - [ ] El sueldo llega completo al service token, aunque `visibility` sea `on_match`.

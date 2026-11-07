@@ -227,7 +227,10 @@ services:
       CV_MAX_SIZE_MB: ${CV_MAX_SIZE_MB}
       CV_ALLOWED_EXTENSIONS: ${CV_ALLOWED_EXTENSIONS}
       CV_MAX_TEXT_CHARS: ${CV_MAX_TEXT_CHARS}
-      MCP_USE_MOCKS: ${MCP_USE_MOCKS}
+      # false = herramientas sobre profile/jobs/matching reales (mismo modo que
+      # MATCHING_USE_MOCKS: si no coinciden, WF-06 pide rankings de IDs que el otro
+      # lado no conoce). true = datos ficticios de app/infrastructure/gateways_mock.py.
+      MCP_USE_MOCKS: ${MCP_USE_MOCKS:-false}
 
   # ------------------------------------------------------------- frontend ----
   frontend:
