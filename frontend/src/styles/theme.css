@@ -205,7 +205,7 @@ h6,
   --bs-btn-hover-border-color: var(--app-magenta-dark);
   --bs-btn-active-bg: var(--app-magenta-darker);
   --bs-btn-active-border-color: var(--app-magenta-darker);
-  --bs-btn-border-radius: 0;
+  --bs-btn-border-radius: 0.25;
   padding: 0.75rem 1.75rem;
 }
 
@@ -233,7 +233,7 @@ h6,
 .hero-label {
   background-color: rgba(186, 57, 149, 0.92);
   color: #fff;
-  border-radius: 2.5rem 0.25rem 0.25rem 2.5rem;
+  border-radius: 0.25rem 2.5rem 0.25rem 2.5rem;
   padding: 1.1rem 2rem;
   max-width: 62rem;
 }
