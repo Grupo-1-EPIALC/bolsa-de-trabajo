@@ -223,6 +223,7 @@ Formato común `{"error": {"code", "message", "details"}}`.
 | HTTP | `code` | Cuándo |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Sin token o token inválido (todas salvo el logo) |
+| 401 | `ACCOUNT_DELETED` | Un admin dio de baja la cuenta y el access token todavía no venció (hasta 15 min): cerrar la sesión. El perfil y el logo dejan de verse |
 | 403 | `FORBIDDEN` | Un usuario que no es empresa usa `/me` |
 | 404 | `COMPANY_PROFILE_NOT_FOUND` | Sin perfil todavía · perfil oculto o inexistente |
 | 404 | `LOGO_NOT_FOUND` | La empresa no tiene logo |

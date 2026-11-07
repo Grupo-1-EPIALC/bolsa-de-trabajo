@@ -33,6 +33,7 @@
 - **Filtro por defecto (cambio respecto del mock):** sólo perfiles **buscables**: `status = "complete"`, `visibility != "hidden"` y `job_search_status != "not_looking"`. Los borradores no entran al ranking. `include_all=true` los incluye (auditoría).
 - `skills`: se queda con los perfiles que tengan **alguna** de esas skills. Se normalizan con el mismo catálogo y sinónimos (`python3` → `python`).
 - `items` trae objetos completos, igual que jobs-service.
+- Los perfiles de **cuentas dadas de baja** no aparecen nunca (ni con `include_all=true`) y `GET /profiles/{id}` da `404`: ver §8.
 
 ---
 
@@ -89,13 +90,13 @@
 - A cada perfil se le agregan `summary`, `consents` y una experiencia ficticia equivalente a su `years_experience`. Todos quedan `complete` y buscables.
 - Es idempotente (no pisa perfiles existentes). En producción: `PROFILE_SEED_DEMO=false`.
 
-### Para apagar los mocks en matching
+### Datos reales o mocks en matching
+
+matching-service usa por defecto los datos reales (`MATCHING_USE_MOCKS=false` en `docker-compose.yml`): con profile-service y jobs-service levantados (los dos con seed), rankea contra el pool real y los estudiantes que se registran y completan el perfil entran solos. Para probar matching aislado con el pool ficticio:
 
 ```bash
-MATCHING_USE_MOCKS=false docker compose up -d matching-service
+MATCHING_USE_MOCKS=true docker compose up -d matching-service
 ```
-
-Con profile-service y jobs-service levantados (los dos con seed), matching rankea contra los datos reales. Los estudiantes que se registran y completan el perfil entran solos al pool.
 
 ---
 
@@ -127,3 +128,19 @@ Después de cada alta o `PATCH`, profile-service hace un **POST best-effort** a 
 - profile-service sigue llamando a `POST http://n8n:5678/webhook/cv-extract` (WF-01) con el mismo body, documentado en [`cv_recognition_profile_service.md`](cv_recognition_profile_service.md) §2.2.
 - La respuesta de WF-01 (`cv_suggestions` con forma `cv_standard`) **no cambia**. profile-service le agrega `profile_draft` y `review_fields` para el front.
 - **Para probarlo de punta a punta, WF-01 tiene que estar importado y activo en n8n.** Si no, el job termina en `failed` con `CV_WEBHOOK_ERROR` ("webhook not registered").
+
+---
+
+## 8. Eventos de cuenta (auth-service → profile-service)
+
+`POST http://profile-service:8000/api/v1/profiles/internal/account-events` · sólo `X-Service-Token` (un usuario recibe `403`; por el gateway no llega porque se borra el header). Cuerpo y entrega en [`account_events.md`](account_events.md). Responde `200` con `{ "event", "user_id", "result" }`.
+
+| Evento | Qué hace profile-service | `result` |
+|---|---|---|
+| `account.deleted` | Anota la baja en `profile.deleted_accounts` (aunque no tuviera perfil) y mueve el perfil del estudiante a `profile.profiles_deleted` o el de la empresa a `profile.company_profiles_deleted` (auditoría). Borra el logo. Desde ahí sale del pool de matching, de los listados y de `/me`, y el JWT que todavía no venció recibe `401 ACCOUNT_DELETED` | `archived` (o `updated` si no tenía perfil) |
+| `account.updated` (empresa) | Actualiza la copia de sólo lectura de razón social, CUIT y actividad (`legal` y el `snapshot` para jobs-service) | `updated` |
+| `account.updated` (estudiante) | Nada: `personal.email` es un dato de contacto que edita el estudiante | `ignored` |
+| Repetido o de un tipo desconocido | Nada (idempotente) | `ignored` |
+
+Una re-alta con el mismo email o CUIT es otra cuenta (otro `user_id`), con un perfil nuevo.
+

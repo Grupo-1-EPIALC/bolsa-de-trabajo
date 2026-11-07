@@ -123,6 +123,9 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - DTOs con `class-validator`; controllers delgados; lógica en services; emails vía interfaz `EmailNotifier` inyectada por token (implementación SMTP → Mailpit en dev).
 - Publicar la clave pública JWT en `/api/v1/auth/.well-known/jwks.json` para que los servicios FastAPI validen localmente.
 - Errores con el formato común `{"error": {...}}` mediante un `ExceptionFilter` global.
+- Contrato para el front y los servicios que validan el JWT en [`contracts/auth_frontend.md`](contracts/auth_frontend.md): actualizarlo en el mismo PR si cambia un endpoint o una respuesta.
+- Administración de cuentas (`/api/v1/auth/admin/users`, sólo `admin`): listar, editar email/empresa, forzar cambio de clave y borrado lógico (`deleted_at`). Email y CUIT son únicos sólo entre cuentas no borradas; una cuenta borrada no inicia sesión. Cada cambio se avisa con un evento de cuenta a `ACCOUNT_EVENT_WEBHOOKS` ([`contracts/account_events.md`](contracts/account_events.md)) mediante un **outbox transaccional** (`auth.account_event_deliveries`) con reintentos y orden por cuenta: nunca publicar fuera de la transacción del cambio.
+- `token_version` por cuenta (claim `tv`): reset, borrado y cambio/recuperación de clave la suben y `JwtStrategy` la compara en cada request (`401 TOKEN_REVOKED`).
 **No debe:** guardar claves en texto plano, devolver si un email existe, mezclar lógica de perfiles.
 **Tests mínimos:** UT-AUTH-01 a UT-AUTH-07 (Jest).
 
@@ -139,7 +142,8 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Perfil completo de la estructura común §5 en el schema `profile`. `PATCH /profiles/me` reemplaza secciones y rechaza `"COMPLETAR_MANUALMENTE"`. La completitud se calcula por reglas (`origin: "RULES"`) en 3 pasos (`cv`, `preferences`, `privacy`). Las sugerencias de WF-01 se devuelven como `profile_draft` + `review_fields`.
 - Autenticar con el JWT RS256 de auth-service (JWKS) y servicios sólo con `X-Service-Token`. Sólo `student` tiene `/me`; un perfil ajeno da 404. Exponer el pool para matching (`GET /profiles`, sólo perfiles buscables) con vistas que minimizan datos (sin teléfono, inclusión ni consentimientos). Contratos: `contracts/profile_frontend.md` y `contracts/profiles_matching.md`.
 - Perfil de empresa (`/api/v1/profiles/companies/...`): marca empleadora (nombre comercial, logo PNG/JPEG/WebP ≤ 1 MB validado por firma y servido público, rubro, tamaño, sede, descripción, links, beneficios, contacto), con razón social/CUIT/actividad como copia de sólo lectura de auth-service y `snapshot` con la forma de `company_snapshot` para jobs-service. **Las búsquedas no van en profile-service**: son de jobs-service y el front las pide ahí. Contratos: `contracts/company_profile_frontend.md` y `contracts/company_profiles_jobs.md`.
-**Tests mínimos:** UT-PROF-01 a UT-PROF-07.
+- Recibir los eventos de cuenta de auth-service (`POST /api/v1/profiles/internal/account-events`, sólo `X-Service-Token`, idempotente): `account.deleted` archiva el perfil de estudiante o empresa (sale del pool, de los listados y de `/me`; el JWT vigente recibe `401 ACCOUNT_DELETED`) y `account.updated` refresca la copia de los datos legales de la empresa. Contrato: `contracts/profiles_matching.md` §8.
+**Tests mínimos:** UT-PROF-01 a UT-PROF-07 y UT-PROF-09 (eventos de cuenta).
 
 ### 4.3 Agente `jobs-agent` — jobs-service (FastAPI)
 **Debe:**
@@ -147,7 +151,8 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Sólo la empresa dueña edita/cierra (403 si no). Validar que haya ≥ 1 requisito obligatorio.
 - `GET /companies/me/searches` = ofertas activas de la empresa.
 - Emitir `job.created` a n8n.
-**Tests mínimos:** UT-JOBS-01, UT-JOBS-02.
+- Recibir los eventos de cuenta de auth-service (`POST /api/v1/jobs/internal/account-events`, sólo `X-Service-Token`, idempotente): `account.deleted` archiva todas las ofertas de la empresa (salen de listados, detalle, búsquedas y matching; el JWT vigente recibe `401 ACCOUNT_DELETED`). Contrato: `contracts/jobs_matching.md` §11.
+**Tests mínimos:** UT-JOBS-01, UT-JOBS-02 y UT-JOBS-03 (eventos de cuenta).
 
 ### 4.4 Agente `matching-agent` — matching-service (FastAPI)
 **Debe:**

@@ -2,8 +2,11 @@
 export type View = 'home' | 'auth' | 'app';
 export type AuthMode = 'login' | 'register';
 
-/** Secciones del área del estudiante. */
-export type StudentSection = 'panel' | 'recommendations' | 'profile';
+/**
+ * Secciones del área privada. Estudiante: panel, recomendaciones, todas las ofertas y perfil.
+ * Empresa: panel, búsquedas y perfil.
+ */
+export type StudentSection = 'panel' | 'recommendations' | 'jobs' | 'searches' | 'profile';
 
 /** Vista a mostrar según la sesión: sin sesión nunca se muestra el área privada. */
 export function resolveView(requested: View, isAuthenticated: boolean): View {

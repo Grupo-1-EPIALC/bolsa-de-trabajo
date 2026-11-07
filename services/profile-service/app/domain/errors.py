@@ -68,6 +68,13 @@ class InvalidInputError(ProfileDomainError):
         super().__init__("INVALID_INPUT", message, status_code=422, details=details)
 
 
+class AccountDeletedError(ProfileDomainError):
+    """La cuenta fue dada de baja en auth-service; su access token todavía no venció."""
+
+    def __init__(self) -> None:
+        super().__init__("ACCOUNT_DELETED", "La cuenta fue dada de baja", status_code=401)
+
+
 class UnauthorizedError(ProfileDomainError):
     def __init__(self, message: str = "No autenticado", details: dict[str, Any] | None = None):
         super().__init__("UNAUTHORIZED", message, status_code=401, details=details)

@@ -1,6 +1,6 @@
 {
   "name": "auth-service",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Autenticación, usuarios y empresas (JWT RS256)",
   "private": true,
   "license": "UNLICENSED",

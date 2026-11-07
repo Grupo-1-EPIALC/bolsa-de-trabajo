@@ -1,24 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { CompanyLogo } from './CompanyLogo';
 import { CompletionCard } from '../profile/CompletionCard';
-import { companyService } from '../../services/companyService';
+import { jobsService } from '../../services/jobsService';
 import { errorMessage } from '../../services/api';
-import { COMPANY_SIZE, SENIORITY, WORK_MODALITY, labelOf } from '../../profile/labels';
-import type { CompanyProfile, CompanySearchList, CompanyStep } from '../../types/company';
+import { COMPANY_SIZE, labelOf } from '../../profile/labels';
+import { jobFacts } from '../../jobs/format';
+import type { CompanyProfile, CompanyStep } from '../../types/company';
+import type { JobList } from '../../types/jobs';
 
 interface CompanyDashboardProps {
   profile: CompanyProfile;
   onEdit: (step: CompanyStep) => void;
+  onSearches: () => void;
+  onNewSearch: () => void;
 }
 
 /** Panel de la empresa: su perfil, la completitud y sus búsquedas activas (jobs-service). */
-export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({ profile, onEdit }) => {
-  const [searches, setSearches] = useState<CompanySearchList | null>(null);
+export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({
+  profile,
+  onEdit,
+  onSearches,
+  onNewSearch,
+}) => {
+  const [searches, setSearches] = useState<JobList | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
-    companyService
-      .mySearches('active')
+    jobsService
+      .mySearches('active', 1, 5)
       .then(setSearches)
       .catch((err) => setSearchError(errorMessage(err)));
   }, []);
@@ -95,9 +104,26 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({ profile, onE
             <h2 id="searches-title" className="section-title h5 mb-0">
               Búsquedas activas
             </h2>
-            {searches && (
-              <span className="badge text-bg-primary rounded-pill">{searches.total}</span>
-            )}
+            <div className="d-flex align-items-center gap-2">
+              {searches && (
+                <span className="badge text-bg-primary rounded-pill">{searches.total}</span>
+              )}
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary btn-pill"
+                onClick={onSearches}
+              >
+                Ver todas
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary btn-pill"
+                onClick={onNewSearch}
+              >
+                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                Nueva búsqueda
+              </button>
+            </div>
           </div>
           {!searches && !searchError && (
             <span
@@ -119,24 +145,11 @@ export const CompanyDashboard: React.FC<CompanyDashboardProps> = ({ profile, onE
                 >
                   <div>
                     <strong className="d-block text-body-emphasis">{s.title}</strong>
-                    <span className="small">
-                      {[
-                        s.area,
-                        s.seniority && labelOf(SENIORITY, s.seniority),
-                        [s.location?.city, s.location?.province].filter(Boolean).join(', '),
-                        (s.work_conditions?.work_modality ?? [])
-                          .map((m) => labelOf(WORK_MODALITY, m))
-                          .join(' / '),
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </span>
+                    <span className="small">{jobFacts(s).join(' · ')}</span>
                   </div>
-                  {s.vacancies !== undefined && (
-                    <span className="badge text-bg-light border flex-shrink-0">
-                      {s.vacancies} vacante{s.vacancies === 1 ? '' : 's'}
-                    </span>
-                  )}
+                  <span className="badge text-bg-light border flex-shrink-0">
+                    {s.vacancies} vacante{s.vacancies === 1 ? '' : 's'}
+                  </span>
                 </li>
               ))}
             </ul>

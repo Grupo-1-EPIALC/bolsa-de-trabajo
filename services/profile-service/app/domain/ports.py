@@ -40,6 +40,9 @@ class ProfileRepository(Protocol):
 
     def list(self, *, offset: int, limit: int) -> tuple[list[StudentProfile], int]: ...
 
+    def archive(self, profile_id: str, deleted_at: datetime) -> bool:
+        """Mueve el perfil al archivo de cuentas borradas. False si ya no estaba."""
+
 
 class EventPublisher(Protocol):
     """Avisa a n8n que el perfil cambió (`profile.updated`). Best-effort."""
@@ -64,6 +67,18 @@ class CompanyProfileRepository(Protocol):
     def get_by_company(self, company_id: str) -> CompanyProfile | None: ...
 
     def list(self, *, offset: int, limit: int) -> tuple[list[CompanyProfile], int]: ...
+
+    def archive(self, company_id: str, deleted_at: datetime) -> bool:
+        """Mueve el perfil de empresa al archivo de cuentas borradas. False si ya no estaba."""
+
+
+class DeletedAccounts(Protocol):
+    """Cuentas dadas de baja en auth-service (soft delete), aunque no tuvieran perfil."""
+
+    def mark(self, user_id: str, role: str, deleted_at: datetime) -> bool:
+        """Registra la baja. False si ya estaba registrada (evento repetido)."""
+
+    def contains(self, user_id: str) -> bool: ...
 
 
 @dataclass(frozen=True)

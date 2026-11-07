@@ -1,47 +1,195 @@
-import {
-  Location,
-  WorkConditions,
+// Tipos de jobs-service según contracts/jobs_frontend.md §9 (sin `any`).
+// Los enums comunes con el perfil salen de ./profile (estructura_comun_perfil_oferta_match.md §3).
+
+import type {
+  AvailabilityStart,
+  ContractDuration,
+  Currency,
+  EducationLevel,
+  EducationStatus,
+  EmploymentType,
+  LanguageLevel,
+  SalaryPeriod,
+  SalaryVisibility,
   Seniority,
-  ProfileSkillItem,
-  ProfileLanguageItem,
-  EducationItem,
+  Shift,
+  SkillCategory,
+  WorkModality,
+  WorkSchedule,
 } from './profile';
 
+export type JobStatus = 'active' | 'closed';
+export type JobStatusFilter = JobStatus | 'all';
 export type RequirementKind = 'required' | 'desired' | 'excluding';
 
-// Extendemos ProfileSkillItem importado de profile.ts
-export interface RequirementSkillItem extends ProfileSkillItem {
+export interface JobLocation {
+  country: string;
+  province: string;
+  city: string;
+  postal_code?: string | null;
+  zone?: string | null;
+}
+
+export interface VariableCompensation {
+  type: 'bonus' | 'commission' | 'profit_sharing';
+  description?: string | null;
+  max_percent?: number | null;
+}
+
+export interface JobSalary {
+  min?: number | null;
+  max?: number | null;
+  currency?: Currency | null;
+  period?: SalaryPeriod | null;
+  gross?: boolean;
+  payment_mode?: 'local' | 'usd' | 'usd_paid_in_local' | null;
+  negotiable?: boolean;
+  adjustment?: 'none' | 'monthly' | 'quarterly' | 'semiannual' | 'by_agreement' | null;
+  variable_compensation?: VariableCompensation[];
+  visibility?: SalaryVisibility | null;
+  to_agree?: boolean;
+  notes?: string | null;
+}
+
+export interface JobWorkConditions {
+  work_schedule: WorkSchedule[];
+  work_modality: WorkModality[];
+  hybrid_onsite_days?: number | null;
+  employment_type: EmploymentType[];
+  contract_duration: ContractDuration[];
+  weekly_hours?: { min: number; max: number } | null;
+  shifts: Shift[];
+  availability_start?: AvailabilityStart | null;
+  /** `null` para terceros si la empresa no publica el sueldo (§7). */
+  salary?: JobSalary | null;
+  relocation_support?: boolean;
+  travel_availability?: 'none' | 'occasional' | 'frequent' | null;
+  driver_license: string[];
+  own_vehicle?: boolean | null;
+  own_equipment?: boolean | null;
+  invoicing_status?: 'monotributo' | 'responsable_inscripto' | 'none' | 'to_register' | null;
+  work_authorization: string[];
+  timezone?: string | null;
+  timezone_overlap_hours?: number | null;
+}
+
+export interface SkillRequirement {
+  name: string;
+  normalized?: string;
+  level: number; // 1–5
+  kind: RequirementKind;
+  years?: number | null;
+  category?: SkillCategory | null;
+}
+
+export interface LanguageRequirement {
+  name: string;
+  normalized?: string;
+  level: LanguageLevel;
+  kind: RequirementKind;
+  certification?: string | null;
+}
+
+export interface EducationRequirement {
+  institution?: string | null;
+  degree?: string | null;
+  field?: string | null;
+  level: EducationLevel;
+  status: EducationStatus;
+  progress_percent?: number | null;
+  gpa?: number | null;
   kind: RequirementKind;
 }
 
-export interface JobRequirement {
-  skills: RequirementSkillItem[];
-  languages?: ProfileLanguageItem[];
-  education?: EducationItem[];
-  experience?: {
-    min_years: number;
-    area: string;
-    kind?: RequirementKind;
-  };
-  academic?: {
-    min_progress_percent?: number;
-    careers?: string[];
-    min_current_year?: number;
-  };
+export interface ExperienceRequirement {
+  min_years: number;
+  area?: string | null;
+  kind: RequirementKind;
+}
+
+export interface CertificationRequirement {
+  name: string;
+  kind: RequirementKind;
+}
+
+export interface AcademicRequirement {
+  min_progress_percent?: number | null;
+  careers: string[];
+  min_current_year?: number | null;
+}
+
+export interface Requirements {
+  skills: SkillRequirement[];
+  languages: LanguageRequirement[];
+  education: EducationRequirement[];
+  experience?: ExperienceRequirement | null;
+  certifications: CertificationRequirement[];
+  academic?: AcademicRequirement | null;
+}
+
+export interface CompanySnapshot {
+  name: string;
+  industry?: string | null;
+  size?: '1-10' | '11-50' | '51-200' | '201-1000' | '1000+' | null;
+  logo_url?: string | null;
 }
 
 export interface JobOpportunity {
   id: string;
   company_id: string;
+  company_snapshot: CompanySnapshot;
+  status: JobStatus;
   title: string;
   description: string;
-  status: 'draft' | 'active' | 'paused' | 'closed' | 'expired';
+  responsibilities: string[];
+  area: string;
   seniority: Seniority;
   vacancies: number;
-  location: Location;
-  work_conditions: WorkConditions;
-  requirements: JobRequirement;
-  benefits?: string[];
-  published_at?: string;
-  expires_at?: string;
+  location: JobLocation;
+  work_conditions: JobWorkConditions | null;
+  requirements: Requirements;
+  benefits: string[];
+  created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  expires_at: string | null;
+  version: number;
 }
+
+export interface JobList {
+  items: JobOpportunity[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+// Requests: sin company_id, company_snapshot, status, version ni timestamps (§2).
+
+export type SkillRequirementInput = Omit<SkillRequirement, 'normalized'>;
+export type LanguageRequirementInput = Omit<LanguageRequirement, 'normalized'>;
+
+export interface RequirementsInput {
+  skills: SkillRequirementInput[];
+  languages?: LanguageRequirementInput[];
+  education?: EducationRequirement[];
+  experience?: ExperienceRequirement | null;
+  certifications?: CertificationRequirement[];
+  academic?: AcademicRequirement | null;
+}
+
+export interface JobCreateInput {
+  title: string;
+  description: string;
+  responsibilities?: string[];
+  area?: string;
+  seniority: Seniority;
+  vacancies?: number;
+  location: JobLocation;
+  work_conditions?: JobWorkConditions | null;
+  requirements: RequirementsInput;
+  benefits?: string[];
+  expires_at?: string | null;
+}
+
+export type JobUpdateInput = Partial<JobCreateInput> & { status?: 'active' };

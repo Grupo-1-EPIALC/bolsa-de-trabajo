@@ -67,24 +67,3 @@ export interface CompanyProfile extends CompanySections {
     }>;
   };
 }
-
-/** Resumen de una búsqueda de jobs-service (JobOpportunity, sólo lo que muestra el panel). */
-export interface CompanySearch {
-  id: string;
-  title: string;
-  status: 'active' | 'closed' | string;
-  area?: string;
-  seniority?: string;
-  vacancies?: number;
-  location?: Partial<Location>;
-  work_conditions?: { work_modality?: WorkModality[] };
-  created_at?: string;
-}
-
-export interface CompanySearchList {
-  items: CompanySearch[];
-  total: number;
-  page: number;
-  size: number;
-  pages: number;
-}

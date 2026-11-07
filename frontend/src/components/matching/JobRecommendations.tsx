@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { matchingService } from '../../services/matchingService';
 import { ApiError, errorMessage } from '../../services/api';
 import { WORK_MODALITY, labelOf } from '../../profile/labels';
+import { PRIORITY_CLASS, RuleMatch } from './RuleMatch';
+import { useAiAnalysis } from './useAiAnalysis';
 import type {
-  Match,
   StudentAIItem,
   StudentRecommendationsView,
   StudentRuleItem,
@@ -14,115 +15,6 @@ interface JobRecommendationsProps {
   profileComplete: boolean;
   onCompleteProfile: () => void;
 }
-
-const POLL_MS = 3000;
-const MAX_WAIT_MS = 5 * 60 * 1000;
-
-const CRITERIA: Record<string, string> = {
-  required_skills: 'Competencias obligatorias',
-  desired_skills: 'Competencias deseables',
-  levels: 'Niveles',
-  experience: 'Experiencia',
-  education: 'Formación',
-  languages: 'Idiomas',
-};
-
-const PRIORITY_CLASS: Record<string, string> = {
-  alta: 'text-bg-danger',
-  media: 'text-bg-warning',
-  baja: 'text-bg-light border',
-};
-
-/** Bloque por reglas de una oferta: score, desglose y skills (origin RULES). */
-const RuleMatch: React.FC<{ match: Match }> = ({ match }) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="panel-rules rounded-3 p-3 h-100">
-      <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
-        <span className="badge badge-rules text-uppercase">
-          <i className="bi bi-shield-check me-1" aria-hidden="true" />
-          Calculado por reglas
-        </span>
-        <span className="score-value fs-3">
-          {Math.round(match.score)}
-          <span className="fs-6 fw-semibold text-body-secondary">/100</span>
-        </span>
-      </div>
-      {match.excluding_cap_applied && (
-        <p className="small text-danger-emphasis mb-2">
-          <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
-          Te falta un requisito excluyente (puntaje máximo 40).
-        </p>
-      )}
-      {match.matched_skills.length > 0 && (
-        <div className="d-flex flex-wrap gap-1 mb-2">
-          {match.matched_skills.map((s) => (
-            <span key={s.skill} className="badge text-bg-success">
-              <i className="bi bi-check me-1" aria-hidden="true" />
-              {s.skill}
-            </span>
-          ))}
-        </div>
-      )}
-      {match.missing_skills.length > 0 && (
-        <div className="d-flex flex-wrap gap-1 mb-2">
-          {match.missing_skills.map((s) => (
-            <span key={s.skill} className="badge text-bg-light border">
-              <i className="bi bi-x text-danger me-1" aria-hidden="true" />
-              {s.skill} (nivel {s.current_level} → {s.required_level})
-            </span>
-          ))}
-        </div>
-      )}
-      {match.conditions_fit && (
-        <p className="small mb-2">
-          <i
-            className={`bi me-1 ${match.conditions_fit.compatible ? 'bi-check-circle text-success' : 'bi-x-circle text-danger'}`}
-            aria-hidden="true"
-          />
-          Condiciones laborales {match.conditions_fit.compatible ? 'compatibles' : 'no compatibles'}
-        </p>
-      )}
-      <button
-        type="button"
-        className="btn btn-sm btn-link p-0"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {open ? 'Ocultar' : '¿Por qué este puntaje?'}
-      </button>
-      {open && (
-        <div className="mt-2">
-          {match.breakdown.map((b) => (
-            <div key={b.criterion} className="mb-2">
-              <div className="d-flex justify-content-between small">
-                <span>{CRITERIA[b.criterion] ?? b.criterion}</span>
-                <span className="fw-semibold">
-                  {Math.round(b.earned * 10) / 10} / {b.weight}
-                </span>
-              </div>
-              <div
-                className="progress"
-                role="progressbar"
-                aria-label={CRITERIA[b.criterion] ?? b.criterion}
-                aria-valuenow={b.earned}
-                aria-valuemin={0}
-                aria-valuemax={b.weight}
-                style={{ height: '0.4rem' }}
-              >
-                <div
-                  className="progress-bar bg-success"
-                  style={{ width: `${b.weight ? (b.earned / b.weight) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-          ))}
-          <p className="small text-body-secondary mb-0">Motor v{match.engine_version}</p>
-        </div>
-      )}
-    </div>
-  );
-};
 
 /** Bloque de IA de una oferta (origin AI): sin score. */
 const AiAdvice: React.FC<{ item?: StudentAIItem }> = ({ item }) => {
@@ -233,9 +125,6 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
   const [view, setView] = useState<StudentRecommendationsView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | Error | null>(null);
-  const [aiBusy, setAiBusy] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const timer = useRef<number | undefined>(undefined);
 
   const load = useCallback(async () => {
     setError(null);
@@ -250,52 +139,17 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
 
   useEffect(() => {
     load();
-    return () => window.clearTimeout(timer.current);
   }, [load]);
 
-  const poll = (requestId: string, startedAt: number) => {
-    timer.current = window.setTimeout(async () => {
-      try {
-        const req = await matchingService.getRequest(requestId);
-        if (req.status === 'completed') {
-          setAiBusy(false);
-          load();
-        } else if (req.status === 'failed') {
-          setAiBusy(false);
-          setAiError(req.error?.message ?? 'La IA no pudo generar las recomendaciones.');
-        } else if (Date.now() - startedAt > MAX_WAIT_MS) {
-          setAiBusy(false);
-          setAiError('El análisis está tardando demasiado. Probá de nuevo más tarde.');
-        } else {
-          poll(requestId, startedAt);
-        }
-      } catch (err) {
-        setAiBusy(false);
-        setAiError(errorMessage(err));
-      }
-    }, POLL_MS);
-  };
-
-  const requestAi = async () => {
-    setAiBusy(true);
-    setAiError(null);
-    try {
-      const req = await matchingService.requestStudentAnalysis(profileId);
-      poll(req.request_id, Date.now());
-    } catch (err) {
-      setAiBusy(false);
-      setAiError(errorMessage(err));
-    }
-  };
-
-  // Si al entrar ya hay un pedido en curso, seguirlo.
-  useEffect(() => {
-    const ai = view?.ai_recommendations;
-    if (!aiBusy && ai?.request_id && (ai.status === 'pending' || ai.status === 'processing')) {
-      setAiBusy(true);
-      poll(ai.request_id, Date.now());
-    }
-  }, [view]); // sólo al recibir una vista nueva
+  const {
+    busy: aiBusy,
+    error: aiError,
+    request: requestAi,
+  } = useAiAnalysis(
+    () => matchingService.requestStudentAnalysis(profileId),
+    load,
+    view?.ai_recommendations,
+  );
 
   if (loading) {
     return (
