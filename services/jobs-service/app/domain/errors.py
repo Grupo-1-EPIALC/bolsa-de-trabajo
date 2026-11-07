@@ -32,6 +32,13 @@ class ForbiddenError(JobsError):
     status_code = 403
 
 
+class ConflictError(JobsError):
+    """Otra escritura ganó la carrera de versiones (lock optimista)."""
+
+    code = "CONFLICT"
+    status_code = 409
+
+
 class UnauthorizedError(JobsError):
     code = "UNAUTHORIZED"
     status_code = 401

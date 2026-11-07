@@ -16,9 +16,13 @@ class InMemoryJobRepository:
         with self._lock:
             self._jobs[job.id] = job
 
-    def update(self, job: JobOpportunity) -> None:
+    def update(self, job: JobOpportunity, *, expected_version: int) -> bool:
         with self._lock:
+            current = self._jobs.get(job.id)
+            if current is None or current.version != expected_version:
+                return False
             self._jobs[job.id] = job
+            return True
 
     def get(self, job_id: str) -> JobOpportunity | None:
         with self._lock:

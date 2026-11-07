@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 
+from app.domain.enums import JobStatus
 from app.domain.errors import UpstreamError
 from app.domain.models import CompanySnapshot, JobOpportunity
 
@@ -54,3 +55,45 @@ class SequentialIds:
         value = self._values[self._cursor]
         self._cursor += 1
         return value
+
+
+class RaceLoserRepository:
+    """Repositorio que simula un escritor concurrente que gana la carrera de versiones.
+
+    La primera lectura devuelve la versión que el servicio conoce; toda escritura
+    falla (`update(...) -> False`), como cuando otro proceso avanzó la fila antes.
+    Si se pasa `replacement`, cada lectura posterior devuelve esa versión nueva
+    (el otro actor ya persistió su cambio).
+    """
+
+    def __init__(self, base: JobOpportunity, *, replacement: JobOpportunity | None = None) -> None:
+        self._base = base
+        self._replacement = replacement
+        self._reads = 0
+
+    def get(self, job_id: str) -> JobOpportunity | None:
+        if job_id != self._base.id:
+            return None
+        self._reads += 1
+        if self._replacement is not None and self._reads > 1:
+            return self._replacement
+        return self._base
+
+    def add(self, job: JobOpportunity) -> None:
+        return None
+
+    def update(self, job: JobOpportunity, *, expected_version: int) -> bool:
+        return False
+
+    def list(
+        self,
+        *,
+        status: JobStatus | None,
+        company_id: str | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[list[JobOpportunity], int]:
+        return [], 0
+
+    def count(self) -> int:
+        return 0

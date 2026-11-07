@@ -13,7 +13,14 @@ JsonDict = dict[str, Any]
 class JobRepository(Protocol):
     def add(self, job: JobOpportunity) -> None: ...
 
-    def update(self, job: JobOpportunity) -> None: ...
+    def update(self, job: JobOpportunity, *, expected_version: int) -> bool:
+        """Persiste `job` sólo si la versión guardada es aún `expected_version`.
+
+        Devuelve `False` (no lanza) cuando otra escritura avanzó `version` o la oferta
+        ya no existe: así no puede perderse una actualización (lost update) entre
+        procesos concurrentes. La aplicación traduce `False` a un 409 `CONFLICT`.
+        """
+        ...
 
     def get(self, job_id: str) -> JobOpportunity | None: ...
 
