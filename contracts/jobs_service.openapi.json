@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "jobs-service",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Ofertas de trabajo y búsquedas de empresas. Implementa RF-11, RF-12, HU-11, HU-12, UT-JOBS-01 y UT-JOBS-02 del Plan MVP. Autenticación de usuarios con Authorization: Bearer <JWT RS256 de auth-service> validado contra el JWKS; servicios internos (matching-service, mcp-tools, n8n) con X-Service-Token. El gateway borra X-Service-Token en peticiones externas. Errores: {\"error\": {\"code\", \"message\", \"details\"}}. Documentación para el front: contracts/jobs_frontend.md. Documentación para matching/mcp: contracts/jobs_matching.md."
   },
   "servers": [
@@ -281,6 +281,55 @@
           "422": { "$ref": "#/components/responses/ValidationError" }
         }
       }
+    },
+    "/api/v1/jobs/internal/account-events": {
+      "post": {
+        "tags": ["internal"],
+        "summary": "[interno] Evento de cuenta de auth-service (borrado o edición). Idempotente",
+        "description": "Sólo X-Service-Token (un usuario recibe 403). `account.deleted` registra la baja (el JWT vigente de esa cuenta recibe 401 ACCOUNT_DELETED) y mueve todas las ofertas de la empresa a `jobs.jobs_deleted`. `account.updated` y tipos desconocidos se ignoran. Ver contracts/account_events.md.",
+        "operationId": "receive_account_event",
+        "security": [{ "serviceToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["event", "user_id", "role", "occurred_at"],
+                "properties": {
+                  "event": { "type": "string", "examples": ["account.deleted", "account.updated"] },
+                  "user_id": { "type": "string", "description": "sub del JWT = company_id" },
+                  "role": { "type": "string" },
+                  "deleted": { "type": "boolean", "default": false },
+                  "occurred_at": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Evento procesado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["event", "user_id", "result", "archived_jobs"],
+                  "properties": {
+                    "event": { "type": "string" },
+                    "user_id": { "type": "string" },
+                    "result": { "type": "string", "enum": ["archived", "registered", "ignored"] },
+                    "archived_jobs": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
     }
   },
   "components": {
@@ -300,7 +349,7 @@
     },
     "responses": {
       "Unauthorized": {
-        "description": "Falta el token o es inválido",
+        "description": "Falta el token o es inválido (`UNAUTHORIZED`), o la cuenta fue dada de baja y el token todavía no venció (`ACCOUNT_DELETED`)",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Error" }

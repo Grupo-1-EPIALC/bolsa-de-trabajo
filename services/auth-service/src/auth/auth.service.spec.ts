@@ -93,7 +93,7 @@ describe('AuthService', () => {
     expect(result.refresh_token).toBeTruthy();
     expect(refreshSessions.save).toHaveBeenCalled();
     expect(jwt.signAsync).toHaveBeenCalledWith(
-      { sub: 'user-1', role: UserRole.STUDENT },
+      { sub: 'user-1', role: UserRole.STUDENT, tv: 0 },
       expect.objectContaining({ header: expect.objectContaining({ alg: 'RS256' }) }),
     );
   });
@@ -153,6 +153,29 @@ describe('AuthService', () => {
     ).rejects.toMatchObject({ status: 401, message: 'Email o contraseña incorrectos' });
   });
 
+  it('UT-AUTH-08 una cuenta borrada no puede renovar el token', async () => {
+    const { service, manager } = createService();
+    // TypeORM no devuelve las filas con deleted_at, así que el usuario "no existe".
+    manager.findOne
+      .mockResolvedValueOnce(Object.assign(new RefreshSession(), { id: 's1', userId: 'user-1' }))
+      .mockResolvedValueOnce(null);
+
+    await expect(service.refresh('x'.repeat(64))).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('el registro de empresa sólo choca con CUITs de empresas no borradas', async () => {
+    const { service, companies } = createService();
+    await service.register({
+      email: 'empresa2@ejemplo.com',
+      password: 'secure-password-123',
+      role: UserRole.COMPANY,
+      company: { legal_name: 'Empresa', cuit: '20329642330', activity: 'Tecnología' },
+    });
+    expect(companies.exists).toHaveBeenCalledWith({
+      where: { cuit: '20329642330', deletedAt: expect.anything() },
+    });
+  });
+
   it('UT-AUTH-04 devuelve el mismo mensaje de reset para emails inexistentes', async () => {
     const { service, users, emailNotifier } = createService();
     users.findOne.mockResolvedValue(null);
@@ -186,6 +209,11 @@ describe('AuthService', () => {
     );
     expect(queryBuilder.update).toHaveBeenCalledWith(RefreshSession);
     expect(queryBuilder.execute).toHaveBeenCalled();
+    expect(manager.update).toHaveBeenCalledWith(
+      User,
+      'user-1',
+      expect.objectContaining({ tokenVersion: expect.any(Function) }),
+    );
   });
 
   it('UT-AUTH-06 rechaza refresh tokens no registrados', async () => {
@@ -215,11 +243,30 @@ describe('AuthService', () => {
     expect(manager.update).toHaveBeenCalledWith(
       User,
       'user-1',
-      expect.objectContaining({ passwordHash: expect.any(String) }),
+      expect.objectContaining({
+        passwordHash: expect.any(String),
+        tokenVersion: expect.any(Function),
+      }),
     );
     expect(queryBuilder.update).toHaveBeenCalledWith(RefreshSession);
     expect(queryBuilder.execute).toHaveBeenCalled();
     expect(users.createQueryBuilder).toHaveBeenCalled();
+  });
+
+  it('UT-AUTH-09 el access token lleva la token_version vigente de la cuenta', async () => {
+    const { service, manager, jwt } = createService();
+    manager.findOne
+      .mockResolvedValueOnce(Object.assign(new RefreshSession(), { id: 's-1', userId: 'user-1' }))
+      .mockResolvedValueOnce(
+        Object.assign(new User(), { id: 'user-1', role: UserRole.ADMIN, tokenVersion: 4 }),
+      );
+
+    await service.refresh('r'.repeat(64));
+
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      { sub: 'user-1', role: UserRole.ADMIN, tv: 4 },
+      expect.anything(),
+    );
   });
 
   it('UT-AUTH-07 publica la clave RSA pública como JWKS', async () => {

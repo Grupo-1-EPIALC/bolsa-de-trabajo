@@ -1,6 +1,10 @@
 // matching-service · /api/v1/matches (contracts/matching_frontend.md)
 import { apiFetch } from './api';
-import type { RecommendationRequest, StudentRecommendationsView } from '../types/matching';
+import type {
+  CompanyRecommendationsView,
+  RecommendationRequest,
+  StudentRecommendationsView,
+} from '../types/matching';
 
 export const matchingService = {
   /** GET /matches/recommendations/students/{profile_id} · ofertas para el estudiante. */
@@ -15,6 +19,21 @@ export const matchingService = {
     return apiFetch<RecommendationRequest>('/matches/recommendations/requests', {
       method: 'POST',
       body: JSON.stringify({ mode: 'student', profile_id: profileId }),
+    });
+  },
+
+  /** GET /matches/recommendations/jobs/{job_id} · candidatos por reglas para una búsqueda propia. */
+  getCompanyRecommendations(jobId: string): Promise<CompanyRecommendationsView> {
+    return apiFetch<CompanyRecommendationsView>(
+      `/matches/recommendations/jobs/${encodeURIComponent(jobId)}`,
+    );
+  },
+
+  /** POST /matches/recommendations/requests · análisis con IA de los candidatos (WF-06). */
+  requestCompanyAnalysis(jobId: string): Promise<RecommendationRequest> {
+    return apiFetch<RecommendationRequest>('/matches/recommendations/requests', {
+      method: 'POST',
+      body: JSON.stringify({ mode: 'company', job_id: jobId }),
     });
   },
 

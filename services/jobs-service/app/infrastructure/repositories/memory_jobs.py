@@ -10,6 +10,7 @@ from app.domain.models import JobOpportunity
 class InMemoryJobRepository:
     def __init__(self) -> None:
         self._jobs: dict[str, JobOpportunity] = {}
+        self.archived: dict[str, tuple[datetime, JobOpportunity]] = {}
         self._lock = Lock()
 
     def add(self, job: JobOpportunity) -> None:
@@ -50,6 +51,13 @@ class InMemoryJobRepository:
     def count(self) -> int:
         with self._lock:
             return len(self._jobs)
+
+    def archive_company(self, company_id: str, deleted_at: datetime) -> int:
+        with self._lock:
+            ids = [job.id for job in self._jobs.values() if job.company_id == company_id]
+            for job_id in ids:
+                self.archived[job_id] = (deleted_at, self._jobs.pop(job_id))
+        return len(ids)
 
 
 def _publication_key(job: JobOpportunity) -> datetime:

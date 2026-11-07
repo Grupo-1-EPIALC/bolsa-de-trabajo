@@ -1,6 +1,6 @@
-// Perfil de empresa (profile-service, /api/v1/profiles/companies) y sus búsquedas (jobs-service).
+// Perfil de empresa (profile-service, /api/v1/profiles/companies). Las búsquedas van en jobsService.
 import { ApiError, apiFetch } from './api';
-import type { CompanyProfile, CompanySearchList, CompanySections } from '../types/company';
+import type { CompanyProfile, CompanySections } from '../types/company';
 
 export const LOGO_MAX_BYTES = 1024 * 1024;
 const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -50,10 +50,5 @@ export const companyService = {
   /** DELETE /profiles/companies/me/logo. */
   deleteLogo(): Promise<void> {
     return apiFetch<void>('/profiles/companies/me/logo', { method: 'DELETE' });
-  },
-
-  /** GET /companies/me/searches (jobs-service) · búsquedas de la empresa. */
-  mySearches(status: 'active' | 'closed' | 'all' = 'active'): Promise<CompanySearchList> {
-    return apiFetch<CompanySearchList>(`/companies/me/searches?status=${status}&page=1&size=20`);
   },
 };

@@ -116,10 +116,6 @@ export interface ExperienceItem {
   [extra: string]: unknown;
 }
 
-/** Alias usados por types/jobs.ts (jobs-service). */
-export type ProfileSkillItem = SkillItem;
-export type ProfileLanguageItem = LanguageItem;
-
 export interface CertificationItem {
   name: string;
   issuer?: string;

@@ -5,6 +5,7 @@ import { CvImport } from '../components/profile/CvImport';
 import { ProfileWizard } from '../components/profile/ProfileWizard';
 import { ProfileDashboard } from '../components/profile/ProfileDashboard';
 import { JobRecommendations } from '../components/matching/JobRecommendations';
+import { JobBoard } from '../components/jobs/JobBoard';
 import { profileService } from '../services/profileService';
 import { errorMessage } from '../services/api';
 import { firstIncompleteStep } from '../profile/draft';
@@ -18,7 +19,9 @@ interface StudentAreaProps {
 
 type Onboarding = 'start' | 'import';
 
-const HEADERS: Record<StudentSection, { title: string; subtitle: string; icon: string }> = {
+type Header = { title: string; subtitle: string; icon: string };
+
+const HEADERS: Record<Exclude<StudentSection, 'searches'>, Header> = {
   panel: {
     title: 'Mi panel',
     subtitle: 'Tus ofertas recomendadas, tu perfil y tu CV en un solo lugar.',
@@ -27,6 +30,11 @@ const HEADERS: Record<StudentSection, { title: string; subtitle: string; icon: s
   recommendations: {
     title: 'Ofertas para vos',
     subtitle: 'Ordenadas por compatibilidad calculada por reglas, con consejos de la IA.',
+    icon: 'bi-briefcase',
+  },
+  jobs: {
+    title: 'Todas las ofertas',
+    subtitle: 'Las búsquedas activas de todas las empresas.',
     icon: 'bi-briefcase',
   },
   profile: {
@@ -126,13 +134,17 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
     }
   };
 
-  const header = onboarding
-    ? {
-        title: 'Alta de perfil',
-        subtitle: 'Armá tu perfil para recibir ofertas.',
-        icon: 'bi-person-plus',
-      }
-    : HEADERS[section];
+  const current = section === 'searches' ? 'panel' : section;
+  const header =
+    section === 'jobs'
+      ? HEADERS.jobs
+      : onboarding
+        ? {
+            title: 'Alta de perfil',
+            subtitle: 'Armá tu perfil para recibir ofertas.',
+            icon: 'bi-person-plus',
+          }
+        : HEADERS[current];
 
   let content: React.ReactNode;
   if (loadError) {
@@ -147,6 +159,9 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
         </button>
       </div>
     );
+  } else if (section === 'jobs') {
+    // El listado no depende del perfil: se ve aunque todavía no lo haya cargado.
+    content = <JobBoard />;
   } else if (profile === undefined) {
     content = (
       <div className="text-center py-5">
