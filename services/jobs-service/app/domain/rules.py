@@ -30,7 +30,7 @@ from app.domain.enums import (
     WorkSchedule,
 )
 from app.domain.errors import ForbiddenError, InvalidInputError
-from app.domain.models import JobOpportunity
+from app.domain.models import CompanySnapshot, JobOpportunity
 
 _COUNTRY_PATTERN = re.compile(r"^[A-Z]{2}$")
 _MAX_TITLE = 200
@@ -248,6 +248,15 @@ def _validate_work_conditions(job: JobOpportunity) -> None:
 
 def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
+def ensure_company_snapshot(snapshot: CompanySnapshot) -> None:
+    """Garantía 1 de `contracts/jobs_matching.md` §4: `company_snapshot.name` no vacío.
+
+    Se aplica al crear (data provista por auth-service) y al cargar el seed de demo;
+    con esto matching y el front reciben siempre un `company_name` utilizable.
+    """
+    _require_text(snapshot.name, "company_snapshot.name", 200)
 
 
 def require_company(principal: Principal) -> None:

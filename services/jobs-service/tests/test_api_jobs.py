@@ -312,3 +312,26 @@ def test_create_body_can_omit_optional_blocks(client: TestClient) -> None:
     response = client.post("/api/v1/jobs", json=body, headers=bearer(COMPANY_001, "company"))
     assert response.status_code == 201
     assert response.json()["work_conditions"]["salary"] is None
+
+
+def test_create_with_oversized_list_item_returns_422(client: TestClient) -> None:
+    """Cada ítem acota su longitud: un texto de 501 caracteres no llega al motor."""
+    body = payload()
+    body["responsibilities"] = ["x" * 501]
+    response = client.post("/api/v1/jobs", json=body, headers=bearer(COMPANY_001, "company"))
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_INPUT"
+
+
+def test_create_with_too_many_items_returns_422(client: TestClient) -> None:
+    body = payload()
+    body["responsibilities"] = [f"tarea {index}" for index in range(51)]
+    response = client.post("/api/v1/jobs", json=body, headers=bearer(COMPANY_001, "company"))
+    assert response.status_code == 422
+
+
+def test_page_above_cap_returns_422(client: TestClient) -> None:
+    """El offset se acota (~200 millones de filas) para no romper la paginación en Postgres."""
+    response = client.get("/api/v1/jobs?page=2000000", headers=bearer(STUDENT_001, "student"))
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_INPUT"
