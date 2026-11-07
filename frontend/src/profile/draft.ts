@@ -78,6 +78,47 @@ export function firstIncompleteStep(completion: Completion | undefined): Profile
  * Datos iniciales del paso 1: lo que sugirió la IA (sin placeholders) pisa a lo guardado
  * sólo en las secciones que trae el borrador. El perfil guardado nunca se modifica acá.
  */
+/**
+ * Combina datos guardados y sugerencias de IA recursivamente.
+ * Los datos persistidos tienen prioridad, excepto cuando están vacíos.
+ */
+function mergeValues(profile: unknown, draft: unknown): unknown {
+  if (draft === undefined) return profile;
+
+  if (
+    profile === undefined ||
+    profile === null ||
+    profile === ''
+  ) {
+    return stripPlaceholders(draft);
+  }
+
+  // Los arrays del borrador reemplazan a los guardados.
+  if (Array.isArray(draft)) {
+    return stripPlaceholders(draft);
+  }
+
+  // Combinar objetos campo por campo.
+  if (
+    typeof profile === 'object' &&
+    profile !== null &&
+    !Array.isArray(profile) &&
+    typeof draft === 'object' &&
+    draft !== null &&
+    !Array.isArray(draft)
+  ) {
+    const result: Record<string, unknown> = { ...profile };
+
+    for (const [key, value] of Object.entries(draft)) {
+      result[key] = mergeValues(result[key], value);
+    }
+
+    return result;
+  }
+
+  return profile;
+}
+
 export function mergeDraft(
   profile: ProfileView | null,
   draft: Record<string, unknown> | null,
@@ -88,11 +129,8 @@ export function mergeDraft(
     const fromProfile = profile?.[key as keyof ProfileView];
     const fromDraft = draft?.[key];
 
-    // 💡 LÓGICA DE COMPARATIVA:
-    // Si el usuario YA TIENE un dato persistido/confirmado en el perfil real,
-    // se respeta su dato. Si el campo en el perfil está vacío, se muestra la sugerencia de la IA.
-    if (fromProfile !== undefined && fromProfile !== null && fromProfile !== '') {
-      base[key] = fromProfile;
+    if (fromProfile !== undefined) {
+      base[key] = mergeValues(fromProfile, fromDraft);
     } else if (fromDraft !== undefined) {
       base[key] = stripPlaceholders(fromDraft);
     }
