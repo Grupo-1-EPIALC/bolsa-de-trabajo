@@ -150,6 +150,8 @@ services:
       SMTP_FROM: ${SMTP_FROM}
       FRONTEND_URL: ${FRONTEND_URL}
       N8N_WEBHOOK_BASE_URL: http://n8n:5678/webhook
+      # Suscriptores de eventos de cuenta (borrado y edición). Ver contracts/account_events.md
+      ACCOUNT_EVENT_WEBHOOKS: ${ACCOUNT_EVENT_WEBHOOKS:-http://profile-service:8000/api/v1/profiles/internal/account-events,http://jobs-service:8000/api/v1/jobs/internal/account-events}
     volumes:
       - ./secrets:/run/secrets/jwt:ro
 

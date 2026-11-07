@@ -96,8 +96,9 @@ export class AuthService {
       if (!input.company || !isValidCuit(input.company.cuit)) {
         throw new BadRequestException('El CUIT de la empresa no es válido');
       }
+      // Sólo cuentan las empresas no borradas: un CUIT borrado puede volver a registrarse.
       const companyExists = await this.companies.exists({
-        where: { cuit: input.company.cuit },
+        where: { cuit: input.company.cuit, deletedAt: IsNull() },
       });
       if (companyExists) {
         throw new ConflictException('El CUIT ya está registrado');
@@ -144,6 +145,7 @@ export class AuthService {
     if (!user || !(await argon2.verify(user.passwordHash, input.password))) {
       throw new UnauthorizedException('Email o contraseña incorrectos');
     }
+    // Las cuentas borradas no aparecen (borrado lógico): para login es como si no existieran.
 
     return { user: this.toPublicUser(user), ...(await this.issueTokens(user)) };
   }
@@ -237,17 +239,27 @@ export class AuthService {
       return GENERIC_RESET_RESPONSE;
     }
 
-    const token = await this.persistActionToken(user.id, ActionTokenPurpose.PASSWORD_RESET);
+    await this.sendPasswordResetLink(user.id, user.email);
+    return GENERIC_RESET_RESPONSE;
+  }
+
+  /**
+   * Genera un token de recuperación y manda el link por mail.
+   * Devuelve false si el mail no se pudo enviar (el token queda creado igual).
+   */
+  async sendPasswordResetLink(userId: string, email: string): Promise<boolean> {
+    const token = await this.persistActionToken(userId, ActionTokenPurpose.PASSWORD_RESET);
     const url = `${this.frontendUrl}/auth/password/reset/confirm?token=${encodeURIComponent(token)}`;
     try {
-      await this.emailNotifier.sendPasswordReset(user.email, url);
+      await this.emailNotifier.sendPasswordReset(email, url);
+      return true;
     } catch (error) {
       this.logger.error(
         'Password reset email delivery failed',
         error instanceof Error ? error.stack : String(error),
       );
+      return false;
     }
-    return GENERIC_RESET_RESPONSE;
   }
 
   async confirmPasswordReset(input: PasswordResetConfirmDto): Promise<{ message: string }> {

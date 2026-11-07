@@ -153,6 +153,29 @@ describe('AuthService', () => {
     ).rejects.toMatchObject({ status: 401, message: 'Email o contraseña incorrectos' });
   });
 
+  it('UT-AUTH-08 una cuenta borrada no puede renovar el token', async () => {
+    const { service, manager } = createService();
+    // TypeORM no devuelve las filas con deleted_at, así que el usuario "no existe".
+    manager.findOne
+      .mockResolvedValueOnce(Object.assign(new RefreshSession(), { id: 's1', userId: 'user-1' }))
+      .mockResolvedValueOnce(null);
+
+    await expect(service.refresh('x'.repeat(64))).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('el registro de empresa sólo choca con CUITs de empresas no borradas', async () => {
+    const { service, companies } = createService();
+    await service.register({
+      email: 'empresa2@ejemplo.com',
+      password: 'secure-password-123',
+      role: UserRole.COMPANY,
+      company: { legal_name: 'Empresa', cuit: '20329642330', activity: 'Tecnología' },
+    });
+    expect(companies.exists).toHaveBeenCalledWith({
+      where: { cuit: '20329642330', deletedAt: expect.anything() },
+    });
+  });
+
   it('UT-AUTH-04 devuelve el mismo mensaje de reset para emails inexistentes', async () => {
     const { service, users, emailNotifier } = createService();
     users.findOne.mockResolvedValue(null);

@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -34,6 +35,13 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
+
+  /**
+   * Borrado lógico: TypeORM excluye estas filas de find() y de los query builders
+   * (salvo withDeleted()), así login, refresh y registro ignoran las cuentas borradas.
+   */
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null;
 
   @OneToOne(() => Company, (company) => company.user)
   company?: Company;
