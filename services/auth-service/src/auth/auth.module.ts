@@ -13,6 +13,7 @@ import { EMAIL_NOTIFIER } from './email-notifier';
 import { RefreshSession } from './refresh-session.entity';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtStrategy } from './jwt.strategy';
+import { UserTokenVersionReader } from './access-token-validator';
 import { SmtpEmailNotifier } from './smtp-email-notifier';
 
 function readPrivateKey(): string {
@@ -51,6 +52,7 @@ function readPublicKey(): string {
   controllers: [AuthController],
   providers: [
     AuthService,
+    UserTokenVersionReader,
     JwtStrategy,
     JwtAuthGuard,
     SmtpEmailNotifier,

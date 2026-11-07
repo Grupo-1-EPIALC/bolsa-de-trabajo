@@ -4,7 +4,7 @@ import { AuthService } from '../auth/auth.service';
 import { Company } from '../users/company.entity';
 import { User } from '../users/user.entity';
 import { UserRole } from '../users/user-role';
-import { AccountEventPublisher } from './account-events';
+import { AccountEventOutbox } from './account-events';
 import { AdminUsersService } from './admin-users.service';
 
 const ADMIN_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -37,11 +37,16 @@ function setup(initial: User | null = makeUser()) {
       return { affected: 1 };
     }),
     createQueryBuilder: jest.fn(() => sessionUpdate),
+    findOne: jest.fn(async () => current),
   };
+  const log: string[] = [];
   const dataSource = {
-    transaction: jest.fn(async (cb: (m: EntityManager) => Promise<unknown>) =>
-      cb(manager as unknown as EntityManager),
-    ),
+    transaction: jest.fn(async (cb: (m: EntityManager) => Promise<unknown>) => {
+      log.push('begin');
+      const result = await cb(manager as unknown as EntityManager);
+      log.push('commit');
+      return result;
+    }),
   };
   const listQb = {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -61,14 +66,19 @@ function setup(initial: User | null = makeUser()) {
     createQueryBuilder: jest.fn(() => listQb),
   };
   const auth = { sendPasswordResetLink: jest.fn().mockResolvedValue(true) };
-  const events: AccountEventPublisher = { publish: jest.fn().mockResolvedValue(undefined) };
+  const outbox = {
+    enqueue: jest.fn(async (m: EntityManager) => {
+      log.push(m === (manager as unknown as EntityManager) ? 'enqueue(tx)' : 'enqueue(otro)');
+    }),
+    afterCommit: jest.fn(() => log.push('afterCommit')),
+  };
   const service = new AdminUsersService(
     users as unknown as Repository<User>,
     dataSource as unknown as DataSource,
     auth as unknown as AuthService,
-    events,
+    outbox as unknown as AccountEventOutbox,
   );
-  return { service, users, manager, sessionUpdate, listQb, auth, events };
+  return { service, users, manager, sessionUpdate, listQb, auth, outbox, log };
 }
 
 describe('AdminUsersService', () => {
@@ -99,7 +109,7 @@ describe('AdminUsersService', () => {
       cuit: '30712345671',
       activity: 'Software',
     });
-    const { service, manager, sessionUpdate, events } = setup(
+    const { service, manager, sessionUpdate, outbox } = setup(
       makeUser({ role: UserRole.COMPANY, company }),
     );
     await service.softDelete(ADMIN_ID, USER_ID);
@@ -114,8 +124,14 @@ describe('AdminUsersService', () => {
       expect.objectContaining({ deletedAt: expect.any(Date) }),
     );
     expect(sessionUpdate.execute).toHaveBeenCalled();
-    expect(events.publish).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'account.deleted', deleted: true, role: UserRole.COMPANY }),
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({
+        event: 'account.deleted',
+        deleted: true,
+        role: UserRole.COMPANY,
+        event_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      }),
     );
   });
 
@@ -133,7 +149,7 @@ describe('AdminUsersService', () => {
   });
 
   it('UT-AUTH-ADM-06 cambia el email directamente y lo normaliza', async () => {
-    const { service, manager, events } = setup();
+    const { service, manager, outbox } = setup();
     const view = await service.update(ADMIN_ID, USER_ID, { email: '  Nuevo@Example.TEST ' });
     expect(manager.update).toHaveBeenCalledWith(
       User,
@@ -141,9 +157,11 @@ describe('AdminUsersService', () => {
       expect.objectContaining({ email: 'nuevo@example.test', pendingEmail: null }),
     );
     expect(view.email).toBe('nuevo@example.test');
-    expect(events.publish).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'account.updated' }),
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      manager,
+      expect.objectContaining({ event: 'account.updated', email: 'nuevo@example.test' }),
     );
+    expect(outbox.afterCommit).toHaveBeenCalled();
   });
 
   it('UT-AUTH-ADM-07 valida los datos de empresa', async () => {
@@ -160,5 +178,33 @@ describe('AdminUsersService', () => {
   it('UT-AUTH-ADM-08 una cuenta inexistente o borrada da 404', async () => {
     const { service } = setup(null);
     await expect(service.softDelete(ADMIN_ID, USER_ID)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('UT-AUTH-ADM-09 el aviso de borrado se guarda en la misma transacción y se envía después del commit', async () => {
+    const { service, log } = setup();
+    await service.softDelete(ADMIN_ID, USER_ID);
+    expect(log).toEqual(['begin', 'enqueue(tx)', 'commit', 'afterCommit']);
+  });
+
+  it('si no se puede guardar el aviso, el borrado no se confirma', async () => {
+    const { service, outbox, log } = setup();
+    outbox.enqueue.mockRejectedValueOnce(new Error('outbox no disponible'));
+    await expect(service.softDelete(ADMIN_ID, USER_ID)).rejects.toThrow('outbox no disponible');
+    expect(log).toEqual(['begin']);
+    expect(outbox.afterCommit).not.toHaveBeenCalled();
+  });
+
+  it('UT-AUTH-ADM-10 reset y borrado suben token_version (cortan los access tokens vigentes)', async () => {
+    const bump = expect.objectContaining({ tokenVersion: expect.any(Function) });
+    const reset = setup();
+    await reset.service.resetPassword(USER_ID);
+    expect(reset.manager.update).toHaveBeenCalledWith(User, USER_ID, bump);
+
+    const deleted = setup();
+    await deleted.service.softDelete(ADMIN_ID, USER_ID);
+    expect(deleted.manager.update).toHaveBeenCalledWith(User, USER_ID, bump);
+    const patch = deleted.manager.update.mock.calls.find(([entity]) => entity === User)?.[2] as
+      { tokenVersion: () => string } | undefined;
+    expect(patch?.tokenVersion()).toBe('token_version + 1');
   });
 });

@@ -30,6 +30,10 @@ export class User {
   @Column({ name: 'email_verified_at', type: 'timestamptz', nullable: true })
   emailVerifiedAt!: Date | null;
 
+  /** Sube con cada reset, borrado o cambio de clave: invalida los access tokens viejos. */
+  @Column({ name: 'token_version', type: 'integer', default: 0 })
+  tokenVersion!: number;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

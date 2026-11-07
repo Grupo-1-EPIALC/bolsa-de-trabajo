@@ -209,6 +209,7 @@ export class AuthService {
     await this.dataSource.transaction(async (manager) => {
       await manager.update(User, userId, {
         passwordHash: await argon2.hash(input.new_password, { type: argon2.argon2id }),
+        tokenVersion: () => 'token_version + 1',
       });
       await manager
         .createQueryBuilder()
@@ -288,6 +289,7 @@ export class AuthService {
 
       await manager.update(User, token.userId, {
         passwordHash: await argon2.hash(input.new_password, { type: argon2.argon2id }),
+        tokenVersion: () => 'token_version + 1',
       });
       await manager.update(
         ActionToken,
@@ -460,7 +462,8 @@ export class AuthService {
       }),
     );
     const accessToken = await this.jwt.signAsync(
-      { sub: user.id, role: user.role },
+      // tv = token_version: JwtStrategy la compara con la de la cuenta en cada request.
+      { sub: user.id, role: user.role, tv: user.tokenVersion ?? 0 },
       { header: { alg: 'RS256', kid: this.keyId } },
     );
     return {

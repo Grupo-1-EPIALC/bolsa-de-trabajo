@@ -93,7 +93,7 @@ describe('AuthService', () => {
     expect(result.refresh_token).toBeTruthy();
     expect(refreshSessions.save).toHaveBeenCalled();
     expect(jwt.signAsync).toHaveBeenCalledWith(
-      { sub: 'user-1', role: UserRole.STUDENT },
+      { sub: 'user-1', role: UserRole.STUDENT, tv: 0 },
       expect.objectContaining({ header: expect.objectContaining({ alg: 'RS256' }) }),
     );
   });
@@ -209,6 +209,11 @@ describe('AuthService', () => {
     );
     expect(queryBuilder.update).toHaveBeenCalledWith(RefreshSession);
     expect(queryBuilder.execute).toHaveBeenCalled();
+    expect(manager.update).toHaveBeenCalledWith(
+      User,
+      'user-1',
+      expect.objectContaining({ tokenVersion: expect.any(Function) }),
+    );
   });
 
   it('UT-AUTH-06 rechaza refresh tokens no registrados', async () => {
@@ -238,11 +243,30 @@ describe('AuthService', () => {
     expect(manager.update).toHaveBeenCalledWith(
       User,
       'user-1',
-      expect.objectContaining({ passwordHash: expect.any(String) }),
+      expect.objectContaining({
+        passwordHash: expect.any(String),
+        tokenVersion: expect.any(Function),
+      }),
     );
     expect(queryBuilder.update).toHaveBeenCalledWith(RefreshSession);
     expect(queryBuilder.execute).toHaveBeenCalled();
     expect(users.createQueryBuilder).toHaveBeenCalled();
+  });
+
+  it('UT-AUTH-09 el access token lleva la token_version vigente de la cuenta', async () => {
+    const { service, manager, jwt } = createService();
+    manager.findOne
+      .mockResolvedValueOnce(Object.assign(new RefreshSession(), { id: 's-1', userId: 'user-1' }))
+      .mockResolvedValueOnce(
+        Object.assign(new User(), { id: 'user-1', role: UserRole.ADMIN, tokenVersion: 4 }),
+      );
+
+    await service.refresh('r'.repeat(64));
+
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      { sub: 'user-1', role: UserRole.ADMIN, tv: 4 },
+      expect.anything(),
+    );
   });
 
   it('UT-AUTH-07 publica la clave RSA pública como JWKS', async () => {

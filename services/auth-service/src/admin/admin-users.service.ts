@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { Brackets, DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import { ActionToken } from '../auth/action-token.entity';
 import { AuthService } from '../auth/auth.service';
@@ -17,7 +17,12 @@ import { RefreshSession } from '../auth/refresh-session.entity';
 import { Company } from '../users/company.entity';
 import { User } from '../users/user.entity';
 import { UserRole } from '../users/user-role';
-import { ACCOUNT_EVENT_PUBLISHER, AccountEventPublisher, AccountEventType } from './account-events';
+import {
+  ACCOUNT_EVENT_OUTBOX,
+  AccountEvent,
+  AccountEventOutbox,
+  AccountEventType,
+} from './account-events';
 import { AdminUpdateUserDto, ListUsersQuery } from './admin.dto';
 
 /** Vista de una cuenta para el panel de administración. */
@@ -43,9 +48,13 @@ export interface AdminUserList {
 
 const iso = (date: Date | null | undefined): string | null => (date ? date.toISOString() : null);
 
+/** Sube `token_version`: los access tokens emitidos antes dejan de valer. */
+const BUMP_TOKEN_VERSION = { tokenVersion: () => 'token_version + 1' };
+
 /**
  * Casos de uso del panel de admin sobre cuentas y empresas (auth-service es su dueño).
- * Cada cambio revoca sesiones cuando corresponde y avisa a los demás servicios.
+ * Cada cambio revoca sesiones y access tokens cuando corresponde y avisa a los demás
+ * servicios por el outbox (en la misma transacción: el aviso no se puede perder).
  */
 @Injectable()
 export class AdminUsersService {
@@ -53,7 +62,7 @@ export class AdminUsersService {
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly auth: AuthService,
-    @Inject(ACCOUNT_EVENT_PUBLISHER) private readonly events: AccountEventPublisher,
+    @Inject(ACCOUNT_EVENT_OUTBOX) private readonly outbox: AccountEventOutbox,
   ) {}
 
   async list(query: ListUsersQuery): Promise<AdminUserList> {
@@ -103,8 +112,9 @@ export class AdminUsersService {
       throw new BadRequestException('El CUIT de la empresa no es válido');
     }
 
+    let updated: User;
     try {
-      await this.dataSource.transaction(async (manager) => {
+      updated = await this.dataSource.transaction(async (manager) => {
         if (input.email) {
           const email = input.email.trim().toLowerCase();
           if (email !== user.email) {
@@ -123,6 +133,9 @@ export class AdminUsersService {
           if (input.company.cuit) patch.cuit = input.company.cuit;
           if (Object.keys(patch).length) await manager.update(Company, user.id, patch);
         }
+        const current = await this.loadIn(manager, user.id);
+        await this.outbox.enqueue(manager, this.toEvent('account.updated', current, actorId));
+        return current;
       });
     } catch (error) {
       if (this.isUniqueViolation(error)) {
@@ -131,14 +144,13 @@ export class AdminUsersService {
       throw error;
     }
 
-    const updated = await this.load(id);
-    await this.publish('account.updated', updated, actorId);
+    this.outbox.afterCommit();
     return this.toView(updated);
   }
 
   /**
-   * Fuerza el cambio de clave: invalida la clave actual, cierra las sesiones y manda
-   * el link de recuperación al email de la cuenta.
+   * Fuerza el cambio de clave: invalida la clave actual, cierra las sesiones, invalida
+   * los access tokens vigentes y manda el link de recuperación al email de la cuenta.
    */
   async resetPassword(id: string): Promise<{ message: string; email_sent: boolean }> {
     const user = await this.load(id);
@@ -146,7 +158,7 @@ export class AdminUsersService {
       type: argon2.argon2id,
     });
     await this.dataSource.transaction(async (manager) => {
-      await manager.update(User, user.id, { passwordHash: unusable });
+      await manager.update(User, user.id, { passwordHash: unusable, ...BUMP_TOKEN_VERSION });
       await this.revokeSessions(manager, user.id);
     });
     const sent = await this.auth.sendPasswordResetLink(user.id, user.email);
@@ -161,18 +173,26 @@ export class AdminUsersService {
   /**
    * Borrado lógico: la cuenta deja de aparecer y de poder entrar, y el email/CUIT quedan
    * libres para una nueva alta. La fila queda para auditoría (include_deleted=true).
+   * Los access tokens vigentes dejan de valer en auth-service al instante; en los demás
+   * servicios, cuando reciben `account.deleted`.
    */
   async softDelete(actorId: string, id: string): Promise<void> {
     this.assertNotSelf(actorId, id, 'borrar');
     const user = await this.load(id);
     const now = new Date();
     await this.dataSource.transaction(async (manager) => {
-      await manager.update(User, user.id, { deletedAt: now, pendingEmail: null });
+      await manager.update(User, user.id, {
+        deletedAt: now,
+        pendingEmail: null,
+        ...BUMP_TOKEN_VERSION,
+      });
       if (user.company) await manager.update(Company, user.id, { deletedAt: now });
       await this.revokeSessions(manager, user.id);
       await this.consumeTokens(manager, user.id);
+      const deleted = Object.assign(new User(), user, { deletedAt: now });
+      await this.outbox.enqueue(manager, this.toEvent('account.deleted', deleted, actorId));
     });
-    await this.publish('account.deleted', { ...user, deletedAt: now } as User, actorId);
+    this.outbox.afterCommit();
   }
 
   // ------------------------------------------------------------------ helpers
@@ -183,6 +203,14 @@ export class AdminUsersService {
       relations: { company: true },
       withDeleted,
     });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    return user;
+  }
+
+  private async loadIn(manager: EntityManager, id: string): Promise<User> {
+    const user = await manager.findOne(User, { where: { id }, relations: { company: true } });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
@@ -208,9 +236,10 @@ export class AdminUsersService {
     await manager.update(ActionToken, { userId, consumedAt: IsNull() }, { consumedAt: new Date() });
   }
 
-  private async publish(event: AccountEventType, user: User, actorId: string): Promise<void> {
+  private toEvent(event: AccountEventType, user: User, actorId: string): AccountEvent {
     const view = this.toView(user);
-    await this.events.publish({
+    return {
+      event_id: randomUUID(),
       event,
       user_id: user.id,
       role: user.role,
@@ -219,7 +248,7 @@ export class AdminUsersService {
       ...(view.company ? { company: view.company } : {}),
       actor_id: actorId,
       occurred_at: new Date().toISOString(),
-    });
+    };
   }
 
   private toView(user: User): AdminUserView {
