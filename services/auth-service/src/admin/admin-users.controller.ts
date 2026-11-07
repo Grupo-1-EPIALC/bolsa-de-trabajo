@@ -16,7 +16,7 @@ import { AuthenticatedUser, CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user-role';
-import { AdminUpdateUserDto, ListUsersQuery, SuspendUserDto } from './admin.dto';
+import { AdminUpdateUserDto, ListUsersQuery } from './admin.dto';
 import { AdminUsersService } from './admin-users.service';
 
 /** /api/v1/auth/admin/users · sólo rol admin. Estudiantes y empresas se filtran con ?role=. */
@@ -49,22 +49,6 @@ export class AdminUsersController {
   @HttpCode(HttpStatus.OK)
   resetPassword(@Param('id', ParseUUIDPipe) id: string) {
     return this.admin.resetPassword(id);
-  }
-
-  @Post(':id/suspend')
-  @HttpCode(HttpStatus.OK)
-  suspend(
-    @CurrentUser() actor: AuthenticatedUser,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: SuspendUserDto,
-  ) {
-    return this.admin.suspend(actor.sub, id, body);
-  }
-
-  @Post(':id/reactivate')
-  @HttpCode(HttpStatus.OK)
-  reactivate(@CurrentUser() actor: AuthenticatedUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.admin.reactivate(actor.sub, id);
   }
 
   @Delete(':id')

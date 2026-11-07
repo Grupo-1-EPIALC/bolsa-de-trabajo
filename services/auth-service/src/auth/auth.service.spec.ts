@@ -7,7 +7,6 @@ import { generateKeyPairSync } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { Company } from '../users/company.entity';
 import { User } from '../users/user.entity';
-import { AccountStatus } from '../users/account-status';
 import { UserRole } from '../users/user-role';
 import { ActionToken, ActionTokenPurpose } from './action-token.entity';
 import { AuthService } from './auth.service';
@@ -154,41 +153,14 @@ describe('AuthService', () => {
     ).rejects.toMatchObject({ status: 401, message: 'Email o contraseña incorrectos' });
   });
 
-  it('UT-AUTH-08 una cuenta suspendida no puede iniciar sesión (403 ACCOUNT_SUSPENDED)', async () => {
-    const { service, users, refreshSessions } = createService();
-    const passwordHash = await argon2.hash('correct-password-123');
-    users.createQueryBuilder().getOne.mockResolvedValue(
-      Object.assign(new User(), {
-        id: 'user-1',
-        email: 'persona@ejemplo.com',
-        passwordHash,
-        role: UserRole.STUDENT,
-        status: AccountStatus.SUSPENDED,
-      }),
-    );
-
-    await expect(
-      service.login({ email: 'persona@ejemplo.com', password: 'correct-password-123' }),
-    ).rejects.toMatchObject({
-      status: 403,
-      response: expect.objectContaining({ error: 'Account Suspended' }),
-    });
-    expect(refreshSessions.save).not.toHaveBeenCalled();
-  });
-
-  it('UT-AUTH-09 una cuenta suspendida no puede renovar el token', async () => {
+  it('UT-AUTH-08 una cuenta borrada no puede renovar el token', async () => {
     const { service, manager } = createService();
+    // TypeORM no devuelve las filas con deleted_at, así que el usuario "no existe".
     manager.findOne
       .mockResolvedValueOnce(Object.assign(new RefreshSession(), { id: 's1', userId: 'user-1' }))
-      .mockResolvedValueOnce(
-        Object.assign(new User(), {
-          id: 'user-1',
-          role: UserRole.STUDENT,
-          status: AccountStatus.SUSPENDED,
-        }),
-      );
+      .mockResolvedValueOnce(null);
 
-    await expect(service.refresh('x'.repeat(64))).rejects.toMatchObject({ status: 403 });
+    await expect(service.refresh('x'.repeat(64))).rejects.toMatchObject({ status: 401 });
   });
 
   it('el registro de empresa sólo choca con CUITs de empresas no borradas', async () => {

@@ -14,8 +14,6 @@ import * as argon2 from 'argon2';
 import { createHash, createPublicKey, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { DataSource, IsNull, MoreThan, Repository } from 'typeorm';
-import { AccountStatus } from '../users/account-status';
-import { accountSuspendedError } from '../users/account-errors';
 import { Company } from '../users/company.entity';
 import { User } from '../users/user.entity';
 import { UserRole } from '../users/user-role';
@@ -147,8 +145,7 @@ export class AuthService {
     if (!user || !(await argon2.verify(user.passwordHash, input.password))) {
       throw new UnauthorizedException('Email o contraseña incorrectos');
     }
-    // Las cuentas borradas ya no aparecen (borrado lógico). Las suspendidas no pueden entrar.
-    this.assertActive(user);
+    // Las cuentas borradas no aparecen (borrado lógico): para login es como si no existieran.
 
     return { user: this.toPublicUser(user), ...(await this.issueTokens(user)) };
   }
@@ -180,7 +177,6 @@ export class AuthService {
       if (!user) {
         throw new UnauthorizedException('Refresh token inválido o expirado');
       }
-      this.assertActive(user);
       return user;
     });
     return this.issueTokens(result);
@@ -194,7 +190,6 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
-    this.assertActive(user);
     return this.toPublicUser(user);
   }
 
@@ -486,12 +481,6 @@ export class AuthService {
       };
     }
     return result;
-  }
-
-  private assertActive(user: User): void {
-    if (user.status === AccountStatus.SUSPENDED) {
-      throw accountSuspendedError();
-    }
   }
 
   private normalizeEmail(email: string): string {

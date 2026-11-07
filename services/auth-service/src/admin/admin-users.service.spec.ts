@@ -1,7 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
-import { AccountStatus } from '../users/account-status';
 import { Company } from '../users/company.entity';
 import { User } from '../users/user.entity';
 import { UserRole } from '../users/user-role';
@@ -16,9 +15,6 @@ function makeUser(overrides: Partial<User> = {}): User {
     id: USER_ID,
     email: 'persona@example.test',
     role: UserRole.STUDENT,
-    status: AccountStatus.ACTIVE,
-    suspendedAt: null,
-    suspensionReason: null,
     deletedAt: null,
     emailVerifiedAt: null,
     createdAt: new Date('2026-11-01T00:00:00Z'),
@@ -82,7 +78,7 @@ describe('AdminUsersService', () => {
     expect(listQb.withDeleted).not.toHaveBeenCalled();
     expect(listQb.skip).toHaveBeenCalledWith(20);
     expect(result).toMatchObject({ total: 41, page: 2, size: 20, pages: 3 });
-    expect(result.items[0]).toMatchObject({ id: USER_ID, status: 'active', deleted: false });
+    expect(result.items[0]).toMatchObject({ id: USER_ID, deleted: false });
   });
 
   it('UT-AUTH-ADM-02 include_deleted muestra también las cuentas borradas', async () => {
@@ -91,37 +87,12 @@ describe('AdminUsersService', () => {
     expect(listQb.withDeleted).toHaveBeenCalled();
   });
 
-  it('UT-AUTH-ADM-03 suspender cierra las sesiones y avisa a los servicios', async () => {
-    const { service, sessionUpdate, events } = setup();
-    const view = await service.suspend(ADMIN_ID, USER_ID, { reason: 'Uso indebido' });
-    expect(view.status).toBe(AccountStatus.SUSPENDED);
-    expect(view.suspension_reason).toBe('Uso indebido');
-    expect(sessionUpdate.execute).toHaveBeenCalled();
-    expect(events.publish).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'account.suspended', user_id: USER_ID, actor_id: ADMIN_ID }),
-    );
-  });
-
-  it('UT-AUTH-ADM-04 no permite suspender ni borrar la propia cuenta', async () => {
+  it('UT-AUTH-ADM-03 no permite borrar la propia cuenta', async () => {
     const { service } = setup();
-    await expect(service.suspend(ADMIN_ID, ADMIN_ID, {})).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
     await expect(service.softDelete(ADMIN_ID, ADMIN_ID)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('UT-AUTH-ADM-05 reactivar limpia la suspensión', async () => {
-    const { service, events } = setup(
-      makeUser({ status: AccountStatus.SUSPENDED, suspensionReason: 'x', suspendedAt: new Date() }),
-    );
-    const view = await service.reactivate(ADMIN_ID, USER_ID);
-    expect(view).toMatchObject({ status: 'active', suspension_reason: null, suspended_at: null });
-    expect(events.publish).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'account.reactivated' }),
-    );
-  });
-
-  it('UT-AUTH-ADM-06 el borrado lógico marca usuario y empresa, revoca sesiones y avisa', async () => {
+  it('UT-AUTH-ADM-04 el borrado lógico marca usuario y empresa, revoca sesiones y avisa', async () => {
     const company = Object.assign(new Company(), {
       userId: USER_ID,
       legalName: 'Empresa Ficticia',
@@ -148,7 +119,7 @@ describe('AdminUsersService', () => {
     );
   });
 
-  it('UT-AUTH-ADM-07 el reset invalida la clave, cierra sesiones y manda el link', async () => {
+  it('UT-AUTH-ADM-05 el reset invalida la clave, cierra sesiones y manda el link', async () => {
     const { service, manager, sessionUpdate, auth } = setup();
     const result = await service.resetPassword(USER_ID);
     expect(manager.update).toHaveBeenCalledWith(
@@ -161,7 +132,7 @@ describe('AdminUsersService', () => {
     expect(result.email_sent).toBe(true);
   });
 
-  it('UT-AUTH-ADM-08 cambia el email directamente y lo normaliza', async () => {
+  it('UT-AUTH-ADM-06 cambia el email directamente y lo normaliza', async () => {
     const { service, manager, events } = setup();
     const view = await service.update(ADMIN_ID, USER_ID, { email: '  Nuevo@Example.TEST ' });
     expect(manager.update).toHaveBeenCalledWith(
@@ -175,7 +146,7 @@ describe('AdminUsersService', () => {
     );
   });
 
-  it('UT-AUTH-ADM-09 valida los datos de empresa', async () => {
+  it('UT-AUTH-ADM-07 valida los datos de empresa', async () => {
     const { service } = setup();
     await expect(
       service.update(ADMIN_ID, USER_ID, { company: { legal_name: 'X' } }),
@@ -186,8 +157,8 @@ describe('AdminUsersService', () => {
     ).rejects.toThrow('El CUIT de la empresa no es válido');
   });
 
-  it('UT-AUTH-ADM-10 una cuenta inexistente o borrada da 404', async () => {
+  it('UT-AUTH-ADM-08 una cuenta inexistente o borrada da 404', async () => {
     const { service } = setup(null);
-    await expect(service.suspend(ADMIN_ID, USER_ID, {})).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.softDelete(ADMIN_ID, USER_ID)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

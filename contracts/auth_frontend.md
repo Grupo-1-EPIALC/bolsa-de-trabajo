@@ -25,7 +25,7 @@
 
 - "Bearer" = header `Authorization: Bearer <access_token>`.
 - Las cuentas `admin` no se crean por `/register`: se dan de alta directamente en la base.
-- Una cuenta puede estar `active` o `suspended`, y además borrada (soft delete). Ver §7.
+- Una cuenta puede estar borrada (soft delete): para login, refresh y `/me` es como si no existiera. Ver §7.
 
 ---
 
@@ -182,8 +182,7 @@ En los errores de validación `message` es **una lista** y se repite en `details
 | 400 | `BAD_REQUEST` | Validación (lista en `details.validation_errors`), CUIT inválido, clave nueva igual a la actual, email nuevo igual al actual, token de recuperación o de email inválido o vencido |
 | 401 | `UNAUTHORIZED` | Email o contraseña incorrectos (mismo mensaje para ambos) · clave actual incorrecta · refresh inválido, vencido o ya usado |
 | 401 | `HTTP_401` | Falta el Bearer o el access token es inválido o venció (`message: "Unauthorized"`) |
-| 403 | `ACCOUNT_SUSPENDED` | Login, refresh o `/me` de una cuenta suspendida (sólo después de validar la clave) |
-| 403 | `FORBIDDEN` | Un usuario que no es admin usa `/admin/...` · un admin intenta suspender o borrar su propia cuenta |
+| 403 | `FORBIDDEN` | Un usuario que no es admin usa `/admin/...` · un admin intenta borrar su propia cuenta |
 | 404 | `NOT_FOUND` | `/admin/users/{id}` inexistente o borrado |
 | 409 | `CONFLICT` | Email o CUIT ya registrado (entre cuentas no borradas) · email pendiente de confirmación en otra cuenta |
 | 503 | `SERVICE_UNAVAILABLE` | No se pudo enviar el mail de confirmación de email |
@@ -202,8 +201,6 @@ Todas las rutas van bajo `/api/v1/auth/admin/users`, piden `Authorization: Beare
 | `GET /admin/users/{id}` | Ver una cuenta (incluye borradas) | `200` `AdminUser` |
 | `PATCH /admin/users/{id}` | Editar email y/o datos de empresa | `200` `AdminUser` |
 | `POST /admin/users/{id}/password-reset` | Forzar cambio de clave | `200` `{ message, email_sent }` |
-| `POST /admin/users/{id}/suspend` | Suspender (body opcional `{ "reason": "…" }`, máx. 500) | `200` `AdminUser` |
-| `POST /admin/users/{id}/reactivate` | Quitar la suspensión | `200` `AdminUser` |
 | `DELETE /admin/users/{id}` | Borrado lógico (soft delete) | `204` |
 
 ### Filtros de `GET /admin/users`
@@ -211,12 +208,11 @@ Todas las rutas van bajo `/api/v1/auth/admin/users`, piden `Authorization: Beare
 | Parámetro | Valores | Default |
 |---|---|---|
 | `role` | `student` · `company` · `admin` | todos |
-| `status` | `active` · `suspended` | todos |
 | `q` | busca en email, razón social y CUIT | — |
 | `include_deleted` | `true` para ver también las borradas (auditoría) | `false` |
 | `page` · `size` | `page ≥ 1` · `size` 1–100 | `1` · `20` |
 
-Orden: más nuevas primero.
+Orden: más nuevas primero. Un parámetro desconocido da `400`.
 
 ### `AdminUser`
 
@@ -225,13 +221,10 @@ Orden: más nuevas primero.
   "id": "64e3d052-54f4-458e-af3f-82f81cadaed7",
   "email": "persona@example.test",
   "role": "company",
-  "status": "suspended",
   "deleted": false,
   "created_at": "2026-11-06T21:44:39.588Z",
   "updated_at": "2026-11-06T21:44:40.120Z",
   "email_verified_at": null,
-  "suspended_at": "2026-11-06T21:44:40.118Z",
-  "suspension_reason": "Uso indebido",
   "deleted_at": null,
   "company": { "legal_name": "Empresa Ficticia S.A.", "cuit": "30712345671", "activity": "Software" }
 }
@@ -245,10 +238,8 @@ Orden: más nuevas primero.
 |---|---|
 | **Editar** | `{ "email"?: string, "company"?: { "legal_name"?, "cuit"?, "activity"? } }`. El email cambia **sin confirmación** y se normaliza; el CUIT se valida con dígito verificador. `company` sólo para cuentas de empresa. Email/CUIT repetidos → `409` |
 | **Forzar cambio de clave** | Invalida la clave actual, cierra todas las sesiones y manda el link de recuperación (§5) al email de la cuenta. `email_sent: false` si el mail no salió |
-| **Suspender** | La cuenta sigue en los listados, pero no puede iniciar sesión ni renovar el token (`403 ACCOUNT_SUSPENDED`). Se cierran sus sesiones |
-| **Reactivar** | Vuelve a `active` y borra el motivo |
-| **Borrar** | Desaparece de los listados (salvo `include_deleted=true`) y no puede entrar. El **email y el CUIT quedan libres**: se puede hacer una nueva alta con los mismos datos, que es una cuenta nueva (otro `id`). La cuenta vieja queda para auditoría |
+| **Borrar** | Desaparece de los listados (salvo `include_deleted=true`) y no puede entrar (login `401`, como un email inexistente). Se cierran sus sesiones. El **email y el CUIT quedan libres**: se puede hacer una nueva alta con los mismos datos, que es una cuenta nueva (otro `id`). La cuenta vieja queda para auditoría |
 
-- Un admin no puede suspender ni borrar su propia cuenta (`403`).
-- Suspender, reactivar, editar y borrar avisan a los demás servicios con un evento de cuenta: ver [`account_events.md`](account_events.md).
-- El access token de una cuenta suspendida o borrada sigue siendo válido hasta que vence (15 min); no se puede renovar.
+- Un admin no puede borrar su propia cuenta (`403`).
+- Editar y borrar avisan a los demás servicios con un evento de cuenta: ver [`account_events.md`](account_events.md).
+- El access token de una cuenta borrada sigue siendo válido hasta que vence (15 min); no se puede renovar.

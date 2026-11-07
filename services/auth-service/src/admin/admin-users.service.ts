@@ -14,25 +14,21 @@ import { ActionToken } from '../auth/action-token.entity';
 import { AuthService } from '../auth/auth.service';
 import { isValidCuit } from '../auth/cuit';
 import { RefreshSession } from '../auth/refresh-session.entity';
-import { AccountStatus } from '../users/account-status';
 import { Company } from '../users/company.entity';
 import { User } from '../users/user.entity';
 import { UserRole } from '../users/user-role';
 import { ACCOUNT_EVENT_PUBLISHER, AccountEventPublisher, AccountEventType } from './account-events';
-import { AdminUpdateUserDto, ListUsersQuery, SuspendUserDto } from './admin.dto';
+import { AdminUpdateUserDto, ListUsersQuery } from './admin.dto';
 
 /** Vista de una cuenta para el panel de administración. */
 export interface AdminUserView {
   id: string;
   email: string;
   role: UserRole;
-  status: AccountStatus;
   deleted: boolean;
   created_at: string;
   updated_at: string;
   email_verified_at: string | null;
-  suspended_at: string | null;
-  suspension_reason: string | null;
   deleted_at: string | null;
   company?: { legal_name: string; cuit: string; activity: string };
 }
@@ -66,7 +62,6 @@ export class AdminUsersService {
     const qb = this.users.createQueryBuilder('user').leftJoinAndSelect('user.company', 'company');
     if (query.include_deleted) qb.withDeleted();
     if (query.role) qb.andWhere('user.role = :role', { role: query.role });
-    if (query.status) qb.andWhere('user.status = :status', { status: query.status });
     const term = query.q?.trim().toLowerCase();
     if (term) {
       qb.andWhere(
@@ -163,34 +158,6 @@ export class AdminUsersService {
     };
   }
 
-  async suspend(actorId: string, id: string, input: SuspendUserDto): Promise<AdminUserView> {
-    this.assertNotSelf(actorId, id, 'suspender');
-    const user = await this.load(id);
-    await this.dataSource.transaction(async (manager) => {
-      await manager.update(User, user.id, {
-        status: AccountStatus.SUSPENDED,
-        suspendedAt: new Date(),
-        suspensionReason: input.reason?.trim() || null,
-      });
-      await this.revokeSessions(manager, user.id);
-    });
-    const updated = await this.load(id);
-    await this.publish('account.suspended', updated, actorId);
-    return this.toView(updated);
-  }
-
-  async reactivate(actorId: string, id: string): Promise<AdminUserView> {
-    const user = await this.load(id);
-    await this.users.update(user.id, {
-      status: AccountStatus.ACTIVE,
-      suspendedAt: null,
-      suspensionReason: null,
-    });
-    const updated = await this.load(id);
-    await this.publish('account.reactivated', updated, actorId);
-    return this.toView(updated);
-  }
-
   /**
    * Borrado lógico: la cuenta deja de aparecer y de poder entrar, y el email/CUIT quedan
    * libres para una nueva alta. La fila queda para auditoría (include_deleted=true).
@@ -247,7 +214,6 @@ export class AdminUsersService {
       event,
       user_id: user.id,
       role: user.role,
-      status: user.status,
       deleted: view.deleted,
       email: user.email,
       ...(view.company ? { company: view.company } : {}),
@@ -261,13 +227,10 @@ export class AdminUsersService {
       id: user.id,
       email: user.email,
       role: user.role,
-      status: user.status,
       deleted: !!user.deletedAt,
       created_at: iso(user.createdAt) ?? '',
       updated_at: iso(user.updatedAt) ?? '',
       email_verified_at: iso(user.emailVerifiedAt),
-      suspended_at: iso(user.suspendedAt),
-      suspension_reason: user.suspensionReason,
       deleted_at: iso(user.deletedAt),
     };
     if (user.company) {

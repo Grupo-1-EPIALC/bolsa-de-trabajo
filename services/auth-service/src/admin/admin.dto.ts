@@ -13,7 +13,6 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { AccountStatus } from '../users/account-status';
 import { UserRole } from '../users/user-role';
 
 const toBoolean = ({ value }: { value: unknown }) =>
@@ -23,10 +22,6 @@ export class ListUsersQuery {
   @IsOptional()
   @IsIn(Object.values(UserRole))
   role?: UserRole;
-
-  @IsOptional()
-  @IsIn(Object.values(AccountStatus))
-  status?: AccountStatus;
 
   /** Busca en email, razón social y CUIT. */
   @IsOptional()
@@ -82,11 +77,4 @@ export class AdminUpdateUserDto {
   @ValidateNested()
   @Type(() => AdminCompanyUpdateDto)
   company?: AdminCompanyUpdateDto;
-}
-
-export class SuspendUserDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  reason?: string;
 }
