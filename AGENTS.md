@@ -139,7 +139,8 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Perfil completo de la estructura común §5 en el schema `profile`. `PATCH /profiles/me` reemplaza secciones y rechaza `"COMPLETAR_MANUALMENTE"`. La completitud se calcula por reglas (`origin: "RULES"`) en 3 pasos (`cv`, `preferences`, `privacy`). Las sugerencias de WF-01 se devuelven como `profile_draft` + `review_fields`.
 - Autenticar con el JWT RS256 de auth-service (JWKS) y servicios sólo con `X-Service-Token`. Sólo `student` tiene `/me`; un perfil ajeno da 404. Exponer el pool para matching (`GET /profiles`, sólo perfiles buscables) con vistas que minimizan datos (sin teléfono, inclusión ni consentimientos). Contratos: `contracts/profile_frontend.md` y `contracts/profiles_matching.md`.
 - Perfil de empresa (`/api/v1/profiles/companies/...`): marca empleadora (nombre comercial, logo PNG/JPEG/WebP ≤ 1 MB validado por firma y servido público, rubro, tamaño, sede, descripción, links, beneficios, contacto), con razón social/CUIT/actividad como copia de sólo lectura de auth-service y `snapshot` con la forma de `company_snapshot` para jobs-service. **Las búsquedas no van en profile-service**: son de jobs-service y el front las pide ahí. Contratos: `contracts/company_profile_frontend.md` y `contracts/company_profiles_jobs.md`.
-**Tests mínimos:** UT-PROF-01 a UT-PROF-07.
+- Recibir los eventos de cuenta de auth-service (`POST /api/v1/profiles/internal/account-events`, sólo `X-Service-Token`, idempotente): `account.deleted` archiva el perfil de estudiante o empresa (sale del pool, de los listados y de `/me`; el JWT vigente recibe `401 ACCOUNT_DELETED`) y `account.updated` refresca la copia de los datos legales de la empresa. Contrato: `contracts/profiles_matching.md` §8.
+**Tests mínimos:** UT-PROF-01 a UT-PROF-07 y UT-PROF-09 (eventos de cuenta).
 
 ### 4.3 Agente `jobs-agent` — jobs-service (FastAPI)
 **Debe:**

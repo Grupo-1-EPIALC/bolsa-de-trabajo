@@ -3,6 +3,7 @@
 import logging
 from dataclasses import dataclass
 
+from app.application.account_events_service import AccountEventsService
 from app.application.company_service import CompanyProfileService
 from app.application.profile_service import ProfileService
 from app.application.upload_cv_use_case import CvExtractionJobStore, UploadAndExtractCvUseCase
@@ -14,6 +15,7 @@ from app.domain.ports import (
     Clock,
     CompanyProfileRepository,
     CvWebhookGateway,
+    DeletedAccounts,
     EventPublisher,
     IdGenerator,
     LogoStore,
@@ -30,6 +32,10 @@ from app.infrastructure.n8n_client import HttpN8nCvWebhookGateway
 from app.infrastructure.renderers.docx import DocxCvRenderer
 from app.infrastructure.renderers.html import HtmlCvRenderer
 from app.infrastructure.renderers.pdf import WeasyPrintCvRenderer
+from app.infrastructure.repositories.deleted_accounts import (
+    InMemoryDeletedAccounts,
+    SqlAlchemyDeletedAccounts,
+)
 from app.infrastructure.repositories.memory import InMemoryProfileRepository
 from app.infrastructure.repositories.memory_companies import (
     InMemoryCompanyProfileRepository,
@@ -57,6 +63,8 @@ class Container:
     repository: ProfileRepository
     company_repository: CompanyProfileRepository
     logos: LogoStore
+    account_events: AccountEventsService
+    deleted_accounts: DeletedAccounts
 
 
 def build_container(
@@ -65,6 +73,7 @@ def build_container(
     repository: ProfileRepository | None = None,
     company_repository: CompanyProfileRepository | None = None,
     logos: LogoStore | None = None,
+    deleted_accounts: DeletedAccounts | None = None,
     webhook: CvWebhookGateway | None = None,
     publisher: EventPublisher | None = None,
     accounts: AccountDirectory | None = None,
@@ -92,6 +101,12 @@ def build_container(
             SqlAlchemyLogoStore(settings.database_url, schema=settings.database_schema)
             if settings.database_url
             else InMemoryLogoStore()
+        )
+    if deleted_accounts is None:
+        deleted_accounts = (
+            SqlAlchemyDeletedAccounts(settings.database_url, schema=settings.database_schema)
+            if settings.database_url
+            else InMemoryDeletedAccounts()
         )
     accounts = accounts or HttpAccountDirectory(
         settings.auth_service_url, settings.http_timeout_seconds
@@ -141,6 +156,22 @@ def build_container(
     verifier = tokens or JwtTokenVerifier(
         JwksKeyResolver(settings.jwks_url), settings.jwt_issuer, settings.jwt_audience
     )
+    account_events = AccountEventsService(
+        profiles=repository,
+        companies=company_repository,
+        logos=logos,
+        deleted_accounts=deleted_accounts,
+        clock=clock,
+    )
     return Container(
-        settings, profiles, companies, cv_upload, verifier, repository, company_repository, logos
+        settings,
+        profiles,
+        companies,
+        cv_upload,
+        verifier,
+        repository,
+        company_repository,
+        logos,
+        account_events,
+        deleted_accounts,
     )

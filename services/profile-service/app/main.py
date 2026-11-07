@@ -12,10 +12,11 @@ from app.api.deps import get_container
 from app.api.errors import install_error_handlers
 from app.api.routes import router as cv_compat_router
 from app.api.routes_companies import router as companies_router
+from app.api.routes_internal import router as internal_router
 from app.api.routes_profiles import router as profiles_router
 
 SERVICE_NAME = "profile-service"
-SERVICE_VERSION = "0.2.0"
+SERVICE_VERSION = "0.3.0"
 
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ install_error_handlers(app)
 # `/{profile_id}` del perfil de estudiante.
 app.include_router(cv_compat_router)
 app.include_router(companies_router)
+app.include_router(internal_router)
 app.include_router(profiles_router)
 
 

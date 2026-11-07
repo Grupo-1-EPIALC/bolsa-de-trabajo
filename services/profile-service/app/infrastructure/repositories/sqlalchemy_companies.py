@@ -1,8 +1,10 @@
 """Repositorios PostgreSQL del perfil de empresa (`company_profiles`) y del logo
 (`company_logos`, binario ≤ 1 MB) en el schema `profile`.
+Los perfiles de cuentas borradas pasan a `company_profiles_deleted` (auditoría).
 """
 
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any, cast
 
 from sqlalchemy import (
@@ -16,6 +18,7 @@ from sqlalchemy import (
     Table,
     create_engine,
     func,
+    insert,
     select,
 )
 from sqlalchemy.engine import Engine
@@ -42,6 +45,15 @@ class SqlAlchemyCompanyProfileRepository:
             Column("status", String(16), nullable=False, index=True),
             Column("updated_at", DateTime(timezone=True), nullable=False),
             Column("version", Integer, nullable=False),
+            Column("document", JSON, nullable=False),
+            schema=schema or None,
+        )
+        self._archive = Table(
+            "company_profiles_deleted",
+            metadata,
+            Column("company_id", String(64), primary_key=True),
+            Column("id", String(64), nullable=False),
+            Column("deleted_at", DateTime(timezone=True), nullable=False),
             Column("document", JSON, nullable=False),
             schema=schema or None,
         )
@@ -76,6 +88,24 @@ class SqlAlchemyCompanyProfileRepository:
             total = int(conn.execute(select(func.count()).select_from(self._table)).scalar_one())
             documents = conn.execute(statement).scalars().all()
         return [_decode(d) for d in documents], total
+
+    def archive(self, company_id: str, deleted_at: datetime) -> bool:
+        table = self._table
+        with self._engine.begin() as conn:
+            row = conn.execute(
+                select(table.c.id, table.c.document)
+                .where(table.c.company_id == company_id)
+                .with_for_update()
+            ).one_or_none()
+            if row is None:
+                return False
+            conn.execute(
+                insert(self._archive).values(
+                    company_id=company_id, id=row[0], deleted_at=deleted_at, document=row[1]
+                )
+            )
+            conn.execute(table.delete().where(table.c.company_id == company_id))
+        return True
 
     def dispose(self) -> None:
         self._engine.dispose()

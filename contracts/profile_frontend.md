@@ -388,6 +388,7 @@ Siempre `{"error": {"code", "message", "details"}}`.
 | HTTP | `code` | Cuándo | Qué hacer |
 |---|---|---|---|
 | 401 | `UNAUTHORIZED` | Sin token, vencido o inválido | Refresh o login |
+| 401 | `ACCOUNT_DELETED` | Un admin dio de baja la cuenta y el access token todavía no venció (hasta 15 min) | Cerrar la sesión y volver al home |
 | 403 | `FORBIDDEN` | Rol distinto de `student` en `/me` | Ocultar la sección |
 | 404 | `PROFILE_NOT_FOUND` | Todavía no tiene perfil · job ajeno | Ofrecer CV o carga manual |
 | 404 | `CV_SUGGESTIONS_NOT_FOUND` | No hay extracción guardada | — |

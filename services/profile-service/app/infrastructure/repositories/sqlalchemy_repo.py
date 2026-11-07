@@ -1,9 +1,11 @@
 """Repositorio PostgreSQL (SQLAlchemy 2.0) en el schema `profile`.
 
 Una fila por perfil: columnas indexadas para buscar y el documento JSON completo.
+Los perfiles de cuentas borradas pasan a `profiles_deleted` (auditoría) y salen de `profiles`.
 """
 
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any, cast
 
 from sqlalchemy import (
@@ -16,6 +18,7 @@ from sqlalchemy import (
     Table,
     create_engine,
     func,
+    insert,
     select,
 )
 from sqlalchemy.engine import Engine
@@ -50,6 +53,15 @@ class SqlAlchemyProfileRepository:
             Column("document", JSON, nullable=False),
             schema=schema or None,
         )
+        self._archive = Table(
+            "profiles_deleted",
+            metadata,
+            Column("id", String(64), primary_key=True),
+            Column("user_id", String(64), nullable=False, index=True),
+            Column("deleted_at", DateTime(timezone=True), nullable=False),
+            Column("document", JSON, nullable=False),
+            schema=schema or None,
+        )
         metadata.create_all(self._engine)
 
     def add(self, profile: StudentProfile) -> None:
@@ -78,6 +90,24 @@ class SqlAlchemyProfileRepository:
             total = int(conn.execute(select(func.count()).select_from(self._table)).scalar_one())
             documents = conn.execute(statement).scalars().all()
         return [_decode(d) for d in documents], total
+
+    def archive(self, profile_id: str, deleted_at: datetime) -> bool:
+        table = self._table
+        with self._engine.begin() as conn:
+            row = conn.execute(
+                select(table.c.user_id, table.c.document)
+                .where(table.c.id == profile_id)
+                .with_for_update()
+            ).one_or_none()
+            if row is None:
+                return False
+            conn.execute(
+                insert(self._archive).values(
+                    id=profile_id, user_id=row[0], deleted_at=deleted_at, document=row[1]
+                )
+            )
+            conn.execute(table.delete().where(table.c.id == profile_id))
+        return True
 
     def count(self) -> int:
         with self._engine.connect() as conn:
