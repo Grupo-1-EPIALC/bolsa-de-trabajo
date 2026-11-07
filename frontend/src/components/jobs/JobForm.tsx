@@ -10,6 +10,7 @@ import {
   newEducation,
   newLanguage,
   newSkill,
+  pendingErrors,
   validateJobForm,
   type JobForm as JobFormState,
   type JobFormErrors,
@@ -92,8 +93,12 @@ export const JobForm: React.FC<JobFormProps> = ({ job, onSaved, onCancel }) => {
   const [busy, setBusy] = useState(false);
   const editing = !!base;
 
-  const set = <K extends keyof JobFormState>(key: K, value: JobFormState[K]) =>
-    setForm((f) => ({ ...f, [key]: value }));
+  const set = <K extends keyof JobFormState>(key: K, value: JobFormState[K]) => {
+    const next = { ...form, [key]: value };
+    setForm(next);
+    // Al corregir un campo su error desaparece; no se muestran errores nuevos hasta guardar.
+    if (Object.keys(errors).length > 0) setErrors((prev) => pendingErrors(prev, next));
+  };
 
   const reload = async () => {
     if (!base) return;

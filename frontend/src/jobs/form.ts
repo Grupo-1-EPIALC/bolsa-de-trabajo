@@ -285,6 +285,19 @@ export function validateJobForm(form: JobForm, now: Date = new Date()): JobFormE
   return errors;
 }
 
+/**
+ * Errores que siguen vigentes después de editar: sólo los campos que ya tenían error y todavía
+ * no cumplen las reglas. Los errores del servidor (`form`) se descartan al editar.
+ */
+export function pendingErrors(previous: JobFormErrors, form: JobForm, now: Date = new Date()) {
+  const current = validateJobForm(form, now);
+  const kept: JobFormErrors = {};
+  for (const field of Object.keys(previous) as JobFormField[]) {
+    if (field !== 'form' && current[field]) kept[field] = current[field];
+  }
+  return kept;
+}
+
 function buildSalary(form: JobForm, base: JobSalary | null | undefined): JobSalary | null {
   if (form.salaryMode === 'none') return null;
   const common = {

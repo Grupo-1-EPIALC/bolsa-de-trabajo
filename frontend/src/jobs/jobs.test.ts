@@ -7,6 +7,7 @@ import {
   fieldErrorsFromApi,
   formToInput,
   jobToForm,
+  pendingErrors,
   validateJobForm,
   type JobForm,
 } from './form';
@@ -276,5 +277,22 @@ describe('fieldErrorsFromApi', () => {
     expect(fieldErrorsFromApi(new ApiError(422, 'INVALID_INPUT', 'Body vacío'))).toEqual({
       form: 'Body vacío',
     });
+  });
+});
+
+describe('pendingErrors', () => {
+  it('al corregir un campo su error desaparece y no aparecen errores nuevos', () => {
+    const previous = validateJobForm(emptyJobForm(), NOW);
+    const fixed = { ...emptyJobForm(), title: 'Backend Python' };
+    const kept = pendingErrors(previous, fixed, NOW);
+    expect(kept.title).toBeUndefined();
+    expect(kept.description).toBeDefined();
+
+    const onlyTitle = pendingErrors({ title: 'Poné un título.' }, { ...emptyJobForm() }, NOW);
+    expect(Object.keys(onlyTitle)).toEqual(['title']);
+  });
+
+  it('descarta el error general del servidor al editar', () => {
+    expect(pendingErrors({ form: 'Error del servidor' }, validForm(), NOW)).toEqual({});
   });
 });

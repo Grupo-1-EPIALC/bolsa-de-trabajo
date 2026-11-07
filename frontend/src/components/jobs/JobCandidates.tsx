@@ -17,6 +17,12 @@ interface JobCandidatesProps {
   onBack: () => void;
 }
 
+/** "1,9 años de experiencia" (un decimal, es-AR). */
+const yearsLabel = (years: number) => {
+  const rounded = Math.round(years * 10) / 10;
+  return `${rounded.toLocaleString('es-AR')} año${rounded === 1 ? '' : 's'} de experiencia`;
+};
+
 const Bullets: React.FC<{ title: string; items?: string[] }> = ({ title, items }) =>
   items && items.length > 0 ? (
     <>
@@ -72,8 +78,7 @@ const CandidateCard: React.FC<{ item: CompanyRuleItem; ai?: CompanyAIItem }> = (
             <p className="small mb-1">
               {[
                 place,
-                typeof c.years_experience === 'number' &&
-                  `${c.years_experience} año${c.years_experience === 1 ? '' : 's'} de experiencia`,
+                typeof c.years_experience === 'number' && yearsLabel(c.years_experience),
                 c.academic_status?.career,
                 modality,
                 start && `Inicio: ${labelOf(AVAILABILITY_START, start).toLowerCase()}`,
