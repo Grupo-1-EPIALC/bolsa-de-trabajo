@@ -33,7 +33,9 @@
 | P-015 | 2026-11-06 | Andres | Claude Code (`auth-agent`) | `docs/auth/v0.0.2-contrato-auth` | Buscar el contrato de auth y ponerlo en `contracts/` | `services/auth-service/AUTH-RESPONSES.md` (sólo register/login) se mueve a `contracts/auth_frontend.md` y se completa con los 10 endpoints, pedidos, sesión/refresh de un solo uso, JWT/JWKS, flujos por mail y errores reales, verificados contra el servicio en Docker; AGENTS §4.1 enlaza el contrato | pendiente de revisión |
 | P-016 | 2026-11-06 | Elian | OpenCode (GLM 5.3 Flash Free) | `fix/jobs/v0.1.0-revision-y-contrato` | Revisión exhaustiva de la implementación de jobs-service (bugs, concurrencia/deadlocks, seguridad XSS/SQLi/auth, checks de la PR y contraste plan/contratos), aplicando los fixes detectados | Lock optimista por `version` con `409 CONFLICT` (antes: lost-update), seed idempotente ante réplicas, validación previa a auth-service, límites de ítems/listas y `page` ≤ 1.000.000 (DoS de entrada), `company_snapshot.name` obligatorio; docs corregidos (no hay `400`, `to_agree` no anula `salary`, `experience` puede ser `null`); confirmados gateway/JWKS/`/me` y errores report-only fuera de alcance | aceptado |
 | P-017 | 2026-11-06 | Elian | OpenCode (GLM 5.3 Flash Free) | `fix/jobs/v0.1.0-revision-y-contrato` | Generar el contrato de búsquedas en un MD para compartir con los compañeros (como con el de matching), cubriendo sólo el trabajo propio y lo que cada quien necesita integrar al final | `contracts/jobs_busquedas.md` v0.1.0: tabla de endpoints, roles/service token, paginación, ejemplo de creación con reglas de `422`, `JobOpportunity` y garantías, visibilidad de sueldo, errores y seed; notas de integración por compañero (front, matching, auth, n8n; profile sin dependencias) sin especificar internos de otros servicios | aceptado |
-| P-018 | | | | | | | |
+| P-018 | 2026-11-06 | Andres | Claude Code (`auth-agent`) | `feature/auth/v0.1.0-admin-cuentas` | Panel de admin: listar usuarios y empresas, editarlos, resetear la clave, cambiar el correo y soft delete (el borrado desaparece de los listados y permite re-alta con el mismo email/CUIT). Back transversal en un core-service nuevo, postulaciones para después, por fases con un PR por servicio. Después: quitar la suspensión y dejar sólo el soft delete | Fase 1 en auth-service v0.1.0: migración `SoftDelete` (`deleted_at` e índices únicos parciales de email y CUIT), `/admin/users` con `RolesGuard` (listar con filtros y paginado, editar, forzar reset, borrar), eventos de cuenta a `ACCOUNT_EVENT_WEBHOOKS`; contratos `auth_frontend.md` §7 y `account_events.md`; 23 tests y prueba E2E | pendiente de revisión |
+| P-019 | 2026-11-06 | Andres | Claude Code (`profile-agent` + `jobs-agent`) | `feature/profile/v0.3.0-eventos-cuenta` y `feature/jobs/v0.2.0-eventos-cuenta` | Seguir con la fase 1 del panel de admin: que profile-service y jobs-service reciban los eventos de cuenta de auth-service y dejen de mostrar las cuentas borradas | Receptores `POST /internal/account-events` (sólo `X-Service-Token`, idempotentes) en los dos servicios: `account.deleted` archiva perfiles y ofertas en tablas `*_deleted` y registra la baja (el JWT vigente recibe `401 ACCOUNT_DELETED`; el seed no los resucita); `account.updated` refresca los datos legales de la empresa en profile. auth avisa a los dos por defecto. 101 + 116 tests y E2E | pendiente de revisión |
+| P-020 | | | | | | | |
 
 ---
 
@@ -244,7 +246,37 @@
 - **Archivos afectados:** `contracts/jobs_busquedas.md`, `PROMPTS.md`.
 - **Decisión:** aceptado.
 
-- ### P-018 — (plantilla)
+### P-018 — Panel de admin, fase 1: cuentas y empresas en auth-service
+- **Fecha:** 2026-11-06 · **Autor:** Andres · **Agente:** Claude Code (`auth-agent`) · **Rama:** `feature/auth/v0.1.0-admin-cuentas` · **HU:** administración de cuentas
+- **Prompt (resumido):**
+  > Quiero armar el admin panel; no sé bien dónde tiene que vivir el back. Debería poder listar usuarios, editarlos, resetear la clave, cambiar el correo, hacer soft delete y suspender una cuenta (el soft delete desaparece de los listados y permite una nueva alta con el mismo email; el suspendido se ve en los listados pero no puede acceder ni matchear). Lo mismo con las empresas, ver sus búsquedas activas, configurar los resultados del match, ver la salud de los servicios y un panel de eventos con alertas por eventos críticos o suma de fallos. Decisiones: core-service nuevo en FastAPI para lo transversal (y eventualmente lógica de negocio), postulaciones para después, unicidad por email/CUIT (sin DNI), por fases con un PR por servicio.
+  > Corrección posterior: quitar el estado de cuenta suspendida y dejar sólo el soft delete.
+- **Resumen de la respuesta:**
+  - Reparto: cuentas y empresas en auth-service (dueño); ocultar al borrado en profile y jobs por eventos; búsquedas por empresa en jobs; configuración del match en matching; salud, eventos y alertas en core-service. Postulaciones no existen todavía.
+  - auth-service v0.1.0: migración `SoftDelete` (`deleted_at`; email y CUIT únicos sólo entre no borrados). `@DeleteDateColumn` hace que login, refresh, `/me` y registro ignoren las cuentas borradas.
+  - `AdminUsersController` (`/api/v1/auth/admin/users`) con `JwtAuthGuard` + `RolesGuard`: listar (rol, búsqueda, `include_deleted`, paginado), ver, editar email/empresa, forzar reset (invalida la clave, cierra sesiones y manda el link) y borrar. Un admin no puede borrarse a sí mismo.
+  - Puerto `AccountEventPublisher` con implementación HTTP best effort a `ACCOUNT_EVENT_WEBHOOKS` (`X-Service-Token`): eventos `account.updated` y `account.deleted`.
+  - La primera versión tenía además suspensión (`status`, `403 ACCOUNT_SUSPENDED`, suspender/reactivar); se quitó a pedido antes del merge.
+  - Contratos: `auth_frontend.md` §7 y nuevo `account_events.md`. 23 tests Jest (10 nuevos) y E2E contra el stack: cambio de email, reset con mail en Mailpit, soft delete y re-alta con el mismo email y CUIT.
+- **Archivos afectados:** `services/auth-service/` (migración, entidades, `admin/`, `roles.guard.ts`, `auth.service.ts`, tests, versión 0.1.0), `contracts/auth_frontend.md`, `contracts/account_events.md`, `docker-compose.yml`, `.env.example`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 1). Siguen en la fase 1 los receptores de eventos en profile-service y jobs-service.
+
+### P-019 — Panel de admin, fase 1: receptores de eventos de cuenta en profile y jobs
+- **Fecha:** 2026-11-06 · **Autor:** Andres · **Agente:** Claude Code (`profile-agent` + `jobs-agent`) · **Rama:** `feature/profile/v0.3.0-eventos-cuenta` y `feature/jobs/v0.2.0-eventos-cuenta` (un PR por servicio) · **HU:** administración de cuentas
+- **Prompt (resumido):**
+  > Continuá entonces (lo que falta de la fase 1: que profile-service y jobs-service reciban los eventos de cuenta y oculten a las cuentas borradas).
+- **Resumen de la respuesta:**
+  - Antes de seguir se integró `dev` en las ramas de auth y se quitó la suspensión (ver P-018).
+  - **profile-service v0.3.0:** `POST /api/v1/profiles/internal/account-events` (sólo `X-Service-Token`, idempotente). `account.deleted` registra la baja en `profile.deleted_accounts` (aunque no tuviera perfil) y mueve el perfil a `profiles_deleted` / `company_profiles_deleted` (auditoría, sin migraciones: tablas nuevas con `create_all`); borra el logo. `account.updated` actualiza la copia de los datos legales de la empresa; el email del estudiante no se toca.
+  - **jobs-service v0.2.0:** `POST /api/v1/jobs/internal/account-events`. `account.deleted` registra la baja y mueve todas las ofertas de la empresa a `jobs.jobs_deleted`; `account.updated` se ignora (el `company_snapshot` se arma al crear o editar).
+  - En los dos: el JWT que todavía no venció de una cuenta borrada recibe `401 ACCOUNT_DELETED` (también al intentar crear el perfil) y el seed de demo no vuelve a cargar lo archivado.
+  - **auth-service:** `ACCOUNT_EVENT_WEBHOOKS` apunta por defecto a los dos receptores en `docker-compose.yml`; `account_events.md` describe lo que hace cada uno.
+  - Contratos: `profiles_matching.md` §8, `jobs_matching.md` §11, OpenAPI de jobs 0.2.0 y el error `ACCOUNT_DELETED` en los contratos para el front. AGENTS §4.2 y §4.3.
+  - Tests: UT-PROF-09 (101 tests en profile) y UT-JOBS-03 (116 en jobs); ruff, black y mypy limpios. E2E contra el stack: alta, perfil u oferta, evento, repetido ignorado, `404` en el detalle y `401 ACCOUNT_DELETED` con el JWT vigente.
+- **Archivos afectados:** `services/profile-service/` (dominio, `AccountEventsService`, repositorios, `deleted_accounts.py`, seed, `routes_internal.py`, tests), `services/jobs-service/` (ídem), `contracts/profiles_matching.md`, `contracts/profile_frontend.md`, `contracts/company_profile_frontend.md`, `contracts/jobs_matching.md`, `contracts/jobs_frontend.md`, `contracts/jobs_busquedas.md`, `contracts/jobs_service.openapi.json`, `contracts/account_events.md`, `docker-compose.yml`, `.env.example`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 2 por profile, Integrante 3 por jobs). Pendiente aparte: el gateway no enruta `POST/GET /api/v1/jobs` sin barra final (ya reportado en `jobs_busquedas.md` §11).
+
+- ### P-020 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
