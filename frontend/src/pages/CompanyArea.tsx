@@ -82,21 +82,6 @@ export const CompanyArea: React.FC<CompanyAreaProps> = ({ user, section, onSecti
     }
   };
 
-  if (user.role !== 'company') {
-    return (
-      <>
-        <PageHeader icon="bi-gear" title="Administración" subtitle={user.email} />
-        <div className="container py-5">
-          <div className="card card-elevated mx-auto text-center p-4" style={{ maxWidth: '40rem' }}>
-            <p className="mb-0">
-              La consola de administración todavía no está disponible en el front.
-            </p>
-          </div>
-        </div>
-      </>
-    );
-  }
-
   const editing = section === 'profile' && profile;
   let content: React.ReactNode;
   if (error && profile === undefined) {

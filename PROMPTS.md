@@ -41,6 +41,7 @@
 | P-023 | 2026-11-06 | Dario	| Gemini (`frontend-agent`)	| `feature/frontend/v0.2.2-correcciones-frontend` | Corregir fallos de integración y errores 422 en el envío de formularios de perfil mediante la limpieza de propiedades calculadas por el backend (como normalized o months), estabilizar la visualización de componentes en Bootstrap y asegurar la compatibilidad de los flujos de estudiante y empresa con la arquitectura actual	
 Sanitización del objeto de envío en ProfileWizard.tsx excluyendo atributos de solo lectura o calculados (normalized, months, etc.) para evitar conflictos de validación estricta con Pydantic/FastAPI en el backend; verificación y soporte de la estructura SPA basada en Bootstrap 5 manteniendo la separación visual estricta entre reglas (origin: "RULES", badges verdes) y sugerencias de IA (origin: "AI", badges ámbar con disclaimer); ajustes en la navegación y control de vistas privadas según los roles de usuario| pendiente de revisión | |
 | P-024 | 2026-11-06 | Dario	| Gemini (`frontend-agent`)	| `feature/frontend/v0.2.2-correcciones-frontend` | Actualización inmutable del estado `profile` en `StudentArea.tsx` mediante `setProfile((prev) => ({ ...prev, has_cv_suggestions: false }))` para forzar un re-render inmediato en la UI sin requerir recarga manual (`F5`).Ajuste en `ProfileWizard.tsx` para mutar explícitamente `updated.has_cv_suggestions = false` al guardar el paso del CV y conectar el evento de descarte con la API.Incorporación de un bloque de control para atrapar la excepción `ApiError` con estado `404` (`CV_SUGGESTIONS_NOT_FOUND`), evitando que se renderice una alerta de error global en la interfaz cuando las sugerencias ya habían sido borradas previamente.| pendiente de revisión | |
+| P-025 | 2026-11-07 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.4.0-panel-admin` | Revisar por qué no se ven las opciones de admin en el front, borrar las cuentas e2e de prueba y crear el panel | El front no tenía panel (sólo el aviso "todavía no está disponible"); además auth-service en dev había quedado con el watcher trabado tras los cambios de rama. `AdminArea` con Panel (cuentas activas por rol + config de matching), Cuentas (buscar, filtrar por rol, incluir borradas, detalle, editar email/empresa con CUIT validado, forzar cambio de clave y borrar con confirmación; sin borrar la propia) y Matching (`GET/PATCH /matches/settings`). 46 tests Vitest y E2E en Chromium 9/9 | pendiente de revisión |
 
 ---
 
@@ -359,7 +360,19 @@ Sanitización del objeto de envío en ProfileWizard.tsx excluyendo atributos de 
 *   **Archivos afectados:** frontend/src/pages/StudentArea.tsx, frontend/src/components/profile/ProfileWizard.tsx, PROMPTS.md.
 *   **Decisión:** aceptado.
 
-### P-025 — (plantilla)
+### P-025 — Panel de administración en el front
+- **Fecha:** 2026-11-07 · **Autor:** Andres · **Agente:** Claude Code (`frontend-agent`) · **Rama:** `feature/frontend/v0.4.0-panel-admin` · **HU:** HU-ADM-01 (panel de admin, fase 2: front)
+- **Prompt (resumido):**
+  > Revisá por qué sigo sin ver las opciones de admin en el front. Después: borrá las cuentas de prueba y creá el panel.
+- **Resumen de la respuesta:**
+  - **Diagnóstico:** el front no tenía panel: para `admin` `CompanyArea` mostraba "La consola de administración todavía no está disponible" (pendiente 4 de `contracts/pendientes_frontend.md`). Aparte, auth-service en dev había quedado con el watcher de Nest trabado (13 errores por archivos que desaparecieron durante un checkout) y respondía `404` en `/admin/users`: se resolvió con `docker compose restart auth-service`.
+  - **Limpieza:** se borraron las 8 cuentas `e2e-…@example.test` de las pruebas de P-022 y sus restos en profile, jobs y el outbox. Queda sólo `admin@bolsa.local`.
+  - **Front 0.4.0:** `pages/AdminArea.tsx` con tres secciones en el menú (Panel · Cuentas · Matching) y en el footer. Panel: cuentas activas por rol (cada tarjeta abre el listado filtrado) y la configuración vigente. Cuentas (`auth_frontend.md` §7): búsqueda por email/razón social/CUIT, filtro por rol, "Incluir cuentas borradas", paginación, detalle con datos frescos, edición (PATCH sólo con lo que cambió; CUIT con dígito verificador en el cliente; `409` legible), forzar cambio de clave y borrar con confirmación que explica qué se archiva; el admin no ve "Borrar" en su propia cuenta. Matching (`matching_frontend.md` §4.5): dos campos 1–20, PATCH parcial, "Última modificación" y aviso de que se guarda en memoria. Lógica pura en `src/admin/` (`users.ts`, `settings.ts`) y servicios `adminService` + `matchingService.getSettings/updateSettings`.
+  - **Verificación:** 46 tests Vitest (12 nuevos UT-FE-ADM-01 a 05), `tsc` y prettier limpios, `vite build` OK. E2E en Chromium con Playwright (9/9): menú de admin, resumen, búsqueda, edición con CUIT inválido rechazado, reset (la clave vieja deja de funcionar), borrado con confirmación y visible con "Incluir borradas", sin "Borrar" en la propia cuenta, configuración de matching (25 rechazado, 6 guardado y restaurado) y menú mobile. Cuentas e2e borradas al terminar.
+- **Archivos afectados:** `frontend/src/` (`pages/AdminArea.tsx`, `components/admin/*`, `admin/*`, `services/adminService.ts`, `services/matchingService.ts`, `types/admin.ts`, `types/matching.ts`, `navigation.ts`, `App.tsx`, `components/layout/SiteHeader.tsx`, `components/layout/SiteFooter.tsx`, `pages/CompanyArea.tsx`, `pages/StudentArea.tsx`), `frontend/package.json` y `package-lock.json` (0.4.0), `contracts/pendientes_frontend.md`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 3).
+
+### P-026 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

@@ -9,8 +9,8 @@
 | 1 | Recuperar clave (pedir mail + pantalla del link) | auth ✅ | Alta |
 | 2 | Confirmar cambio de email (pantalla del link) | auth ✅ | Alta |
 | 3 | "Mi cuenta": cambiar clave y email | auth ✅ | Alta |
-| 4 | Panel de administración de cuentas | auth ✅ | Alta (fase 2) |
-| 5 | Admin: configuración de matching | matching ✅ | Media |
+| 4 | ~~Panel de administración de cuentas~~ ✅ hecho en front 0.4.0 (P-025) | auth ✅ | Alta (fase 2) |
+| 5 | ~~Admin: configuración de matching~~ ✅ hecho en front 0.4.0 (P-025) | matching ✅ | Media |
 | 6 | Modal "¿Por qué este puntaje?" | matching ✅ | Media |
 | 7 | Perfil público de la empresa desde una oferta | profile ✅ | Media |
 | 8 | Recomendaciones de formación (`mode=training`) | n8n WF-06 ✅ / matching ❓ | Media |
@@ -53,7 +53,9 @@
   - `409`: email ya usado. `503`: no se pudo mandar el mail.
 - **Servicio:** sumar a `authService` los métodos `me`, `changePassword`, `requestEmailChange`, `confirmEmail`, `requestPasswordReset` y `confirmPasswordReset`.
 
-## 4. Panel de administración de cuentas (fase 2)
+## 4. Panel de administración de cuentas (fase 2) · ✅ hecho
+
+> Implementado en front 0.4.0 (`pages/AdminArea.tsx`, `components/admin/`). Se deja el detalle como referencia.
 
 **Contrato:** `auth_frontend.md` §7. Hoy `CompanyArea` muestra "La consola de administración todavía no está disponible" para el rol `admin`.
 
@@ -69,7 +71,9 @@
   - El admin no puede borrarse a sí mismo (`403`), así que el botón se oculta en su propia fila.
 - **Tipos:** `AdminUser` y `AdminUserList` en `types/admin.ts`.
 
-## 5. Admin: configuración de matching
+## 5. Admin: configuración de matching · ✅ hecho
+
+> Implementado en front 0.4.0 (`components/admin/MatchingSettings.tsx`).
 
 **Contrato:** `matching_frontend.md` §3 y §4.5.
 

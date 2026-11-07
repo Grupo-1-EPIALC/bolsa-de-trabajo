@@ -18,6 +18,12 @@ const COMPANY_NAV: Array<{ section: StudentSection; label: string; icon: string 
   { section: 'profile', label: 'Perfil de la empresa', icon: 'bi-pencil-square' },
 ];
 
+const ADMIN_NAV: Array<{ section: StudentSection; label: string; icon: string }> = [
+  { section: 'panel', label: 'Panel', icon: 'bi-shield-lock' },
+  { section: 'users', label: 'Cuentas', icon: 'bi-people' },
+  { section: 'settings', label: 'Matching', icon: 'bi-sliders' },
+];
+
 const STUDENT_NAV: Array<{ section: StudentSection; label: string; icon: string }> = [
   { section: 'panel', label: 'Mi panel', icon: 'bi-grid' },
   { section: 'recommendations', label: 'Ofertas para vos', icon: 'bi-stars' },
@@ -108,7 +114,7 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
                     ? STUDENT_NAV
                     : user.role === 'company'
                       ? COMPANY_NAV
-                      : []
+                      : ADMIN_NAV
                   ).map((item) => (
                     <li className="nav-item" key={item.section}>
                       <button
