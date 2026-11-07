@@ -177,6 +177,11 @@ services:
     environment:
       <<: *python-env
       DATABASE_URL: postgresql://jobs_svc:${JOBS_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JOBS_DB_SCHEMA: jobs
+      # 12 ofertas ficticias (mismos ids que los mocks de matching). false en producción.
+      JOBS_SEED_DEMO: ${JOBS_SEED_DEMO:-true}
+      # company_snapshot de cada oferta nueva: GET /api/v1/auth/me con el Bearer de la empresa
+      AUTH_SERVICE_URL: http://auth-service:3000
 
   matching-service:
     <<: *common
@@ -187,8 +192,9 @@ services:
       DATABASE_URL: postgresql://matching_svc:${MATCHING_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PROFILE_SERVICE_URL: http://profile-service:8000
       JOBS_SERVICE_URL: http://jobs-service:8000
-      # true = perfiles y ofertas ficticios hasta que profile/jobs expongan GET (ver app/data/mock)
-      MATCHING_USE_MOCKS: ${MATCHING_USE_MOCKS:-true}
+      # false = perfiles y ofertas reales de profile-service y jobs-service (por X-Service-Token).
+      # true = pool ficticio de app/data/mock, sólo para probar matching aislado.
+      MATCHING_USE_MOCKS: ${MATCHING_USE_MOCKS:-false}
 
   mcp-tools:
     <<: *common

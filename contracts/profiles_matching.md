@@ -89,13 +89,13 @@
 - A cada perfil se le agregan `summary`, `consents` y una experiencia ficticia equivalente a su `years_experience`. Todos quedan `complete` y buscables.
 - Es idempotente (no pisa perfiles existentes). En producción: `PROFILE_SEED_DEMO=false`.
 
-### Para apagar los mocks en matching
+### Datos reales o mocks en matching
+
+matching-service usa por defecto los datos reales (`MATCHING_USE_MOCKS=false` en `docker-compose.yml`): con profile-service y jobs-service levantados (los dos con seed), rankea contra el pool real y los estudiantes que se registran y completan el perfil entran solos. Para probar matching aislado con el pool ficticio:
 
 ```bash
-MATCHING_USE_MOCKS=false docker compose up -d matching-service
+MATCHING_USE_MOCKS=true docker compose up -d matching-service
 ```
-
-Con profile-service y jobs-service levantados (los dos con seed), matching rankea contra los datos reales. Los estudiantes que se registran y completan el perfil entran solos al pool.
 
 ---
 
