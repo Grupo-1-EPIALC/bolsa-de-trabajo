@@ -150,8 +150,11 @@ def build_container(
         logo_max_bytes=settings.logo_max_kb * 1024,
     )
     if settings.seed_demo if seed is None else seed:
-        loaded = seed_profiles(profiles, settings.seed_path)
-        loaded_companies = seed_companies(companies, settings.companies_seed_path)
+        is_deleted = deleted_accounts.contains
+        loaded = seed_profiles(profiles, settings.seed_path, is_deleted=is_deleted)
+        loaded_companies = seed_companies(
+            companies, settings.companies_seed_path, is_deleted=is_deleted
+        )
         logger.info("Seed: %s perfiles y %s empresas nuevos", loaded, loaded_companies)
     verifier = tokens or JwtTokenVerifier(
         JwksKeyResolver(settings.jwks_url), settings.jwt_issuer, settings.jwt_audience

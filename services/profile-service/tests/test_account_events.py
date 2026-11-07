@@ -191,3 +191,26 @@ def test_ut_prof_09_datos_legales_iguales_no_reescriben(container: Container) ->
         ),
     )
     assert result["result"] == "ignored"
+
+
+def test_ut_prof_09_el_seed_no_resucita_perfiles_borrados(seeded: Container) -> None:
+    from app.infrastructure.seed import seed_companies, seed_profiles
+
+    pool = seeded.profiles.list_profiles(SERVICE_PRINCIPAL, include_all=True)["items"]
+    profile = seeded.repository.get(pool[0]["id"])
+    assert profile is not None
+    company_id = seeded.company_repository.list(offset=0, limit=1)[0][0].company_id
+    for user_id, role in ((profile.user_id, "student"), (company_id, "company")):
+        seeded.account_events.handle(
+            SERVICE_PRINCIPAL,
+            AccountEvent("account.deleted", user_id, role, True, _when()),
+        )
+
+    is_deleted = seeded.deleted_accounts.contains
+    assert seed_profiles(seeded.profiles, seeded.settings.seed_path, is_deleted=is_deleted) == 0
+    assert seeded.repository.get(profile.id) is None
+    companies_path = seeded.settings.companies_seed_path
+    assert seed_companies(seeded.companies, companies_path, is_deleted=is_deleted) == 0
+    assert seeded.company_repository.get_by_company(company_id) is None
+    # Sin el filtro, el seed los volvería a cargar.
+    assert seed_profiles(seeded.profiles, seeded.settings.seed_path) == 1
