@@ -24,7 +24,7 @@
 - **Auth:** `Authorization: Bearer <access_token>` en todas las llamadas, con el cliente único `src/api/client.ts` y su refresh automático.
 - **No hay endpoint público anónimo** en `v0.1.0`: todo requiere sesión.
 
-> **Dependencia del gateway (Integrante 1):** `gateway/nginx.conf` hoy tiene `location /api/v1/jobs/` (con barra final). Eso no matchea `/api/v1/jobs` ni `/api/v1/jobs` sin barra, que es el listado y el POST. Hace falta un `location = /api/v1/jobs` o cambiar el prefijo. Mientras tanto, el front puede probar contra `http://localhost:8000/api/v1/jobs` en desarrollo.
+> **Gateway:** `GET/POST /api/v1/jobs` (listado y alta, sin barra final) van por `location = /api/v1/jobs` en `gateway/nginx.conf`. Antes respondían `301`.
 
 ---
 

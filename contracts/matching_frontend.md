@@ -585,7 +585,7 @@ Los ítems de `ai_recommendations.items` traen además metadatos (`id`, `model`,
 | Tema | Estado | Impacto en el front |
 |---|---|---|
 | Persistencia | Las recomendaciones de IA, los pedidos y la configuración del admin están **en memoria** | Se pierden si se reinicia el contenedor; el bloque por reglas no se ve afectado |
-| Datos | Perfiles y ofertas ficticios (`MATCHING_USE_MOCKS=true`) hasta que profile-service y jobs-service expongan sus GET | Usar los ids del pool de demo (`stu-001`…`stu-015`, `job-001`…`job-012`). Los dueños son UUIDs fijos: estudiante `stu-0NN` → `11111111-1111-4111-8111-0000000000NN`; empresa `cmp-00N` → `22222222-2222-4222-8222-00000000000N`. Para probar con JWT reales hay que registrar usuarios en auth-service y cargar esos UUIDs en `user_id` / `company_id` del mock |
+| Datos | Perfiles y ofertas reales de profile-service y jobs-service (`MATCHING_USE_MOCKS=false`, default). El seed de demo suma `stu-001`…`stu-015` y `job-001`…`job-012`, con dueños ficticios | Un estudiante con perfil **completo** y buscable entra al ranking; una empresa ve los candidatos de sus búsquedas por `job_id`. Los perfiles en borrador no aparecen como candidatos de las empresas |
 | Dueño del perfil | Los perfiles tienen que traer `user_id` y las ofertas, `company_id` (ver `estructura_comun_perfil_oferta_match.md` §5 y §6) | Si un perfil no trae `user_id`, sólo lo ven `admin` y los servicios |
 | Idiomas deseables | El criterio de idiomas cuenta un idioma `desired` igual que uno obligatorio | Un candidato sin un idioma deseable pierde puntos en "Idiomas" |
 | Skills relacionadas | Sólo sinónimos exactos (PostgreSQL ≠ SQL) | Puede mostrar como faltantes skills "parecidas" a las que tiene |
