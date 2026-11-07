@@ -1,6 +1,7 @@
 """Repositorios en memoria del perfil de empresa y su logo (tests y modo sin base)."""
 
 import threading
+from datetime import datetime
 
 from app.domain.company import CompanyProfile
 from app.domain.ports import StoredLogo
@@ -10,6 +11,7 @@ class InMemoryCompanyProfileRepository:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._items: dict[str, CompanyProfile] = {}
+        self.archived: dict[str, tuple[datetime, CompanyProfile]] = {}
 
     def add(self, profile: CompanyProfile) -> None:
         with self._lock:
@@ -27,6 +29,14 @@ class InMemoryCompanyProfileRepository:
         with self._lock:
             ordered = sorted(self._items.values(), key=lambda p: p.id)
         return ordered[offset : offset + limit], len(ordered)
+
+    def archive(self, company_id: str, deleted_at: datetime) -> bool:
+        with self._lock:
+            profile = self._items.pop(company_id, None)
+            if profile is None:
+                return False
+            self.archived[company_id] = (deleted_at, profile)
+            return True
 
 
 class InMemoryLogoStore:
