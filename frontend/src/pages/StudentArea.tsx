@@ -11,7 +11,6 @@ import { firstIncompleteStep } from '../profile/draft';
 import type { StudentSection } from '../navigation';
 import type { CvResult, ProfileStep, ProfileView } from '../types/profile';
 
-
 interface StudentAreaProps {
   section: StudentSection;
   onSection: (section: StudentSection) => void;
@@ -196,7 +195,7 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
                   has_cv_suggestions:
                     prev.has_cv_suggestions === false ? false : updated.has_cv_suggestions,
                 }
-              : updated
+              : updated,
           );
         }}
         onDiscardSuggestions={discardSuggestions}
