@@ -150,6 +150,11 @@ services:
       SMTP_FROM: ${SMTP_FROM}
       FRONTEND_URL: ${FRONTEND_URL}
       N8N_WEBHOOK_BASE_URL: http://n8n:5678/webhook
+      # Suscriptores de eventos de cuenta (borrado y edición). Ver contracts/account_events.md
+      ACCOUNT_EVENT_WEBHOOKS: ${ACCOUNT_EVENT_WEBHOOKS:-http://profile-service:8000/api/v1/profiles/internal/account-events,http://jobs-service:8000/api/v1/jobs/internal/account-events}
+      ACCOUNT_EVENT_RETRY_INTERVAL_MS: ${ACCOUNT_EVENT_RETRY_INTERVAL_MS:-5000}
+      ACCOUNT_EVENT_RETRY_BASE_MS: ${ACCOUNT_EVENT_RETRY_BASE_MS:-5000}
+      ACCOUNT_EVENT_RETRY_MAX_MS: ${ACCOUNT_EVENT_RETRY_MAX_MS:-600000}
     volumes:
       - ./secrets:/run/secrets/jwt:ro
 
@@ -177,6 +182,11 @@ services:
     environment:
       <<: *python-env
       DATABASE_URL: postgresql://jobs_svc:${JOBS_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JOBS_DB_SCHEMA: jobs
+      # 12 ofertas ficticias (mismos ids que los mocks de matching). false en producción.
+      JOBS_SEED_DEMO: ${JOBS_SEED_DEMO:-true}
+      # company_snapshot de cada oferta nueva: GET /api/v1/auth/me con el Bearer de la empresa
+      AUTH_SERVICE_URL: http://auth-service:3000
 
   matching-service:
     <<: *common
@@ -187,8 +197,9 @@ services:
       DATABASE_URL: postgresql://matching_svc:${MATCHING_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PROFILE_SERVICE_URL: http://profile-service:8000
       JOBS_SERVICE_URL: http://jobs-service:8000
-      # true = perfiles y ofertas ficticios hasta que profile/jobs expongan GET (ver app/data/mock)
-      MATCHING_USE_MOCKS: ${MATCHING_USE_MOCKS:-true}
+      # false = perfiles y ofertas reales de profile-service y jobs-service (por X-Service-Token).
+      # true = pool ficticio de app/data/mock, sólo para probar matching aislado.
+      MATCHING_USE_MOCKS: ${MATCHING_USE_MOCKS:-false}
 
   mcp-tools:
     <<: *common
@@ -221,7 +232,10 @@ services:
       CV_MAX_SIZE_MB: ${CV_MAX_SIZE_MB}
       CV_ALLOWED_EXTENSIONS: ${CV_ALLOWED_EXTENSIONS}
       CV_MAX_TEXT_CHARS: ${CV_MAX_TEXT_CHARS}
-      MCP_USE_MOCKS: ${MCP_USE_MOCKS}
+      # false = herramientas sobre profile/jobs/matching reales (mismo modo que
+      # MATCHING_USE_MOCKS: si no coinciden, WF-06 pide rankings de IDs que el otro
+      # lado no conoce). true = datos ficticios de app/infrastructure/gateways_mock.py.
+      MCP_USE_MOCKS: ${MCP_USE_MOCKS:-false}
 
   # ------------------------------------------------------------- frontend ----
   frontend:

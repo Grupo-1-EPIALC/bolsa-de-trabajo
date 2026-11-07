@@ -327,6 +327,7 @@ Formato común:
 | HTTP | `code` | Cuándo | Qué hace el consumidor |
 |---|---|---|---|
 | 401 | `UNAUTHORIZED` | Falta el token o es inválido | Renovar sesión / redirigir a login |
+| 401 | `ACCOUNT_DELETED` | La cuenta fue dada de baja y el token todavía no venció | Cerrar la sesión |
 | 403 | `FORBIDDEN` | Rol incorrecto, recurso de otra empresa o `status=closed` sin permiso | Ocultar la acción y avisar |
 | 404 | `NOT_FOUND` | Oferta inexistente, o cerrada y el usuario no es dueño/admin/service | Tratarla como inexistente |
 | 405 | `METHOD_NOT_ALLOWED` | Método no soportado en la ruta | — |
@@ -354,14 +355,14 @@ Formato común:
 
 ## 11. Limitaciones actuales (v0.1.0)
 
-1. **Gateway (Integrante 1):** `gateway/nginx.conf` tiene `location /api/v1/jobs/` con barra final,
-   que no matchea `GET/POST /api/v1/jobs`. Falta `location = /api/v1/jobs` o ajustar el prefijo.
-   Mientras tanto se prueba contra `http://localhost:8000`.
+1. ~~**Gateway:** `GET/POST /api/v1/jobs` sin barra final respondía `301`.~~ Resuelto: `gateway/nginx.conf`
+   tiene `location = /api/v1/jobs` (rama `fix/infra/v0.1.1-integracion-busquedas`).
 2. **n8n:** `WF-02` (consumidor de `job.created`) todavía no existe; el evento se emite best-effort.
 3. **`on_match`:** se trata como sueldo oculto para terceros hasta que exista la integración de
    postulaciones.
-4. **Compose:** `JOBS_SEED_DEMO` y `AUTH_SERVICE_URL` no están cableadas en `.env.example` /
-   `docker-compose.yml`; hoy se usan los defaults del servicio.
+4. ~~**Compose:** `JOBS_SEED_DEMO` y `AUTH_SERVICE_URL` sin cablear.~~ Resuelto: `docker-compose.yml`
+   pasa `JOBS_DB_SCHEMA`, `JOBS_SEED_DEMO` (default `true`) y `AUTH_SERVICE_URL`; `.env.example` documenta
+   `JOBS_SEED_DEMO`. matching-service usa los datos reales por defecto (`MATCHING_USE_MOCKS=false`).
 5. **`company_snapshot`:** se arma desde `GET /api/v1/auth/me`. El `snapshot` de empresa que expone
    profile-service todavía no se consume; evaluarlo cuando se cierre la integración de perfiles.
 6. No hay borradores, postulaciones, pasantías ni analíticas en esta entrega.

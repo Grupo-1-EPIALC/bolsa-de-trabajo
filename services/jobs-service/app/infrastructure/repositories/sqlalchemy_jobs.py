@@ -1,6 +1,10 @@
-"""Repositorio PostgreSQL (SQLAlchemy 2.0) para el schema `jobs`."""
+"""Repositorio PostgreSQL (SQLAlchemy 2.0) para el schema `jobs`.
+
+Las ofertas de empresas dadas de baja pasan a `jobs_deleted` (auditoría) y salen de `jobs`.
+"""
 
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any, cast
 
 from sqlalchemy import (
@@ -13,6 +17,7 @@ from sqlalchemy import (
     Table,
     create_engine,
     func,
+    insert,
     select,
 )
 from sqlalchemy.engine import Engine
@@ -50,6 +55,15 @@ class SqlAlchemyJobRepository:
             Column("title", String(200), nullable=False),
             Column("published_at", DateTime(timezone=True), nullable=True, index=True),
             Column("version", Integer, nullable=False),
+            Column("document", JSON, nullable=False),
+            schema=schema or None,
+        )
+        self._archive = Table(
+            "jobs_deleted",
+            metadata,
+            Column("id", String(64), primary_key=True),
+            Column("company_id", String(64), nullable=False, index=True),
+            Column("deleted_at", DateTime(timezone=True), nullable=False),
             Column("document", JSON, nullable=False),
             schema=schema or None,
         )
@@ -118,6 +132,31 @@ class SqlAlchemyJobRepository:
             return int(
                 connection.execute(select(func.count()).select_from(self._table)).scalar_one()
             )
+
+    def archive_company(self, company_id: str, deleted_at: datetime) -> int:
+        table = self._table
+        with self._engine.begin() as connection:
+            rows = connection.execute(
+                select(table.c.id, table.c.document)
+                .where(table.c.company_id == company_id)
+                .with_for_update()
+            ).all()
+            if not rows:
+                return 0
+            connection.execute(
+                insert(self._archive),
+                [
+                    {
+                        "id": row[0],
+                        "company_id": company_id,
+                        "deleted_at": deleted_at,
+                        "document": row[1],
+                    }
+                    for row in rows
+                ],
+            )
+            connection.execute(table.delete().where(table.c.company_id == company_id))
+        return len(rows)
 
     def dispose(self) -> None:
         self._engine.dispose()

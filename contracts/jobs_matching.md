@@ -45,6 +45,7 @@
 - `items` trae **objetos completos**, no summaries. `HttpJobSource.list_active_jobs` filtra por `status` y corta a `limit`; no necesita más.
 - Orden: `published_at DESC`, `id ASC`.
 - Las ofertas `closed` no se devuelven con `status=active`.
+- Las ofertas de **empresas dadas de baja** no aparecen nunca (ni con `status=all`) y su detalle da `404`: ver §11.
 - El service token puede pedir `status=closed` o `status=all` si necesita auditar; matching no lo hace.
 
 ---
@@ -227,16 +228,11 @@
 
 ## 8. Integración con matching
 
-Hoy `matching-service` arranca con:
+`matching-service` usa jobs-service real por defecto (`docker-compose.yml`):
 
 ```env
-MATCHING_USE_MOCKS=true
-```
-
-Para probar contra jobs-service real:
-
-```env
-MATCHING_USE_MOCKS=false
+MATCHING_USE_MOCKS=false   # true = pool ficticio de app/data/mock
+MCP_USE_MOCKS=false        # mcp-tools: tiene que coincidir (WF-06 rankea por MCP)
 JOBS_SERVICE_URL=http://jobs-service:8000
 SERVICE_TOKEN=...
 ```
@@ -260,7 +256,7 @@ curl -H "X-Service-Token: $SERVICE_TOKEN" \
   "http://localhost:8000/api/v1/jobs/job-004" | jq '.requirements.skills'
 ```
 
-Luego, con matching en `MATCHING_USE_MOCKS=false`:
+Luego, desde la red interna:
 
 ```bash
 curl -H "X-Service-Token: $SERVICE_TOKEN" \
@@ -286,6 +282,19 @@ curl -H "X-Service-Token: $SERVICE_TOKEN" \
 - [ ] `JobMapper.to_domain` mapea los 12 jobs sin excepciones.
 - [ ] `GET /api/v1/jobs/job-004` devuelve el detalle completo.
 - [ ] Una oferta cerrada no aparece en `status=active`.
-- [ ] Con `MATCHING_USE_MOCKS=false`, el ranking de matching usa los jobs reales.
-- [ ] `mcp-tools` con `MCP_USE_MOCKS=false` obtiene los mismos jobs.
+- [x] Con `MATCHING_USE_MOCKS=false` (default), el ranking de matching usa los jobs reales.
+- [x] `mcp-tools` con `MCP_USE_MOCKS=false` (default) obtiene los mismos jobs: `rank_jobs_for_student` y `rank_candidates_for_job` devuelven el mismo ranking que matching por REST, con ofertas y perfiles reales (UUID / `prof-…`).
 - [ ] El sueldo llega completo al service token, aunque `visibility` sea `on_match`.
+
+---
+
+## 11. Eventos de cuenta (auth-service → jobs-service)
+
+`POST http://jobs-service:8000/api/v1/jobs/internal/account-events` · sólo `X-Service-Token` (un usuario recibe `403`; por el gateway no llega porque se borra el header). Cuerpo y entrega en [`account_events.md`](account_events.md). Responde `200` con `{ "event", "user_id", "result", "archived_jobs" }`.
+
+| Evento | Qué hace jobs-service | `result` |
+|---|---|---|
+| `account.deleted` | Anota la baja en `jobs.deleted_accounts` y mueve **todas** las ofertas de la empresa (activas y cerradas) a `jobs.jobs_deleted` (auditoría). Desde ahí no salen en `GET /jobs`, en el detalle, en `/companies/me/searches` ni en el matching, y el JWT que todavía no venció recibe `401 ACCOUNT_DELETED`. El seed de demo no las vuelve a cargar | `archived` (o `registered` si no tenía ofertas, p. ej. un estudiante) |
+| `account.updated` | Nada: el `company_snapshot` se arma al crear o editar una oferta | `ignored` |
+| Repetido o de un tipo desconocido | Nada (idempotente) | `ignored` |
+

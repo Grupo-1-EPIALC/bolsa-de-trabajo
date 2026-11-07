@@ -97,3 +97,6 @@ class RaceLoserRepository:
 
     def count(self) -> int:
         return 0
+
+    def archive_company(self, company_id: str, deleted_at: datetime) -> int:
+        return 0

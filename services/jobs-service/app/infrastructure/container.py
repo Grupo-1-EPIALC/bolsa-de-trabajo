@@ -2,10 +2,12 @@
 
 from dataclasses import dataclass
 
+from app.application.account_events_service import AccountEventsService
 from app.application.job_service import JobService
 from app.domain.ports import (
     Clock,
     CompanyDirectory,
+    DeletedAccounts,
     EventPublisher,
     IdGenerator,
     JobRepository,
@@ -16,6 +18,10 @@ from app.infrastructure.company_directory import HttpCompanyDirectory
 from app.infrastructure.config import JobsSettings
 from app.infrastructure.events.n8n import HttpN8nEventPublisher
 from app.infrastructure.jwt_verifier import JwksKeyResolver, JwtTokenVerifier
+from app.infrastructure.repositories.deleted_accounts import (
+    InMemoryDeletedAccounts,
+    SqlAlchemyDeletedAccounts,
+)
 from app.infrastructure.repositories.memory_jobs import InMemoryJobRepository
 from app.infrastructure.repositories.sqlalchemy_jobs import SqlAlchemyJobRepository
 from app.infrastructure.seed import seed_repository
@@ -27,12 +33,15 @@ class Container:
     jobs: JobService
     tokens: TokenVerifier
     repository: JobRepository
+    account_events: AccountEventsService
+    deleted_accounts: DeletedAccounts
 
 
 def build_container(
     settings: JobsSettings,
     *,
     repository: JobRepository | None = None,
+    deleted_accounts: DeletedAccounts | None = None,
     directory: CompanyDirectory | None = None,
     publisher: EventPublisher | None = None,
     clock: Clock | None = None,
@@ -47,9 +56,16 @@ def build_container(
             else InMemoryJobRepository()
         )
 
+    if deleted_accounts is None:
+        deleted_accounts = (
+            SqlAlchemyDeletedAccounts(settings.database_url, schema=settings.database_schema)
+            if settings.database_url
+            else InMemoryDeletedAccounts()
+        )
+
     should_seed = settings.seed_demo if seed is None else seed
     if should_seed:
-        seed_repository(repository, settings.seed_path)
+        seed_repository(repository, settings.seed_path, is_deleted=deleted_accounts.contains)
 
     current_clock = clock or UtcClock()
     if directory is None:
@@ -76,4 +92,12 @@ def build_container(
         clock=current_clock,
         ids=ids,
     )
-    return Container(settings=settings, jobs=jobs, tokens=tokens, repository=repository)
+    account_events = AccountEventsService(repository=repository, deleted_accounts=deleted_accounts)
+    return Container(
+        settings=settings,
+        jobs=jobs,
+        tokens=tokens,
+        repository=repository,
+        account_events=account_events,
+        deleted_accounts=deleted_accounts,
+    )
