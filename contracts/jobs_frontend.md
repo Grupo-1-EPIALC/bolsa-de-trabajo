@@ -302,7 +302,8 @@ Mismos parámetros. `status` default `active`; `closed` y `all` permiten gestion
 | `on_match` | Completo | `salary: null` |
 | `hidden` | Completo | `salary: null` |
 
-- `salary` puede ser `null` también si la oferta no publica monto (`to_agree: true`).
+- `salary` sólo llega `null` para un tercero cuando `visibility` es `on_match`/`hidden`. Si la
+  oferta se publica "a convenir", el objeto `salary` sigue viajando con `min`/`max` en `null`.
 - La UI debe mostrar:
   - `salary === null` → "Sueldo no publicado" o "A convenir".
   - `salary.to_agree === true` → "A convenir".
@@ -327,11 +328,11 @@ Formato:
 
 | HTTP | `code` | Cuándo | Qué muestra la UI |
 |---|---|---|---|
-| 400 | `INVALID_INPUT` | Regla de negocio violada | Mensaje del error |
 | 401 | `UNAUTHORIZED` | Sin token / token vencido | Redirigir a login o refrescar |
 | 403 | `FORBIDDEN` | Estudiante creando, otra empresa editando/cerrando | "No tenés permiso para esta acción" |
 | 404 | `NOT_FOUND` | Oferta inexistente o cerrada de otra empresa | "No encontramos esta búsqueda" |
-| 422 | `INVALID_INPUT` | Body/query inválido (incluye UT-JOBS-01) | Errores por campo |
+| 409 | `CONFLICT` | La oferta cambió mientras la editabas/cerrabas (lock optimista); la nueva versión se relee con `GET` | "Alguien más editó la búsqueda": recargar la oferta y re-aplicar el cambio |
+| 422 | `INVALID_INPUT` | Body/query inválido o regla de negocio violada (incluye UT-JOBS-01) | Errores por campo |
 | 502 | `UPSTREAM_ERROR` | auth-service o n8n no respondieron | "Probá de nuevo en unos minutos" |
 
 Para 422, `details` puede traer una lista de errores de Pydantic. La UI debe mapear `details[].loc` a los campos del formulario.
@@ -613,6 +614,6 @@ export type JobUpdateInput = Partial<Omit<JobCreateInput, 'status'>> & {
 - [ ] "Cerrar" usa `DELETE`; "Reabrir" usa `PATCH {"status":"active"}`.
 - [ ] `salary: null` se muestra como "No publicado / A convenir".
 - [ ] Listado de "Mis búsquedas" usa `/api/v1/companies/me/searches`.
-- [ ] Errores 401/403/404/422/502 manejados con el formato común.
+- [ ] Errores 401/403/404/409/422/502 manejados con el formato común.
 - [ ] Paginación con `page`/`size` y controles de página.
 - [ ] Sin `any` en los tipos de jobs.

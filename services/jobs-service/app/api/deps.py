@@ -47,11 +47,15 @@ class Pagination:
 
 
 def pagination(
-    page: Annotated[int, Query(ge=1)] = 1,
+    page: Annotated[int, Query(ge=1, le=1_000_000)] = 1,
     size: Annotated[int, Query(ge=1, le=200)] = 5,
     limit: Annotated[int | None, Query(ge=1, le=200)] = None,
 ) -> Pagination:
-    """`limit` es el alias que usan matching-service y mcp-tools; gana sobre `size`."""
+    """`limit` es el alias que usan matching-service y mcp-tools; gana sobre `size`.
+
+    `page` acota el offset a ~200 millones de filas: evita pedidos con offsets de
+    bigint que hicieron fallar la paginación en PostgreSQL.
+    """
     return Pagination(page=page, size=limit if limit is not None else size)
 
 
