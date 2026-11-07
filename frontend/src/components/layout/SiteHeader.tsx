@@ -14,12 +14,14 @@ interface SiteHeaderProps {
 
 const COMPANY_NAV: Array<{ section: StudentSection; label: string; icon: string }> = [
   { section: 'panel', label: 'Mi empresa', icon: 'bi-building' },
+  { section: 'searches', label: 'Búsquedas', icon: 'bi-briefcase' },
   { section: 'profile', label: 'Perfil de la empresa', icon: 'bi-pencil-square' },
 ];
 
 const STUDENT_NAV: Array<{ section: StudentSection; label: string; icon: string }> = [
   { section: 'panel', label: 'Mi panel', icon: 'bi-grid' },
-  { section: 'recommendations', label: 'Ofertas para vos', icon: 'bi-briefcase' },
+  { section: 'recommendations', label: 'Ofertas para vos', icon: 'bi-stars' },
+  { section: 'jobs', label: 'Todas las ofertas', icon: 'bi-briefcase' },
   { section: 'profile', label: 'Mi perfil', icon: 'bi-person-vcard' },
 ];
 

@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../components/layout/PageHeader';
 import { CompanyForm } from '../components/company/CompanyForm';
 import { CompanyDashboard } from '../components/company/CompanyDashboard';
+import { CompanySearches } from '../components/jobs/CompanySearches';
 import { companyService } from '../services/companyService';
 import { errorMessage } from '../services/api';
 import type { StudentSection } from '../navigation';
@@ -27,6 +28,22 @@ export const CompanyArea: React.FC<CompanyAreaProps> = ({ user, section, onSecti
   const [step, setStep] = useState<CompanyStep>('company');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [startWithNew, setStartWithNew] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<number | undefined>(undefined);
+
+  const showNotice = (message: string) => {
+    setNotice(message);
+    window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => setNotice(null), 3000);
+  };
+
+  useEffect(() => () => window.clearTimeout(noticeTimer.current), []);
+
+  const openSearches = (createNew: boolean) => {
+    setStartWithNew(createNew);
+    onSection('searches');
+  };
 
   const edit = useCallback(
     (s: CompanyStep) => {
@@ -91,6 +108,15 @@ export const CompanyArea: React.FC<CompanyAreaProps> = ({ user, section, onSecti
         </button>
       </div>
     );
+  } else if (section === 'searches') {
+    // Las búsquedas no dependen del perfil de empresa: el snapshot sale de auth-service.
+    content = (
+      <CompanySearches
+        key={startWithNew ? 'new' : 'list'}
+        startWithNew={startWithNew}
+        onNotice={showNotice}
+      />
+    );
   } else if (profile === undefined) {
     content = (
       <div className="text-center py-5">
@@ -137,17 +163,46 @@ export const CompanyArea: React.FC<CompanyAreaProps> = ({ user, section, onSecti
       />
     );
   } else {
-    content = <CompanyDashboard profile={profile} onEdit={edit} />;
+    content = (
+      <CompanyDashboard
+        profile={profile}
+        onEdit={edit}
+        onSearches={() => openSearches(false)}
+        onNewSearch={() => openSearches(true)}
+      />
+    );
   }
 
   return (
     <>
       <PageHeader
         icon="bi-building"
-        title={editing ? 'Perfil de la empresa' : (profile?.name ?? 'Mi empresa')}
-        subtitle={editing ? 'Datos de la empresa y marca empleadora.' : user.email}
+        title={
+          editing
+            ? 'Perfil de la empresa'
+            : section === 'searches'
+              ? 'Búsquedas'
+              : (profile?.name ?? 'Mi empresa')
+        }
+        subtitle={
+          editing
+            ? 'Datos de la empresa y marca empleadora.'
+            : section === 'searches'
+              ? 'Publicá, editá y cerrá tus búsquedas. Mirá los candidatos por reglas.'
+              : user.email
+        }
       />
-      <div className="container py-4 py-md-5">{content}</div>
+      <div className="container py-4 py-md-5">
+        {notice && (
+          <div className="toast-floating" role="status" aria-live="polite">
+            <div className="d-flex align-items-center gap-2 text-bg-success rounded-pill shadow px-4 py-2 fw-semibold small">
+              <i className="bi bi-check-circle-fill" aria-hidden="true" />
+              {notice}
+            </div>
+          </div>
+        )}
+        {content}
+      </div>
     </>
   );
 };
