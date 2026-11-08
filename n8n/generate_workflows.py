@@ -2601,8 +2601,9 @@ def _claim_node(seed: str, name: str, workflow: str, pos: list[int]) -> dict[str
         pos,
         {
             "operation": "executeQuery",
+            # Tabla y etiqueta son constantes del generador; la clave viaja como parámetro $1.
             "query": (
-                f"INSERT INTO {NOTIFICATIONS_TABLE} (notification_key, workflow) VALUES ($1, '{workflow}') "
+                f"INSERT INTO {NOTIFICATIONS_TABLE} (notification_key, workflow) VALUES ($1, '{workflow}') "  # noqa: S608
                 "ON CONFLICT (notification_key) DO NOTHING RETURNING notification_key"
             ),
             "options": {
@@ -2973,7 +2974,7 @@ for (const it of ((ranking && ranking.items) || [])) {
 
   const skills = (candidate.skills || []).slice(0, 6).map((s) => s.name).filter(Boolean);
   const years = Number(candidate.years_experience || 0);
-  const sub = [place(candidate.location), years ? `${years} ${years === 1 ? 'año' : 'años'} de experiencia` : 'Sin experiencia laboral cargada'].filter(Boolean).join(' · ');
+  const sub = [place(candidate.location), years ? `${years.toLocaleString('es-AR', { maximumFractionDigits: 1 })} ${years === 1 ? 'año' : 'años'} de experiencia` : 'Sin experiencia laboral cargada'].filter(Boolean).join(' · ');
   const subject = `Nuevo candidato compatible con "${job.title}" (${scoreText(it.match.score)})`;
   const html = mailHtml({
     title: 'Hay un candidato nuevo para tu búsqueda',
