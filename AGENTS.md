@@ -61,6 +61,8 @@ Servicios y dueños:
    - El servidor **`mcp-tools` es consumido únicamente por `n8n`** mediante conexión directa contenedor a contenedor (`http://mcp-tools:8000/mcp` sobre la red interna `mcp_internal`) y **nunca se publica ni enruta a través del API Gateway Nginx (`gateway`)**.
 6. **Contratos primero**: si cambia un endpoint o schema JSON, actualizar `contracts/` en el mismo PR.
 
+7. **Documentación de la API viva**: cada servicio REST publica Swagger UI, ReDoc y OpenAPI bajo su prefijo (`/api/v1/<recurso>/docs`, `/redoc`, `/openapi.json`) para que pasen por el gateway sin rutas nuevas. En FastAPI con `docs_url`, `redoc_url` y `openapi_url`. El panel de admin los enlaza.
+
 ### 2.2 Separación Reglas vs. IA (requisito obligatorio)
 - Todo resultado calculado por código lleva `"origin": "RULES"` y `engine_version`.
 - Todo resultado de IA lleva `"origin": "AI"`, `model`, `generated_at`, `prompt_version` y `disclaimer`.
@@ -122,6 +124,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Reset: token de un solo uso, 1 h, **misma respuesta exista o no el email**.
 - DTOs con `class-validator`; controllers delgados; lógica en services; emails vía interfaz `EmailNotifier` inyectada por token (implementación SMTP → Mailpit en dev).
 - Publicar la clave pública JWT en `/api/v1/auth/.well-known/jwks.json` para que los servicios FastAPI validen localmente.
+- Documentación con `@nestjs/swagger` (plugin del CLI que lee los DTOs de `class-validator`): Swagger UI en `/api/v1/auth/docs`, ReDoc en `/api/v1/auth/redoc` y OpenAPI en `/api/v1/auth/openapi.json`. Etiquetar los controllers con `@ApiTags` y las rutas protegidas con `@ApiBearerAuth`.
 - Errores con el formato común `{"error": {...}}` mediante un `ExceptionFilter` global.
 - Contrato para el front y los servicios que validan el JWT en [`contracts/auth_frontend.md`](contracts/auth_frontend.md): actualizarlo en el mismo PR si cambia un endpoint o una respuesta.
 - Administración de cuentas (`/api/v1/auth/admin/users`, sólo `admin`): listar, editar email/empresa, forzar cambio de clave y borrado lógico (`deleted_at`). Email y CUIT son únicos sólo entre cuentas no borradas; una cuenta borrada no inicia sesión. Cada cambio se avisa con un evento de cuenta a `ACCOUNT_EVENT_WEBHOOKS` ([`contracts/account_events.md`](contracts/account_events.md)) mediante un **outbox transaccional** (`auth.account_event_deliveries`) con reintentos y orden por cuenta: nunca publicar fuera de la transacción del cambio.

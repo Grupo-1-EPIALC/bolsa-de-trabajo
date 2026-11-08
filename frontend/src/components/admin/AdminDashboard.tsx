@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { adminService } from '../../services/adminService';
 import { matchingService } from '../../services/matchingService';
 import { adminErrorMessage } from '../../admin/users';
+import { ApiDocsLinks } from './ApiDocsLinks';
 import type { Role } from '../../services/session';
 import type { RecommendationSettings } from '../../types/matching';
 
@@ -18,7 +19,7 @@ const CARDS: Array<{ role: Role; label: string; icon: string }> = [
   { role: 'admin', label: 'Administradores', icon: 'bi-shield-lock' },
 ];
 
-/** Resumen: cuentas activas por rol y configuración vigente del matching. */
+/** Resumen: cuentas activas por rol, configuración vigente del matching y documentación de las APIs. */
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onUsers, onSettings }) => {
   const [counts, setCounts] = useState<Counts | null>(null);
   const [settings, setSettings] = useState<RecommendationSettings | null>(null);
@@ -105,6 +106,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onUsers, onSetti
           </div>
         </div>
       </section>
+
+      <ApiDocsLinks />
     </div>
   );
 };
