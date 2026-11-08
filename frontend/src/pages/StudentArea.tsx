@@ -21,7 +21,9 @@ type Onboarding = 'start' | 'import';
 
 type Header = { title: string; subtitle: string; icon: string };
 
-const HEADERS: Record<Exclude<StudentSection, 'searches'>, Header> = {
+type StudentOnlySection = Exclude<StudentSection, 'searches' | 'users' | 'settings'>;
+
+const HEADERS: Record<StudentOnlySection, Header> = {
   panel: {
     title: 'Mi panel',
     subtitle: 'Tus ofertas recomendadas, tu perfil y tu CV en un solo lugar.',
@@ -144,7 +146,9 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
     setProfile((prev) => (prev ? { ...prev, has_cv_suggestions: false } : prev));
   };
 
-  const current = section === 'searches' ? 'panel' : section;
+  // Secciones de otros roles (búsquedas, cuentas, configuración) caen en el panel.
+  const current: StudentOnlySection =
+    section in HEADERS ? (section as StudentOnlySection) : 'panel';
   const header =
     section === 'jobs'
       ? HEADERS.jobs

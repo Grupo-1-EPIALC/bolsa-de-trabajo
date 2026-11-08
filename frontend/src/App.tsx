@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useEffect, useState } from 'react';
 import { SiteHeader } from './components/layout/SiteHeader';
 import { SiteFooter } from './components/layout/SiteFooter';
@@ -8,6 +7,7 @@ import { StudentArea } from './pages/StudentArea';
 import { CompanyArea } from './pages/CompanyArea';
 import { ConfirmEmailPage } from './pages/ConfirmEmailPage';
 import { ResetPasswordConfirmPage } from './pages/ResetPasswordConfirmPage';
+import { AdminArea } from './pages/AdminArea';
 import { authService } from './services/authService';
 import { session, SessionUser } from './services/session';
 import { AuthMode, StudentSection, View, resolveView } from './navigation';
@@ -15,7 +15,7 @@ import { AuthMode, StudentSection, View, resolveView } from './navigation';
 /**
  * Sin sesión → portada (y acceso/registro).
  * Estudiante → su área: alta de perfil si no tiene, o panel con recomendaciones, perfil y CV.
- * Empresa/admin → su panel.
+ * Empresa → su panel y búsquedas. Admin → cuentas y configuración de matching.
  */
 export const App: React.FC = () => {
   const [user, setUser] = useState<SessionUser | null>(() => session.user());
@@ -120,15 +120,18 @@ export const App: React.FC = () => {
             }}
           />
         ) : (
-          /* NAVEGACIÓN NORMAL SPA */
+          /* NAVEGACIÓN NORMAL SPA (CON ROLES UNIFICADOS) */
           <>
             {activeView === 'home' && <LandingPage onAuth={openAuth} />}
             {activeView === 'auth' && <AuthPage mode={authMode} onSuccess={handleAuthSuccess} />}
             {activeView === 'app' && user?.role === 'student' && (
               <StudentArea key={user.id} section={section} onSection={goToSection} />
             )}
-            {activeView === 'app' && user && user.role !== 'student' && (
+            {activeView === 'app' && user?.role === 'company' && (
               <CompanyArea key={user.id} user={user} section={section} onSection={goToSection} />
+            )}
+            {activeView === 'app' && user?.role === 'admin' && (
+              <AdminArea key={user.id} user={user} section={section} onSection={goToSection} />
             )}
           </>
         )}

@@ -43,6 +43,7 @@
 | P-025 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Crear modal y formulario de recuperación de clave (solicitud y confirmación por mail) interceptando tokens desde la URL | Implementación de ForgotPasswordModal.tsx y ResetPasswordConfirmPage.tsx conectados a authService y App.tsx respetando la UI de Bootstrap e interceptando tokens de recuperación | aceptado |
 | P-026 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Crear pantalla receptora de confirmación de cambio de correo electrónico con rotación de sesión | Implementación de ConfirmEmailPage.tsx con captura de ?token=..., limpieza de sesión activa y maquetado institucional | aceptado |
 | P-027 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Desarrollar modal "Mi cuenta" para estudiantes y empresas con cambio de clave y solicitud de cambio de correo | Componente AccountSettingsModal.tsx integrado en SiteHeader.tsx con pestañas para solicitar cambio de contraseña y nuevo email | aceptado |
+| P-028 | 2026-11-07 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.4.0-panel-admin` | Revisar por qué no se ven las opciones de admin en el front, borrar las cuentas e2e de prueba y crear el panel | El front no tenía panel (sólo el aviso "todavía no está disponible"); además auth-service en dev había quedado con el watcher trabado tras los cambios de rama. `AdminArea` con Panel (cuentas activas por rol + config de matching), Cuentas (buscar, filtrar por rol, incluir borradas, detalle, editar email/empresa con CUIT validado, forzar cambio de clave y borrar con confirmación; sin borrar la propia) y Matching (`GET/PATCH /matches/settings`). 46 tests Vitest y E2E en Chromium 9/9 | pendiente de revisión |
 
 
 ---
@@ -372,7 +373,19 @@
 * **Archivos afectados:** `frontend/src/services/authService.ts`, `frontend/src/components/auth/AccountSettingsModal.tsx`, `frontend/src/components/layout/SiteHeader.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-### P-028 — (plantilla)
+### P-028 — Panel de administración en el front
+- **Fecha:** 2026-11-07 · **Autor:** Andres · **Agente:** Claude Code (`frontend-agent`) · **Rama:** `feature/frontend/v0.4.0-panel-admin` · **HU:** HU-ADM-01 (panel de admin, fase 2: front)
+- **Prompt (resumido):**
+  > Revisá por qué sigo sin ver las opciones de admin en el front. Después: borrá las cuentas de prueba y creá el panel.
+- **Resumen de la respuesta:**
+  - **Diagnóstico:** el front no tenía panel: para `admin` `CompanyArea` mostraba "La consola de administración todavía no está disponible" (pendiente 4 de `contracts/pendientes_frontend.md`). Aparte, auth-service en dev había quedado con el watcher de Nest trabado (13 errores por archivos que desaparecieron durante un checkout) y respondía `404` en `/admin/users`: se resolvió con `docker compose restart auth-service`.
+  - **Limpieza:** se borraron las 8 cuentas `e2e-…@example.test` de las pruebas de P-022 y sus restos en profile, jobs y el outbox. Queda sólo `admin@bolsa.local`.
+  - **Front 0.4.0:** `pages/AdminArea.tsx` con tres secciones en el menú (Panel · Cuentas · Matching) y en el footer. Panel: cuentas activas por rol (cada tarjeta abre el listado filtrado) y la configuración vigente. Cuentas (`auth_frontend.md` §7): búsqueda por email/razón social/CUIT, filtro por rol, "Incluir cuentas borradas", paginación, detalle con datos frescos, edición (PATCH sólo con lo que cambió; CUIT con dígito verificador en el cliente; `409` legible), forzar cambio de clave y borrar con confirmación que explica qué se archiva; el admin no ve "Borrar" en su propia cuenta. Matching (`matching_frontend.md` §4.5): dos campos 1–20, PATCH parcial, "Última modificación" y aviso de que se guarda en memoria. Lógica pura en `src/admin/` (`users.ts`, `settings.ts`) y servicios `adminService` + `matchingService.getSettings/updateSettings`.
+  - **Verificación:** 46 tests Vitest (12 nuevos UT-FE-ADM-01 a 05), `tsc` y prettier limpios, `vite build` OK. E2E en Chromium con Playwright (9/9): menú de admin, resumen, búsqueda, edición con CUIT inválido rechazado, reset (la clave vieja deja de funcionar), borrado con confirmación y visible con "Incluir borradas", sin "Borrar" en la propia cuenta, configuración de matching (25 rechazado, 6 guardado y restaurado) y menú mobile. Cuentas e2e borradas al terminar.
+- **Archivos afectados:** `frontend/src/` (`pages/AdminArea.tsx`, `components/admin/*`, `admin/*`, `services/adminService.ts`, `services/matchingService.ts`, `types/admin.ts`, `types/matching.ts`, `navigation.ts`, `App.tsx`, `components/layout/SiteHeader.tsx`, `components/layout/SiteFooter.tsx`, `pages/CompanyArea.tsx`, `pages/StudentArea.tsx`), `frontend/package.json` y `package-lock.json` (0.4.0), `contracts/pendientes_frontend.md`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 3).
+
+### P-029 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

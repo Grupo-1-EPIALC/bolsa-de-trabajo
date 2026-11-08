@@ -3,6 +3,8 @@ import { apiFetch } from './api';
 import type {
   CompanyRecommendationsView,
   RecommendationRequest,
+  RecommendationSettings,
+  RecommendationSettingsUpdate,
   StudentRecommendationsView,
 } from '../types/matching';
 
@@ -34,6 +36,19 @@ export const matchingService = {
     return apiFetch<RecommendationRequest>('/matches/recommendations/requests', {
       method: 'POST',
       body: JSON.stringify({ mode: 'company', job_id: jobId }),
+    });
+  },
+
+  /** GET /matches/settings · cuántas ofertas y candidatos se recomiendan (sólo admin). */
+  getSettings(): Promise<RecommendationSettings> {
+    return apiFetch<RecommendationSettings>('/matches/settings');
+  },
+
+  /** PATCH /matches/settings · sólo los campos que cambian. */
+  updateSettings(changes: RecommendationSettingsUpdate): Promise<RecommendationSettings> {
+    return apiFetch<RecommendationSettings>('/matches/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(changes),
     });
   },
 

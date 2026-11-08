@@ -200,3 +200,16 @@ export interface RecommendationRequest {
   limit?: number;
   error: ApiErrorBody | null;
 }
+
+/** GET/PATCH /matches/settings (contracts/matching_frontend.md §4.5) · sólo admin. */
+export interface RecommendationSettings {
+  student_jobs_limit: number;
+  company_candidates_limit: number;
+  limits: { min: number; max: number };
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+export type RecommendationSettingsUpdate = Partial<
+  Pick<RecommendationSettings, 'student_jobs_limit' | 'company_candidates_limit'>
+>;

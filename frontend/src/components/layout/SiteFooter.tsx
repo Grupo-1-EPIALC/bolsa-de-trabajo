@@ -65,7 +65,13 @@ export const SiteFooter: React.FC<SiteFooterProps> = ({ user, onNavigate, onSect
               </>
             )}
             {user?.role === 'admin' && (
-              <FooterLink onClick={() => onNavigate('app')}>Mi panel</FooterLink>
+              <>
+                <FooterLink onClick={() => onSection('panel')}>Panel</FooterLink>
+                <FooterLink onClick={() => onSection('users')}>Cuentas</FooterLink>
+                <FooterLink onClick={() => onSection('settings')}>
+                  Configuración de matching
+                </FooterLink>
+              </>
             )}
           </ul>
         </div>
