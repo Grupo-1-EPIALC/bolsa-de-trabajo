@@ -44,7 +44,7 @@
 | P-026 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Crear pantalla receptora de confirmación de cambio de correo electrónico con rotación de sesión | Implementación de ConfirmEmailPage.tsx con captura de ?token=..., limpieza de sesión activa y maquetado institucional | aceptado |
 | P-027 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Desarrollar modal "Mi cuenta" para estudiantes y empresas con cambio de clave y solicitud de cambio de correo | Componente AccountSettingsModal.tsx integrado en SiteHeader.tsx con pestañas para solicitar cambio de contraseña y nuevo email | aceptado |
 | P-028 | 2026-11-07 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.4.0-panel-admin` | Revisar por qué no se ven las opciones de admin en el front, borrar las cuentas e2e de prueba y crear el panel | El front no tenía panel (sólo el aviso "todavía no está disponible"); además auth-service en dev había quedado con el watcher trabado tras los cambios de rama. `AdminArea` con Panel (cuentas activas por rol + config de matching), Cuentas (buscar, filtrar por rol, incluir borradas, detalle, editar email/empresa con CUIT validado, forzar cambio de clave y borrar con confirmación; sin borrar la propia) y Matching (`GET/PATCH /matches/settings`). 46 tests Vitest y E2E en Chromium 9/9 | pendiente de revisión |
-
+| P-029 | 2026-11-08 | Dario | Gemini (`frontend-agent`) | `feature/v0.5.0-frontend/auth-flujos-panel-admin` | Fusionar localmente el PR del Panel Admin (v0.4.0) con la rama de flujos Auth (v0.3.0), resolviendo conflictos en App.tsx, SiteHeader.tsx y PROMPTS.md, consolidando todo el frontend en la versión v0.5.0 | Fusión completa de AdminArea.tsx con los 3 flujos de autenticación (HU-04, HU-05, HU-06, HU-10), enrutamiento por roles (student, company, admin), resolución manual de marcas de conflicto y sanitización integral del frontend (Prettier, typecheck y tests unitarios en verde) | aceptado |
 
 ---
 
@@ -385,7 +385,18 @@
 - **Archivos afectados:** `frontend/src/` (`pages/AdminArea.tsx`, `components/admin/*`, `admin/*`, `services/adminService.ts`, `services/matchingService.ts`, `types/admin.ts`, `types/matching.ts`, `navigation.ts`, `App.tsx`, `components/layout/SiteHeader.tsx`, `components/layout/SiteFooter.tsx`, `pages/CompanyArea.tsx`, `pages/StudentArea.tsx`), `frontend/package.json` y `package-lock.json` (0.4.0), `contracts/pendientes_frontend.md`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 3).
 
-### P-029 — (plantilla)
+##### P-029 — Consolidación local de Panel Admin y Flujos Auth (v0.5.0)
+* **Fecha:** 2026-11-08 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/v0.5.0-frontend/auth-flujos-panel-admin` · **HU:** HU-04, HU-05, HU-06, HU-10
+* **Prompt (resumido):**
+  > Fusionar localmente la rama del panel de administración (v0.4.0) con los flujos de autenticación (v0.3.0), resolviendo conflictos en App.tsx, SiteHeader.tsx y PROMPTS.md para generar una entrega unificada v0.5.0.
+* **Resumen de la respuesta:**
+  - Fusión de la rama `feature/frontend/v0.4.0-panel-admin` con la rama local de Auth, integrando el componente `AdminArea.tsx` y su enrutamiento de rol `admin` dentro de `App.tsx`.
+  - Resolución manual de conflictos de Git en `App.tsx`, `SiteHeader.tsx` y `PROMPTS.md` sin perder interceptores de tokens ni botones del menú superior.
+  - Sanitización completa del código frontend (`npx prettier`, `npm run typecheck` y `npm run test` en verde) y actualización de la rama a `feature/v0.5.0-frontend/auth-flujos-panel-admin`.
+* **Archivos afectados:** `frontend/src/App.tsx`, `frontend/src/components/layout/SiteHeader.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+### P-030 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
