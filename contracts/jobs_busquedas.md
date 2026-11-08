@@ -289,8 +289,8 @@ Es la única dependencia externa de búsquedas. jobs-service espera:
 }
 ```
 
-- **Pendiente del lado de n8n:** el workflow `WF-02` que lo consume no existe todavía. El evento se
-  emite igual; su tratamiento es tarea del dueño de n8n.
+- Lo consume **WF-02**: toma los candidatos por reglas de la oferta (`score ≥ notifications.min_score`) y
+  WF-03 les manda el mail a los que aceptaron contacto por email. Ver [`notificaciones_n8n.md`](notificaciones_n8n.md).
 
 ### 8.3 Matching-service y mcp-tools
 
@@ -357,7 +357,8 @@ Formato común:
 
 1. ~~**Gateway:** `GET/POST /api/v1/jobs` sin barra final respondía `301`.~~ Resuelto: `gateway/nginx.conf`
    tiene `location = /api/v1/jobs` (rama `fix/infra/v0.1.1-integracion-busquedas`).
-2. **n8n:** `WF-02` (consumidor de `job.created`) todavía no existe; el evento se emite best-effort.
+2. ~~**n8n:** `WF-02` (consumidor de `job.created`) todavía no existía.~~ Resuelto: WF-02 a WF-05
+   ([`notificaciones_n8n.md`](notificaciones_n8n.md)). El evento sigue siendo best-effort.
 3. **`on_match`:** se trata como sueldo oculto para terceros hasta que exista la integración de
    postulaciones.
 4. ~~**Compose:** `JOBS_SEED_DEMO` y `AUTH_SERVICE_URL` sin cablear.~~ Resuelto: `docker-compose.yml`
