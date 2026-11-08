@@ -1,0 +1,496 @@
+{
+  "id": "BolsaWf03PerfilListo",
+  "name": "WF-03 · Mails a estudiantes (resumen y ofertas nuevas)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "profile-updated",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f2d98a67-612b-5ce4-984d-e073edfac35e",
+      "name": "Webhook profile.updated",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "931e84bb-99fa-567b-8d25-c258dc541dd8"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst SVC = {\n  profile: ($env.PROFILE_SERVICE_URL || 'http://profile-service:8000').replace(/\\/$/, ''),\n  jobs: ($env.JOBS_SERVICE_URL || 'http://jobs-service:8000').replace(/\\/$/, ''),\n  matching: ($env.MATCHING_SERVICE_URL || 'http://matching-service:8000').replace(/\\/$/, ''),\n};\n\n// Mismo criterio que WF-06: token de servicio (lo mandan los microservicios) o de webhook.\nconst checkToken = (incoming) => {\n  const headers = Object.fromEntries(\n    Object.entries(incoming.headers || {}).map(([k, v]) => [k.toLowerCase(), v])\n  );\n  const query = incoming.query || {};\n  const body = incoming.body || {};\n  const given = headers['x-service-token'] || headers['x-webhook-token'] || headers['x-api-key'] || query.token || '';\n  const ok = (Boolean($env.SERVICE_TOKEN) && given === $env.SERVICE_TOKEN)\n    || (Boolean($env.N8N_WEBHOOK_TOKEN) && given === $env.N8N_WEBHOOK_TOKEN);\n  return { ok, body };\n};\n\nconst unauthorized = () => ({\n  valid: false,\n  status_code: 401,\n  error: { code: 'UNAUTHORIZED', message: 'Token de webhook ausente o inválido', details: {} },\n});\nconst invalid = (message) => ({\n  valid: false,\n  status_code: 400,\n  error: { code: 'INVALID_INPUT', message, details: {} },\n});\n\n\nconst incoming = $input.first().json;\nconst { ok, body } = checkToken(incoming);\nif (!ok) return [{ json: unauthorized() }];\nif (body.event !== 'profile.updated' || !body.profile_id) {\n  return [{ json: invalid('Se espera { \"event\": \"profile.updated\", \"profile_id\": \"...\" }') }];\n}\nconst searchable = body.searchable === true;\nreturn [{\n  json: {\n    valid: true,\n    status_code: 202,\n    event: body.event,\n    profile_id: String(body.profile_id),\n    version: body.version ?? null,\n    proceed: searchable,\n    skip_reason: searchable ? null : 'not_searchable',\n  },\n}];\n"
+      },
+      "id": "3eb1f31b-0077-53be-b1df-478e73aacae6",
+      "name": "Validar Evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.valid ? { accepted: true, event: $json.event, skipped: $json.skip_reason || null } : { error: $json.error }) }}",
+        "options": {
+          "responseCode": "={{ $json.status_code }}"
+        }
+      },
+      "id": "ed635e17-f798-5f9c-b8a9-8dd63d6eaa66",
+      "name": "Responder 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "424205b0-038e-55f5-9130-321e6c7882db",
+              "leftValue": "={{ $json.valid && $json.proceed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9bbf4bf0-c577-5494-88a0-0dc98871f9aa",
+      "name": "¿Perfil Buscable?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// WF-04 (avisos a empresas) escucha en un webhook interno propio: así cada workflow guarda sus\n// notification_key y un fallo de uno no frena al otro. Best-effort.\nconst ev = $input.first().json;\nconst base = ($env.N8N_INTERNAL_WEBHOOK_URL || 'http://localhost:5678/webhook').replace(/\\/$/, '');\ntry {\n  await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${base}/company-alerts`,\n    headers: { 'X-Service-Token': $env.SERVICE_TOKEN || '', 'Content-Type': 'application/json' },\n    body: { event: 'profile.searchable', profile_id: ev.profile_id, version: ev.version },\n    json: true,\n    timeout: 5000,\n  });\n  return [{ json: { ...ev, forwarded: true } }];\n} catch (err) {\n  return [{ json: { ...ev, forwarded: false, forward_error: err.message } }];\n}\n"
+      },
+      "id": "2a288525-2e2e-53fd-9753-46267e3bd10a",
+      "name": "Reenviar a WF-04 (Empresas)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst SERVICE_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const raw = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/mcp`,\n    headers: {\n      'Accept': 'application/json, text/event-stream',\n      'Content-Type': 'application/json',\n      'X-Service-Token': SERVICE_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n    json: true,\n    timeout: 60000,\n  });\n  const payload = typeof raw === 'string'\n    ? JSON.parse((raw.split('\\n').find(l => l.startsWith('data:')) || 'data: {}').replace(/^data:\\s*/, ''))\n    : raw;\n  const sc = payload?.result?.structuredContent;\n  if (sc && typeof sc === 'object') return sc.result || sc;\n  const txt = payload?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (e) { return { ok: true, text: txt }; }\n  }\n  return payload?.result || payload || {};\n};\n\nconst callRouterHttp = async (path, body = null, method = 'POST') => {\n  const opts = {\n    method,\n    url: `${MCP_BASE}/router/${path}`,\n    headers: { 'X-Service-Token': SERVICE_TOKEN },\n    json: true,\n    timeout: 10000,\n  };\n  if (body !== null && method !== 'GET') opts.body = body;\n  return await this.helpers.httpRequest(opts);\n};\n\nconst repairJsonString = (s) => {\n  let txt = String(s || '').trim();\n  const firstBrace = txt.indexOf('{');\n  if (firstBrace === -1) throw new Error('No se encontró llave de apertura JSON');\n  txt = txt.slice(firstBrace);\n\n  // Intentar parseo directo o hasta la última llave de cierre\n  const lastBrace = txt.lastIndexOf('}');\n  if (lastBrace !== -1) {\n    try { return JSON.parse(txt.slice(0, lastBrace + 1)); } catch (_) {}\n  }\n\n  // Buscar el bloque balanceado { ... } más largo que sea JSON válido\n  for (let i = txt.length - 1; i > 0; i--) {\n    if (txt[i] === '}') {\n      try { return JSON.parse(txt.slice(0, i + 1)); } catch (_) {}\n    }\n  }\n\n  // Reparación de JSON truncado (cierra comillas, corchetes y llaves abiertas)\n  let repaired = txt.replace(/,\\s*$/, '');\n  const stack = [];\n  let inStr = false;\n  let esc = false;\n  for (let i = 0; i < repaired.length; i++) {\n    const ch = repaired[i];\n    if (esc) { esc = false; continue; }\n    if (ch === '\\\\') { esc = true; continue; }\n    if (ch === '\"') { inStr = !inStr; continue; }\n    if (!inStr) {\n      if (ch === '{') stack.push('}');\n      else if (ch === '[') stack.push(']');\n      else if (ch === '}' || ch === ']') stack.pop();\n    }\n  }\n  if (inStr) repaired += '\"';\n  repaired = repaired.replace(/,\\s*$/, '');\n  while (stack.length > 0) {\n    repaired += stack.pop();\n  }\n  return JSON.parse(repaired);\n};\n\nconst extractJsonObject = (rawText) => {\n  let raw = String(rawText || '');\n  if (raw.includes('</think>')) {\n    raw = raw.split('</think>').pop() || raw;\n  } else {\n    raw = raw.replace(/<think>[\\s\\S]*?<\\/think>/gi, '');\n  }\n  const fenceMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);\n  if (fenceMatch && fenceMatch[1]) {\n    try { return repairJsonString(fenceMatch[1]); } catch (_) {}\n  }\n  const cleaned = raw.replace(/<\\/?think>/gi, '').replace(/```(?:json)?/gi, '').trim();\n  return repairJsonString(cleaned);\n};\n\nconst MANUAL_INDICATOR = 'COMPLETAR_MANUALMENTE';\n\nconst normKey = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');\n\nconst pickAnalogous = (obj, candidates) => {\n  if (!obj || typeof obj !== 'object') return undefined;\n  const entries = Object.entries(obj);\n  for (const cand of candidates) {\n    if (obj[cand] !== undefined) return obj[cand];\n    const nk = normKey(cand);\n    const found = entries.find(([k]) => normKey(k) === nk);\n    if (found && found[1] !== undefined) return found[1];\n  }\n  return undefined;\n};\n\nconst isGroundedInSource = (term, sourceText) => {\n  if (!sourceText || !term) return true;\n  const hay = String(sourceText).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n  const needle = String(term).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();\n  if (!needle) return false;\n  if (hay.includes(needle)) return true;\n  // Permite coincidencia por tokens significativos (ej. \"Administración de Servidores Linux\" cuando el CV dice \"Administración de Servidores\" y \"Linux\")\n  const tokens = needle.split(/[^a-z0-9+#.]+/).filter(t => t.length >= 2 && !['de', 'en', 'el', 'la', 'los', 'las', 'con', 'del', 'por', 'para', 'and', 'with', 'in', 'of'].includes(t));\n  if (tokens.length > 0 && tokens.every(t => hay.includes(t))) return true;\n  return false;\n};\n\nconst normalizeCvCandidate = (rawInput, sourceText = '') => {\n  let raw = (rawInput && typeof rawInput === 'object' && !Array.isArray(rawInput)) ? rawInput : {};\n  for (const wrapKey of ['cv_suggestions', 'data', 'cv', 'profile', 'perfil', 'result', 'output']) {\n    if (raw[wrapKey] && typeof raw[wrapKey] === 'object' && !Array.isArray(raw[wrapKey])) {\n      raw = raw[wrapKey];\n      break;\n    }\n  }\n  const pending = [];\n\n  const strOrManual = (val, fieldPath) => {\n    if (val === null || val === undefined) {\n      pending.push(fieldPath);\n      return MANUAL_INDICATOR;\n    }\n    const s = String(val).trim();\n    if (!s || ['null', 'undefined', 'n/a', 'na', 'none', 'sin especificar', 'no especificado', MANUAL_INDICATOR.toLowerCase()].includes(s.toLowerCase())) {\n      pending.push(fieldPath);\n      return MANUAL_INDICATOR;\n    }\n    return s;\n  };\n\n  const toArray = (val) => {\n    if (Array.isArray(val)) return val;\n    if (val && typeof val === 'object') {\n      const vals = Object.values(val);\n      if (vals.every(Array.isArray)) return vals.flat();\n    }\n    return [];\n  };\n\n  const personalRaw = pickAnalogous(raw, ['personal', 'datos_personales', 'contacto', 'contact', 'informacion_personal', 'personal_info']) || {};\n  const personal = {\n    name: strOrManual(\n      pickAnalogous(personalRaw, ['name', 'nombre', 'full_name', 'nombre_completo', 'candidato']) ??\n      pickAnalogous(raw, ['name', 'nombre', 'full_name', 'nombre_completo']),\n      'personal.name'\n    ),\n    email: strOrManual(\n      pickAnalogous(personalRaw, ['email', 'correo', 'mail', 'e_mail', 'correo_electronico']) ??\n      pickAnalogous(raw, ['email', 'correo', 'mail']),\n      'personal.email'\n    ),\n    phone: strOrManual(\n      pickAnalogous(personalRaw, ['phone', 'telefono', 'celular', 'tel', 'movil', 'whatsapp']) ??\n      pickAnalogous(raw, ['phone', 'telefono', 'celular', 'tel']),\n      'personal.phone'\n    ),\n    location: strOrManual(\n      pickAnalogous(personalRaw, ['location', 'ubicacion', 'ciudad', 'localidad', 'residencia', 'pais', 'provincia']) ??\n      pickAnalogous(raw, ['location', 'ubicacion', 'ciudad', 'localidad']),\n      'personal.location'\n    ),\n  };\n\n  const summary = strOrManual(\n    pickAnalogous(raw, ['summary', 'resumen', 'perfil', 'perfil_profesional', 'objetivo', 'sobre_mi', 'about', 'bio', 'extracto', 'presentacion']),\n    'summary'\n  );\n\n  const parseSkillLevel = (val, path) => {\n    if (typeof val === 'number' && Number.isFinite(val) && val >= 1 && val <= 5) {\n      return Math.round(val);\n    }\n    if (typeof val === 'string') {\n      const clean = val.trim().toLowerCase();\n      const n = Number(clean);\n      if (Number.isFinite(n) && n >= 1 && n <= 5) return Math.round(n);\n      if (/experto|expert|senior|sr/.test(clean)) return 5;\n      if (/avanzad|advanced|alto|high/.test(clean)) return 4;\n      if (/intermedi|medio|medium|ssr|semi/.test(clean)) return 3;\n      if (/basic|basico|básico|junior|jr|inicial/.test(clean)) return 2;\n      if (/principiante|trainee|aprendiz/.test(clean)) return 1;\n    }\n    pending.push(path);\n    return MANUAL_INDICATOR;\n  };\n\n  const rawSkills = toArray(pickAnalogous(raw, ['skills', 'competencias', 'habilidades', 'tecnologias', 'conocimientos', 'aptitudes', 'herramientas', 'technical_skills']));\n  const skills = [];\n  rawSkills.forEach((item) => {\n    const rawName = typeof item === 'string'\n      ? item\n      : pickAnalogous(item, ['name', 'skill', 'nombre', 'competencia', 'tecnologia', 'herramienta', 'habilidad']);\n    const cleanName = String(rawName || '').trim();\n    if (!cleanName || cleanName.toLowerCase() === 'null') return;\n    if (sourceText && !isGroundedInSource(cleanName, sourceText)) return;\n    const idx = skills.length;\n    const rawLvl = typeof item === 'object' && item !== null\n      ? pickAnalogous(item, ['level', 'level_estimado', 'nivel', 'nivel_estimado', 'proficiency', 'seniority'])\n      : undefined;\n    skills.push({\n      name: cleanName,\n      level: parseSkillLevel(rawLvl, `skills[${idx}].level`),\n    });\n  });\n  if (skills.length === 0) pending.push('skills');\n\n  const rawExp = toArray(pickAnalogous(raw, ['experience', 'experiencia', 'experiencia_laboral', 'antecedentes', 'empleos', 'trabajos', 'work_experience', 'practicas', 'pasantias', 'historial_laboral']));\n  const experience = rawExp\n    .filter(it => it && (typeof it === 'object' || typeof it === 'string'))\n    .map((it, idx) => {\n      if (typeof it === 'string') {\n        return {\n          company: strOrManual(null, `experience[${idx}].company`),\n          role: strOrManual(null, `experience[${idx}].role`),\n          start: strOrManual(null, `experience[${idx}].start`),\n          end: strOrManual(null, `experience[${idx}].end`),\n          description: strOrManual(it, `experience[${idx}].description`),\n        };\n      }\n      return {\n        company: strOrManual(pickAnalogous(it, ['company', 'empresa', 'organizacion', 'empleador', 'lugar', 'organization']), `experience[${idx}].company`),\n        role: strOrManual(pickAnalogous(it, ['role', 'puesto', 'cargo', 'rol', 'position', 'title', 'posicion', 'ocupacion']), `experience[${idx}].role`),\n        start: strOrManual(pickAnalogous(it, ['start', 'inicio', 'fecha_inicio', 'desde', 'start_date', 'periodo', 'period', 'years', 'anios']), `experience[${idx}].start`),\n        end: strOrManual(pickAnalogous(it, ['end', 'fin', 'fecha_fin', 'hasta', 'end_date', 'actualidad', 'current']), `experience[${idx}].end`),\n        description: strOrManual(pickAnalogous(it, ['description', 'descripcion', 'tareas', 'responsabilidades', 'summary', 'detalle', 'logros']), `experience[${idx}].description`),\n      };\n    });\n  if (experience.length === 0) pending.push('experience');\n\n  const rawEdu = toArray(pickAnalogous(raw, ['education', 'educacion', 'formacion', 'formacion_academica', 'estudios', 'academic', 'titulos', 'academico']));\n  const education = rawEdu\n    .filter(it => it && (typeof it === 'object' || typeof it === 'string'))\n    .map((it, idx) => {\n      if (typeof it === 'string') {\n        return {\n          institution: strOrManual(null, `education[${idx}].institution`),\n          degree: strOrManual(it, `education[${idx}].degree`),\n          status: strOrManual(null, `education[${idx}].status`),\n          start: strOrManual(null, `education[${idx}].start`),\n          end: strOrManual(null, `education[${idx}].end`),\n        };\n      }\n      return {\n        institution: strOrManual(pickAnalogous(it, ['institution', 'institucion', 'universidad', 'colegio', 'escuela', 'centro', 'school', 'university']), `education[${idx}].institution`),\n        degree: strOrManual(pickAnalogous(it, ['degree', 'titulo', 'carrera', 'estudio', 'field', 'especialidad', 'program']), `education[${idx}].degree`),\n        status: strOrManual(pickAnalogous(it, ['status', 'estado', 'situacion', 'condicion']), `education[${idx}].status`),\n        start: strOrManual(pickAnalogous(it, ['start', 'inicio', 'fecha_inicio', 'desde', 'start_date']), `education[${idx}].start`),\n        end: strOrManual(pickAnalogous(it, ['end', 'fin', 'fecha_fin', 'hasta', 'end_date', 'year', 'anio', 'graduacion']), `education[${idx}].end`),\n      };\n    });\n  if (education.length === 0) pending.push('education');\n\n  const rawLangs = toArray(pickAnalogous(raw, ['languages', 'idiomas', 'lenguajes', 'idiomas_conocidos']));\n  const languages = [];\n  rawLangs.forEach((it) => {\n    if (typeof it === 'string') {\n      const clean = it.trim();\n      if (!clean) return;\n      const idx = languages.length;\n      languages.push({ name: clean, level: strOrManual(null, `languages[${idx}].level`) });\n      return;\n    }\n    if (it && typeof it === 'object') {\n      const nameVal = pickAnalogous(it, ['name', 'language', 'idioma', 'nombre', 'lenguaje']);\n      const clean = String(nameVal || '').trim();\n      if (!clean || clean.toLowerCase() === 'null') return;\n      const idx = languages.length;\n      languages.push({\n        name: clean,\n        level: strOrManual(pickAnalogous(it, ['level', 'nivel', 'fluidez', 'proficiency', 'dominio']), `languages[${idx}].level`),\n      });\n    }\n  });\n  if (languages.length === 0) pending.push('languages');\n\n  const rawCerts = toArray(pickAnalogous(raw, ['certifications', 'certificaciones', 'cursos', 'capacitaciones', 'courses', 'diplomas']));\n  const certifications = rawCerts\n    .map(c => typeof c === 'string' ? c.trim() : String(pickAnalogous(c, ['name', 'nombre', 'title', 'titulo', 'curso', 'certification']) || '').trim())\n    .filter(s => s && s.toLowerCase() !== 'null');\n  if (certifications.length === 0) pending.push('certifications');\n\n  const rawLinks = toArray(pickAnalogous(raw, ['links', 'enlaces', 'redes', 'urls', 'portfolio', 'perfiles', 'social']));\n  const links = rawLinks\n    .map(l => typeof l === 'string' ? l.trim() : String(pickAnalogous(l, ['url', 'link', 'href', 'enlace', 'value']) || '').trim())\n    .filter(s => s && s.toLowerCase() !== 'null');\n  if (links.length === 0) pending.push('links');\n\n  return {\n    personal,\n    summary,\n    skills,\n    experience,\n    education,\n    languages,\n    certifications,\n    links,\n    pending_manual_fields: pending,\n  };\n};\n\nconst SVC = {\n  profile: ($env.PROFILE_SERVICE_URL || 'http://profile-service:8000').replace(/\\/$/, ''),\n  jobs: ($env.JOBS_SERVICE_URL || 'http://jobs-service:8000').replace(/\\/$/, ''),\n  matching: ($env.MATCHING_SERVICE_URL || 'http://matching-service:8000').replace(/\\/$/, ''),\n};\n\n// Mismo criterio que WF-06: token de servicio (lo mandan los microservicios) o de webhook.\nconst checkToken = (incoming) => {\n  const headers = Object.fromEntries(\n    Object.entries(incoming.headers || {}).map(([k, v]) => [k.toLowerCase(), v])\n  );\n  const query = incoming.query || {};\n  const body = incoming.body || {};\n  const given = headers['x-service-token'] || headers['x-webhook-token'] || headers['x-api-key'] || query.token || '';\n  const ok = (Boolean($env.SERVICE_TOKEN) && given === $env.SERVICE_TOKEN)\n    || (Boolean($env.N8N_WEBHOOK_TOKEN) && given === $env.N8N_WEBHOOK_TOKEN);\n  return { ok, body };\n};\n\nconst unauthorized = () => ({\n  valid: false,\n  status_code: 401,\n  error: { code: 'UNAUTHORIZED', message: 'Token de webhook ausente o inválido', details: {} },\n});\nconst invalid = (message) => ({\n  valid: false,\n  status_code: 400,\n  error: { code: 'INVALID_INPUT', message, details: {} },\n});\n\n// GET a un microservicio con X-Service-Token. 404 → null; otro error → excepción (lo toma WF-05).\nconst getJson = async (url) => {\n  try {\n    return await this.helpers.httpRequest({\n      method: 'GET',\n      url,\n      headers: { 'X-Service-Token': SERVICE_TOKEN, Accept: 'application/json' },\n      json: true,\n      timeout: 15000,\n    });\n  } catch (err) {\n    const status = Number(err?.response?.status ?? err?.httpCode ?? err?.statusCode ?? err?.cause?.response?.status);\n    if (status === 404) return null;\n    throw new Error(`GET ${url} falló (${status || 'sin respuesta'}): ${err.message}`);\n  }\n};\n\n// POST JSON a un microservicio (p. ej. matching-service `POST /matches`). 404 → null.\nconst postJson = async (url, body) => {\n  try {\n    return await this.helpers.httpRequest({\n      method: 'POST',\n      url,\n      headers: { 'X-Service-Token': SERVICE_TOKEN, Accept: 'application/json', 'Content-Type': 'application/json' },\n      body,\n      json: true,\n      timeout: 15000,\n    });\n  } catch (err) {\n    const status = Number(err?.response?.status ?? err?.httpCode ?? err?.statusCode ?? err?.cause?.response?.status);\n    if (status === 404) return null;\n    throw new Error(`POST ${url} falló (${status || 'sin respuesta'}): ${err.message}`);\n  }\n};\n\n// Parámetros dinámicos: get_agent_settings (mcp-tools), nunca valores fijos.\nconst loadNotifySettings = async () => {\n  const res = await callMcpTool('get_agent_settings');\n  const cfg = (res && (res.data || res)) || {};\n  const n = cfg.notifications || {};\n  return {\n    enabled: n.enabled !== false,\n    min_score: Number(n.min_score ?? 70),\n    max_per_event: Math.max(1, Number(n.max_per_event ?? 10)),\n    admin_email: String(n.admin_email || '').trim(),\n    frontend_url: String(n.frontend_url || 'http://localhost:8080').replace(/\\/$/, ''),\n  };\n};\n\n// Idempotencia (AGENTS §4.6): cada mail lleva un notification_key. El nodo Postgres\n// \"Reservar Aviso\" lo inserta en bolsa.notifications_sent (clave primaria) con\n// ON CONFLICT DO NOTHING: sólo sale el mail cuya clave se reservó, aunque haya\n// ejecuciones simultáneas del mismo workflow.\n\nconst esc = (value) => String(value ?? '').replace(/[&<>\"']/g, (c) => (\n  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]\n));\nconst place = (loc) => [loc?.city, loc?.province].filter(Boolean).join(', ');\nconst firstName = (name) => String(name || '').trim().split(/\\s+/)[0] || '';\nconst skillList = (items, max = 5) => (items || []).slice(0, max).map((s) => s.skill || s.name).filter(Boolean);\nconst scoreText = (score) => `${Math.round(Number(score) || 0)}/100`;\n\n// Plantilla común: una columna, texto real, el puntaje siempre marcado como \"calculado por reglas\".\nconst mailHtml = ({ title, intro, blocks, ctaUrl, ctaLabel, footer }) => `<!doctype html>\n<html lang=\"es\"><body style=\"margin:0;background:#f5f3f7;font-family:Arial,Helvetica,sans-serif;color:#2b2b2b\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"padding:24px 12px\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden\">\n<tr><td style=\"background:#BA3995;color:#ffffff;padding:20px 28px;font-size:20px;font-weight:bold\">Bolsa de Trabajo</td></tr>\n<tr><td style=\"padding:28px\">\n<h1 style=\"font-size:20px;margin:0 0 12px\">${esc(title)}</h1>\n<p style=\"margin:0 0 20px;line-height:1.5\">${intro}</p>\n${blocks.join('')}\n<p style=\"margin:24px 0 0\"><a href=\"${esc(ctaUrl)}\" style=\"background:#BA3995;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:bold;display:inline-block\">${esc(ctaLabel)}</a></p>\n</td></tr>\n<tr><td style=\"padding:16px 28px;background:#faf7fb;font-size:12px;color:#6b6b6b;line-height:1.5\">${footer}</td></tr>\n</table></td></tr></table></body></html>`;\n\nconst matchBlock = ({ heading, sub, score, matched, missing }) => `\n<div style=\"border:1px solid #eadff0;border-radius:10px;padding:16px;margin:0 0 12px\">\n  <div style=\"font-weight:bold;font-size:16px\">${esc(heading)}</div>\n  <div style=\"color:#6b6b6b;font-size:13px;margin:2px 0 10px\">${esc(sub)}</div>\n  <div style=\"font-size:14px\"><span style=\"background:#e6f4ea;color:#1e6b34;border-radius:999px;padding:2px 10px;font-weight:bold\">Calculado por reglas · ${esc(scoreText(score))}</span></div>\n  ${matched.length ? `<div style=\"font-size:13px;margin-top:10px\">Cumplís: ${esc(matched.join(', '))}</div>` : ''}\n  ${missing.length ? `<div style=\"font-size:13px;margin-top:4px\">Te falta o podés reforzar: ${esc(missing.join(', '))}</div>` : ''}\n</div>`;\n\nconst RULES_NOTE = 'El puntaje lo calcula el motor de reglas de la bolsa de trabajo con criterios explícitos; no interviene ninguna IA.';\n\nconst STUDENT_FOOTER = `${RULES_NOTE}<br>Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.`;\nconst STUDENT_FOOTER_TEXT = [RULES_NOTE, 'Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.'];\nconst offerKey = (profileId, jobId) => `profile:${profileId}|job:${jobId}`;\n// Sólo a quien aceptó que lo contacten por mail (consents.contact_by_email).\nconst contactable = (profile) => Boolean(profile && profile.contact_by_email === true && profile.personal && profile.personal.email);\n\nconst ev = $input.first().json;\nconst cfg = await loadNotifySettings();\nif (!cfg.enabled) return [];\n\nconst profile = await getJson(`${SVC.profile}/api/v1/profiles/${encodeURIComponent(ev.profile_id)}`);\nif (!contactable(profile)) return [];\n\nconst ranking = await getJson(`${SVC.matching}/api/v1/matches/students/${encodeURIComponent(ev.profile_id)}/jobs`);\n// Un ítem por oferta: \"Reservar Ofertas\" se queda con las que todavía no le avisamos\n// (por un resumen anterior o por WF-02).\nreturn ((ranking && ranking.items) || [])\n  .filter((it) => it.job && it.job.job_id && Number(it.match && it.match.score) >= cfg.min_score)\n  .slice(0, cfg.max_per_event)\n  .map((it) => ({\n    json: {\n      notification_key: offerKey(ev.profile_id, it.job.job_id),\n      to: profile.personal.email,\n      name: firstName(profile.personal.name),\n      frontend_url: cfg.frontend_url,\n      job: { title: it.job.title, company_name: it.job.company_name, location: it.job.location },\n      score: it.match.score,\n      matched: skillList(it.match.matched_skills),\n      missing: skillList(it.match.missing_skills, 3),\n    },\n  }));\n"
+      },
+      "id": "66c9a9ac-558f-5f3b-9cd1-6acf742b5aec",
+      "name": "Elegir Ofertas para el Resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bolsa.notifications_sent (notification_key, workflow) VALUES ($1, 'WF-03') ON CONFLICT (notification_key) DO NOTHING RETURNING notification_key",
+        "options": {
+          "queryReplacement": "={{ $json.notification_key }}",
+          "queryBatching": "independently"
+        }
+      },
+      "id": "8e48eccb-ba8b-50c6-8daf-c91227de5495",
+      "name": "Reservar Ofertas",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        1320,
+        -100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "BolsaN8nPostgres1",
+          "name": "Postgres n8n (avisos)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst SVC = {\n  profile: ($env.PROFILE_SERVICE_URL || 'http://profile-service:8000').replace(/\\/$/, ''),\n  jobs: ($env.JOBS_SERVICE_URL || 'http://jobs-service:8000').replace(/\\/$/, ''),\n  matching: ($env.MATCHING_SERVICE_URL || 'http://matching-service:8000').replace(/\\/$/, ''),\n};\n\n// Mismo criterio que WF-06: token de servicio (lo mandan los microservicios) o de webhook.\nconst checkToken = (incoming) => {\n  const headers = Object.fromEntries(\n    Object.entries(incoming.headers || {}).map(([k, v]) => [k.toLowerCase(), v])\n  );\n  const query = incoming.query || {};\n  const body = incoming.body || {};\n  const given = headers['x-service-token'] || headers['x-webhook-token'] || headers['x-api-key'] || query.token || '';\n  const ok = (Boolean($env.SERVICE_TOKEN) && given === $env.SERVICE_TOKEN)\n    || (Boolean($env.N8N_WEBHOOK_TOKEN) && given === $env.N8N_WEBHOOK_TOKEN);\n  return { ok, body };\n};\n\nconst unauthorized = () => ({\n  valid: false,\n  status_code: 401,\n  error: { code: 'UNAUTHORIZED', message: 'Token de webhook ausente o inválido', details: {} },\n});\nconst invalid = (message) => ({\n  valid: false,\n  status_code: 400,\n  error: { code: 'INVALID_INPUT', message, details: {} },\n});\n\n// Idempotencia (AGENTS §4.6): cada mail lleva un notification_key. El nodo Postgres\n// \"Reservar Aviso\" lo inserta en bolsa.notifications_sent (clave primaria) con\n// ON CONFLICT DO NOTHING: sólo sale el mail cuya clave se reservó, aunque haya\n// ejecuciones simultáneas del mismo workflow.\n\nconst esc = (value) => String(value ?? '').replace(/[&<>\"']/g, (c) => (\n  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]\n));\nconst place = (loc) => [loc?.city, loc?.province].filter(Boolean).join(', ');\nconst firstName = (name) => String(name || '').trim().split(/\\s+/)[0] || '';\nconst skillList = (items, max = 5) => (items || []).slice(0, max).map((s) => s.skill || s.name).filter(Boolean);\nconst scoreText = (score) => `${Math.round(Number(score) || 0)}/100`;\n\n// Plantilla común: una columna, texto real, el puntaje siempre marcado como \"calculado por reglas\".\nconst mailHtml = ({ title, intro, blocks, ctaUrl, ctaLabel, footer }) => `<!doctype html>\n<html lang=\"es\"><body style=\"margin:0;background:#f5f3f7;font-family:Arial,Helvetica,sans-serif;color:#2b2b2b\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"padding:24px 12px\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden\">\n<tr><td style=\"background:#BA3995;color:#ffffff;padding:20px 28px;font-size:20px;font-weight:bold\">Bolsa de Trabajo</td></tr>\n<tr><td style=\"padding:28px\">\n<h1 style=\"font-size:20px;margin:0 0 12px\">${esc(title)}</h1>\n<p style=\"margin:0 0 20px;line-height:1.5\">${intro}</p>\n${blocks.join('')}\n<p style=\"margin:24px 0 0\"><a href=\"${esc(ctaUrl)}\" style=\"background:#BA3995;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:bold;display:inline-block\">${esc(ctaLabel)}</a></p>\n</td></tr>\n<tr><td style=\"padding:16px 28px;background:#faf7fb;font-size:12px;color:#6b6b6b;line-height:1.5\">${footer}</td></tr>\n</table></td></tr></table></body></html>`;\n\nconst matchBlock = ({ heading, sub, score, matched, missing }) => `\n<div style=\"border:1px solid #eadff0;border-radius:10px;padding:16px;margin:0 0 12px\">\n  <div style=\"font-weight:bold;font-size:16px\">${esc(heading)}</div>\n  <div style=\"color:#6b6b6b;font-size:13px;margin:2px 0 10px\">${esc(sub)}</div>\n  <div style=\"font-size:14px\"><span style=\"background:#e6f4ea;color:#1e6b34;border-radius:999px;padding:2px 10px;font-weight:bold\">Calculado por reglas · ${esc(scoreText(score))}</span></div>\n  ${matched.length ? `<div style=\"font-size:13px;margin-top:10px\">Cumplís: ${esc(matched.join(', '))}</div>` : ''}\n  ${missing.length ? `<div style=\"font-size:13px;margin-top:4px\">Te falta o podés reforzar: ${esc(missing.join(', '))}</div>` : ''}\n</div>`;\n\nconst RULES_NOTE = 'El puntaje lo calcula el motor de reglas de la bolsa de trabajo con criterios explícitos; no interviene ninguna IA.';\n\nconst STUDENT_FOOTER = `${RULES_NOTE}<br>Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.`;\nconst STUDENT_FOOTER_TEXT = [RULES_NOTE, 'Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.'];\nconst offerKey = (profileId, jobId) => `profile:${profileId}|job:${jobId}`;\n// Sólo a quien aceptó que lo contacten por mail (consents.contact_by_email).\nconst contactable = (profile) => Boolean(profile && profile.contact_by_email === true && profile.personal && profile.personal.email);\n\nconst claimed = new Set($input.all().map((i) => i.json.notification_key).filter(Boolean));\nconst fresh = $('Elegir Ofertas para el Resumen').all().map((i) => i.json).filter((j) => claimed.has(j.notification_key));\nif (!fresh.length) return [];\n\nconst { to, name, frontend_url: url } = fresh[0];\nconst count = fresh.length;\nconst subject = count === 1\n  ? `Tenés 1 oferta compatible: ${fresh[0].job.title}`\n  : `Tenés ${count} ofertas compatibles con tu perfil`;\nconst html = mailHtml({\n  title: count === 1 ? 'Encontramos una oferta para vos' : `Encontramos ${count} ofertas para vos`,\n  intro: `${name ? `Hola ${esc(name)}, ` : ''}con tu perfil actualizado, estas búsquedas activas encajan con lo que sabés hacer.`,\n  blocks: fresh.map((j) => matchBlock({\n    heading: j.job.title,\n    sub: [j.job.company_name, place(j.job.location)].filter(Boolean).join(' · '),\n    score: j.score,\n    matched: j.matched,\n    missing: j.missing,\n  })),\n  ctaUrl: url,\n  ctaLabel: 'Ver mis ofertas',\n  footer: STUDENT_FOOTER,\n});\nconst text = [\n  `${name ? `Hola ${name}, ` : ''}con tu perfil actualizado, estas búsquedas activas encajan con lo que sabés hacer:`,\n  '',\n  ...fresh.map((j) => `- ${j.job.title}${j.job.company_name ? ` (${j.job.company_name})` : ''}: ${scoreText(j.score)} calculado por reglas`),\n  '',\n  `Ver mis ofertas: ${url}`,\n  '',\n  ...STUDENT_FOOTER_TEXT,\n].join('\\n');\nreturn [{ json: { notification_key: fresh.map((j) => j.notification_key).join(' '), to, subject, html, text } }];\n"
+      },
+      "id": "5ad2aef1-83ed-5b14-9e3d-756e99181bc9",
+      "name": "Armar Resumen al Estudiante",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "student-offer",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "465a3dfc-b95d-5591-9377-976f25841437",
+      "name": "Webhook student-offer",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "824d1198-deeb-5f64-914b-62d44efdaaa3"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst SVC = {\n  profile: ($env.PROFILE_SERVICE_URL || 'http://profile-service:8000').replace(/\\/$/, ''),\n  jobs: ($env.JOBS_SERVICE_URL || 'http://jobs-service:8000').replace(/\\/$/, ''),\n  matching: ($env.MATCHING_SERVICE_URL || 'http://matching-service:8000').replace(/\\/$/, ''),\n};\n\n// Mismo criterio que WF-06: token de servicio (lo mandan los microservicios) o de webhook.\nconst checkToken = (incoming) => {\n  const headers = Object.fromEntries(\n    Object.entries(incoming.headers || {}).map(([k, v]) => [k.toLowerCase(), v])\n  );\n  const query = incoming.query || {};\n  const body = incoming.body || {};\n  const given = headers['x-service-token'] || headers['x-webhook-token'] || headers['x-api-key'] || query.token || '';\n  const ok = (Boolean($env.SERVICE_TOKEN) && given === $env.SERVICE_TOKEN)\n    || (Boolean($env.N8N_WEBHOOK_TOKEN) && given === $env.N8N_WEBHOOK_TOKEN);\n  return { ok, body };\n};\n\nconst unauthorized = () => ({\n  valid: false,\n  status_code: 401,\n  error: { code: 'UNAUTHORIZED', message: 'Token de webhook ausente o inválido', details: {} },\n});\nconst invalid = (message) => ({\n  valid: false,\n  status_code: 400,\n  error: { code: 'INVALID_INPUT', message, details: {} },\n});\n\n\nconst incoming = $input.first().json;\nconst { ok, body } = checkToken(incoming);\nif (!ok) return [{ json: unauthorized() }];\nif (!body.profile_id || !body.job_id) {\n  return [{ json: invalid('Se espera { \"profile_id\": \"...\", \"job_id\": \"...\" }') }];\n}\nreturn [{ json: { valid: true, status_code: 202, event: body.event || 'job.matched', profile_id: String(body.profile_id), job_id: String(body.job_id) } }];\n"
+      },
+      "id": "bd4fc783-03cf-55a7-b40e-3a00dba7626b",
+      "name": "Validar Oferta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.valid ? { accepted: true, event: $json.event, skipped: $json.skip_reason || null } : { error: $json.error }) }}",
+        "options": {
+          "responseCode": "={{ $json.status_code }}"
+        }
+      },
+      "id": "26a63a77-8a26-5cf3-8778-a602172728ec",
+      "name": "Responder 202 (Oferta)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b4f1b90c-2a8f-5466-9abf-d9165528701e",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "15f34d7e-109f-5317-ac4f-ff6b6eeadd1e",
+      "name": "¿Oferta Válida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst MCP_BASE = ($env.MCP_URL || 'http://mcp-tools:8000/mcp').replace(/\\/mcp\\/?$/, '');\nconst SERVICE_TOKEN = $env.SERVICE_TOKEN || '';\n\nconst callMcpTool = async (name, args = {}) => {\n  const raw = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `${MCP_BASE}/mcp`,\n    headers: {\n      'Accept': 'application/json, text/event-stream',\n      'Content-Type': 'application/json',\n      'X-Service-Token': SERVICE_TOKEN,\n    },\n    body: {\n      jsonrpc: '2.0',\n      id: Date.now(),\n      method: 'tools/call',\n      params: { name, arguments: args },\n    },\n    json: true,\n    timeout: 60000,\n  });\n  const payload = typeof raw === 'string'\n    ? JSON.parse((raw.split('\\n').find(l => l.startsWith('data:')) || 'data: {}').replace(/^data:\\s*/, ''))\n    : raw;\n  const sc = payload?.result?.structuredContent;\n  if (sc && typeof sc === 'object') return sc.result || sc;\n  const txt = payload?.result?.content?.[0]?.text;\n  if (txt) {\n    try { return JSON.parse(txt); } catch (e) { return { ok: true, text: txt }; }\n  }\n  return payload?.result || payload || {};\n};\n\nconst callRouterHttp = async (path, body = null, method = 'POST') => {\n  const opts = {\n    method,\n    url: `${MCP_BASE}/router/${path}`,\n    headers: { 'X-Service-Token': SERVICE_TOKEN },\n    json: true,\n    timeout: 10000,\n  };\n  if (body !== null && method !== 'GET') opts.body = body;\n  return await this.helpers.httpRequest(opts);\n};\n\nconst repairJsonString = (s) => {\n  let txt = String(s || '').trim();\n  const firstBrace = txt.indexOf('{');\n  if (firstBrace === -1) throw new Error('No se encontró llave de apertura JSON');\n  txt = txt.slice(firstBrace);\n\n  // Intentar parseo directo o hasta la última llave de cierre\n  const lastBrace = txt.lastIndexOf('}');\n  if (lastBrace !== -1) {\n    try { return JSON.parse(txt.slice(0, lastBrace + 1)); } catch (_) {}\n  }\n\n  // Buscar el bloque balanceado { ... } más largo que sea JSON válido\n  for (let i = txt.length - 1; i > 0; i--) {\n    if (txt[i] === '}') {\n      try { return JSON.parse(txt.slice(0, i + 1)); } catch (_) {}\n    }\n  }\n\n  // Reparación de JSON truncado (cierra comillas, corchetes y llaves abiertas)\n  let repaired = txt.replace(/,\\s*$/, '');\n  const stack = [];\n  let inStr = false;\n  let esc = false;\n  for (let i = 0; i < repaired.length; i++) {\n    const ch = repaired[i];\n    if (esc) { esc = false; continue; }\n    if (ch === '\\\\') { esc = true; continue; }\n    if (ch === '\"') { inStr = !inStr; continue; }\n    if (!inStr) {\n      if (ch === '{') stack.push('}');\n      else if (ch === '[') stack.push(']');\n      else if (ch === '}' || ch === ']') stack.pop();\n    }\n  }\n  if (inStr) repaired += '\"';\n  repaired = repaired.replace(/,\\s*$/, '');\n  while (stack.length > 0) {\n    repaired += stack.pop();\n  }\n  return JSON.parse(repaired);\n};\n\nconst extractJsonObject = (rawText) => {\n  let raw = String(rawText || '');\n  if (raw.includes('</think>')) {\n    raw = raw.split('</think>').pop() || raw;\n  } else {\n    raw = raw.replace(/<think>[\\s\\S]*?<\\/think>/gi, '');\n  }\n  const fenceMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);\n  if (fenceMatch && fenceMatch[1]) {\n    try { return repairJsonString(fenceMatch[1]); } catch (_) {}\n  }\n  const cleaned = raw.replace(/<\\/?think>/gi, '').replace(/```(?:json)?/gi, '').trim();\n  return repairJsonString(cleaned);\n};\n\nconst MANUAL_INDICATOR = 'COMPLETAR_MANUALMENTE';\n\nconst normKey = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');\n\nconst pickAnalogous = (obj, candidates) => {\n  if (!obj || typeof obj !== 'object') return undefined;\n  const entries = Object.entries(obj);\n  for (const cand of candidates) {\n    if (obj[cand] !== undefined) return obj[cand];\n    const nk = normKey(cand);\n    const found = entries.find(([k]) => normKey(k) === nk);\n    if (found && found[1] !== undefined) return found[1];\n  }\n  return undefined;\n};\n\nconst isGroundedInSource = (term, sourceText) => {\n  if (!sourceText || !term) return true;\n  const hay = String(sourceText).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n  const needle = String(term).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();\n  if (!needle) return false;\n  if (hay.includes(needle)) return true;\n  // Permite coincidencia por tokens significativos (ej. \"Administración de Servidores Linux\" cuando el CV dice \"Administración de Servidores\" y \"Linux\")\n  const tokens = needle.split(/[^a-z0-9+#.]+/).filter(t => t.length >= 2 && !['de', 'en', 'el', 'la', 'los', 'las', 'con', 'del', 'por', 'para', 'and', 'with', 'in', 'of'].includes(t));\n  if (tokens.length > 0 && tokens.every(t => hay.includes(t))) return true;\n  return false;\n};\n\nconst normalizeCvCandidate = (rawInput, sourceText = '') => {\n  let raw = (rawInput && typeof rawInput === 'object' && !Array.isArray(rawInput)) ? rawInput : {};\n  for (const wrapKey of ['cv_suggestions', 'data', 'cv', 'profile', 'perfil', 'result', 'output']) {\n    if (raw[wrapKey] && typeof raw[wrapKey] === 'object' && !Array.isArray(raw[wrapKey])) {\n      raw = raw[wrapKey];\n      break;\n    }\n  }\n  const pending = [];\n\n  const strOrManual = (val, fieldPath) => {\n    if (val === null || val === undefined) {\n      pending.push(fieldPath);\n      return MANUAL_INDICATOR;\n    }\n    const s = String(val).trim();\n    if (!s || ['null', 'undefined', 'n/a', 'na', 'none', 'sin especificar', 'no especificado', MANUAL_INDICATOR.toLowerCase()].includes(s.toLowerCase())) {\n      pending.push(fieldPath);\n      return MANUAL_INDICATOR;\n    }\n    return s;\n  };\n\n  const toArray = (val) => {\n    if (Array.isArray(val)) return val;\n    if (val && typeof val === 'object') {\n      const vals = Object.values(val);\n      if (vals.every(Array.isArray)) return vals.flat();\n    }\n    return [];\n  };\n\n  const personalRaw = pickAnalogous(raw, ['personal', 'datos_personales', 'contacto', 'contact', 'informacion_personal', 'personal_info']) || {};\n  const personal = {\n    name: strOrManual(\n      pickAnalogous(personalRaw, ['name', 'nombre', 'full_name', 'nombre_completo', 'candidato']) ??\n      pickAnalogous(raw, ['name', 'nombre', 'full_name', 'nombre_completo']),\n      'personal.name'\n    ),\n    email: strOrManual(\n      pickAnalogous(personalRaw, ['email', 'correo', 'mail', 'e_mail', 'correo_electronico']) ??\n      pickAnalogous(raw, ['email', 'correo', 'mail']),\n      'personal.email'\n    ),\n    phone: strOrManual(\n      pickAnalogous(personalRaw, ['phone', 'telefono', 'celular', 'tel', 'movil', 'whatsapp']) ??\n      pickAnalogous(raw, ['phone', 'telefono', 'celular', 'tel']),\n      'personal.phone'\n    ),\n    location: strOrManual(\n      pickAnalogous(personalRaw, ['location', 'ubicacion', 'ciudad', 'localidad', 'residencia', 'pais', 'provincia']) ??\n      pickAnalogous(raw, ['location', 'ubicacion', 'ciudad', 'localidad']),\n      'personal.location'\n    ),\n  };\n\n  const summary = strOrManual(\n    pickAnalogous(raw, ['summary', 'resumen', 'perfil', 'perfil_profesional', 'objetivo', 'sobre_mi', 'about', 'bio', 'extracto', 'presentacion']),\n    'summary'\n  );\n\n  const parseSkillLevel = (val, path) => {\n    if (typeof val === 'number' && Number.isFinite(val) && val >= 1 && val <= 5) {\n      return Math.round(val);\n    }\n    if (typeof val === 'string') {\n      const clean = val.trim().toLowerCase();\n      const n = Number(clean);\n      if (Number.isFinite(n) && n >= 1 && n <= 5) return Math.round(n);\n      if (/experto|expert|senior|sr/.test(clean)) return 5;\n      if (/avanzad|advanced|alto|high/.test(clean)) return 4;\n      if (/intermedi|medio|medium|ssr|semi/.test(clean)) return 3;\n      if (/basic|basico|básico|junior|jr|inicial/.test(clean)) return 2;\n      if (/principiante|trainee|aprendiz/.test(clean)) return 1;\n    }\n    pending.push(path);\n    return MANUAL_INDICATOR;\n  };\n\n  const rawSkills = toArray(pickAnalogous(raw, ['skills', 'competencias', 'habilidades', 'tecnologias', 'conocimientos', 'aptitudes', 'herramientas', 'technical_skills']));\n  const skills = [];\n  rawSkills.forEach((item) => {\n    const rawName = typeof item === 'string'\n      ? item\n      : pickAnalogous(item, ['name', 'skill', 'nombre', 'competencia', 'tecnologia', 'herramienta', 'habilidad']);\n    const cleanName = String(rawName || '').trim();\n    if (!cleanName || cleanName.toLowerCase() === 'null') return;\n    if (sourceText && !isGroundedInSource(cleanName, sourceText)) return;\n    const idx = skills.length;\n    const rawLvl = typeof item === 'object' && item !== null\n      ? pickAnalogous(item, ['level', 'level_estimado', 'nivel', 'nivel_estimado', 'proficiency', 'seniority'])\n      : undefined;\n    skills.push({\n      name: cleanName,\n      level: parseSkillLevel(rawLvl, `skills[${idx}].level`),\n    });\n  });\n  if (skills.length === 0) pending.push('skills');\n\n  const rawExp = toArray(pickAnalogous(raw, ['experience', 'experiencia', 'experiencia_laboral', 'antecedentes', 'empleos', 'trabajos', 'work_experience', 'practicas', 'pasantias', 'historial_laboral']));\n  const experience = rawExp\n    .filter(it => it && (typeof it === 'object' || typeof it === 'string'))\n    .map((it, idx) => {\n      if (typeof it === 'string') {\n        return {\n          company: strOrManual(null, `experience[${idx}].company`),\n          role: strOrManual(null, `experience[${idx}].role`),\n          start: strOrManual(null, `experience[${idx}].start`),\n          end: strOrManual(null, `experience[${idx}].end`),\n          description: strOrManual(it, `experience[${idx}].description`),\n        };\n      }\n      return {\n        company: strOrManual(pickAnalogous(it, ['company', 'empresa', 'organizacion', 'empleador', 'lugar', 'organization']), `experience[${idx}].company`),\n        role: strOrManual(pickAnalogous(it, ['role', 'puesto', 'cargo', 'rol', 'position', 'title', 'posicion', 'ocupacion']), `experience[${idx}].role`),\n        start: strOrManual(pickAnalogous(it, ['start', 'inicio', 'fecha_inicio', 'desde', 'start_date', 'periodo', 'period', 'years', 'anios']), `experience[${idx}].start`),\n        end: strOrManual(pickAnalogous(it, ['end', 'fin', 'fecha_fin', 'hasta', 'end_date', 'actualidad', 'current']), `experience[${idx}].end`),\n        description: strOrManual(pickAnalogous(it, ['description', 'descripcion', 'tareas', 'responsabilidades', 'summary', 'detalle', 'logros']), `experience[${idx}].description`),\n      };\n    });\n  if (experience.length === 0) pending.push('experience');\n\n  const rawEdu = toArray(pickAnalogous(raw, ['education', 'educacion', 'formacion', 'formacion_academica', 'estudios', 'academic', 'titulos', 'academico']));\n  const education = rawEdu\n    .filter(it => it && (typeof it === 'object' || typeof it === 'string'))\n    .map((it, idx) => {\n      if (typeof it === 'string') {\n        return {\n          institution: strOrManual(null, `education[${idx}].institution`),\n          degree: strOrManual(it, `education[${idx}].degree`),\n          status: strOrManual(null, `education[${idx}].status`),\n          start: strOrManual(null, `education[${idx}].start`),\n          end: strOrManual(null, `education[${idx}].end`),\n        };\n      }\n      return {\n        institution: strOrManual(pickAnalogous(it, ['institution', 'institucion', 'universidad', 'colegio', 'escuela', 'centro', 'school', 'university']), `education[${idx}].institution`),\n        degree: strOrManual(pickAnalogous(it, ['degree', 'titulo', 'carrera', 'estudio', 'field', 'especialidad', 'program']), `education[${idx}].degree`),\n        status: strOrManual(pickAnalogous(it, ['status', 'estado', 'situacion', 'condicion']), `education[${idx}].status`),\n        start: strOrManual(pickAnalogous(it, ['start', 'inicio', 'fecha_inicio', 'desde', 'start_date']), `education[${idx}].start`),\n        end: strOrManual(pickAnalogous(it, ['end', 'fin', 'fecha_fin', 'hasta', 'end_date', 'year', 'anio', 'graduacion']), `education[${idx}].end`),\n      };\n    });\n  if (education.length === 0) pending.push('education');\n\n  const rawLangs = toArray(pickAnalogous(raw, ['languages', 'idiomas', 'lenguajes', 'idiomas_conocidos']));\n  const languages = [];\n  rawLangs.forEach((it) => {\n    if (typeof it === 'string') {\n      const clean = it.trim();\n      if (!clean) return;\n      const idx = languages.length;\n      languages.push({ name: clean, level: strOrManual(null, `languages[${idx}].level`) });\n      return;\n    }\n    if (it && typeof it === 'object') {\n      const nameVal = pickAnalogous(it, ['name', 'language', 'idioma', 'nombre', 'lenguaje']);\n      const clean = String(nameVal || '').trim();\n      if (!clean || clean.toLowerCase() === 'null') return;\n      const idx = languages.length;\n      languages.push({\n        name: clean,\n        level: strOrManual(pickAnalogous(it, ['level', 'nivel', 'fluidez', 'proficiency', 'dominio']), `languages[${idx}].level`),\n      });\n    }\n  });\n  if (languages.length === 0) pending.push('languages');\n\n  const rawCerts = toArray(pickAnalogous(raw, ['certifications', 'certificaciones', 'cursos', 'capacitaciones', 'courses', 'diplomas']));\n  const certifications = rawCerts\n    .map(c => typeof c === 'string' ? c.trim() : String(pickAnalogous(c, ['name', 'nombre', 'title', 'titulo', 'curso', 'certification']) || '').trim())\n    .filter(s => s && s.toLowerCase() !== 'null');\n  if (certifications.length === 0) pending.push('certifications');\n\n  const rawLinks = toArray(pickAnalogous(raw, ['links', 'enlaces', 'redes', 'urls', 'portfolio', 'perfiles', 'social']));\n  const links = rawLinks\n    .map(l => typeof l === 'string' ? l.trim() : String(pickAnalogous(l, ['url', 'link', 'href', 'enlace', 'value']) || '').trim())\n    .filter(s => s && s.toLowerCase() !== 'null');\n  if (links.length === 0) pending.push('links');\n\n  return {\n    personal,\n    summary,\n    skills,\n    experience,\n    education,\n    languages,\n    certifications,\n    links,\n    pending_manual_fields: pending,\n  };\n};\n\nconst SVC = {\n  profile: ($env.PROFILE_SERVICE_URL || 'http://profile-service:8000').replace(/\\/$/, ''),\n  jobs: ($env.JOBS_SERVICE_URL || 'http://jobs-service:8000').replace(/\\/$/, ''),\n  matching: ($env.MATCHING_SERVICE_URL || 'http://matching-service:8000').replace(/\\/$/, ''),\n};\n\n// Mismo criterio que WF-06: token de servicio (lo mandan los microservicios) o de webhook.\nconst checkToken = (incoming) => {\n  const headers = Object.fromEntries(\n    Object.entries(incoming.headers || {}).map(([k, v]) => [k.toLowerCase(), v])\n  );\n  const query = incoming.query || {};\n  const body = incoming.body || {};\n  const given = headers['x-service-token'] || headers['x-webhook-token'] || headers['x-api-key'] || query.token || '';\n  const ok = (Boolean($env.SERVICE_TOKEN) && given === $env.SERVICE_TOKEN)\n    || (Boolean($env.N8N_WEBHOOK_TOKEN) && given === $env.N8N_WEBHOOK_TOKEN);\n  return { ok, body };\n};\n\nconst unauthorized = () => ({\n  valid: false,\n  status_code: 401,\n  error: { code: 'UNAUTHORIZED', message: 'Token de webhook ausente o inválido', details: {} },\n});\nconst invalid = (message) => ({\n  valid: false,\n  status_code: 400,\n  error: { code: 'INVALID_INPUT', message, details: {} },\n});\n\n// GET a un microservicio con X-Service-Token. 404 → null; otro error → excepción (lo toma WF-05).\nconst getJson = async (url) => {\n  try {\n    return await this.helpers.httpRequest({\n      method: 'GET',\n      url,\n      headers: { 'X-Service-Token': SERVICE_TOKEN, Accept: 'application/json' },\n      json: true,\n      timeout: 15000,\n    });\n  } catch (err) {\n    const status = Number(err?.response?.status ?? err?.httpCode ?? err?.statusCode ?? err?.cause?.response?.status);\n    if (status === 404) return null;\n    throw new Error(`GET ${url} falló (${status || 'sin respuesta'}): ${err.message}`);\n  }\n};\n\n// POST JSON a un microservicio (p. ej. matching-service `POST /matches`). 404 → null.\nconst postJson = async (url, body) => {\n  try {\n    return await this.helpers.httpRequest({\n      method: 'POST',\n      url,\n      headers: { 'X-Service-Token': SERVICE_TOKEN, Accept: 'application/json', 'Content-Type': 'application/json' },\n      body,\n      json: true,\n      timeout: 15000,\n    });\n  } catch (err) {\n    const status = Number(err?.response?.status ?? err?.httpCode ?? err?.statusCode ?? err?.cause?.response?.status);\n    if (status === 404) return null;\n    throw new Error(`POST ${url} falló (${status || 'sin respuesta'}): ${err.message}`);\n  }\n};\n\n// Parámetros dinámicos: get_agent_settings (mcp-tools), nunca valores fijos.\nconst loadNotifySettings = async () => {\n  const res = await callMcpTool('get_agent_settings');\n  const cfg = (res && (res.data || res)) || {};\n  const n = cfg.notifications || {};\n  return {\n    enabled: n.enabled !== false,\n    min_score: Number(n.min_score ?? 70),\n    max_per_event: Math.max(1, Number(n.max_per_event ?? 10)),\n    admin_email: String(n.admin_email || '').trim(),\n    frontend_url: String(n.frontend_url || 'http://localhost:8080').replace(/\\/$/, ''),\n  };\n};\n\n// Idempotencia (AGENTS §4.6): cada mail lleva un notification_key. El nodo Postgres\n// \"Reservar Aviso\" lo inserta en bolsa.notifications_sent (clave primaria) con\n// ON CONFLICT DO NOTHING: sólo sale el mail cuya clave se reservó, aunque haya\n// ejecuciones simultáneas del mismo workflow.\n\nconst esc = (value) => String(value ?? '').replace(/[&<>\"']/g, (c) => (\n  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]\n));\nconst place = (loc) => [loc?.city, loc?.province].filter(Boolean).join(', ');\nconst firstName = (name) => String(name || '').trim().split(/\\s+/)[0] || '';\nconst skillList = (items, max = 5) => (items || []).slice(0, max).map((s) => s.skill || s.name).filter(Boolean);\nconst scoreText = (score) => `${Math.round(Number(score) || 0)}/100`;\n\n// Plantilla común: una columna, texto real, el puntaje siempre marcado como \"calculado por reglas\".\nconst mailHtml = ({ title, intro, blocks, ctaUrl, ctaLabel, footer }) => `<!doctype html>\n<html lang=\"es\"><body style=\"margin:0;background:#f5f3f7;font-family:Arial,Helvetica,sans-serif;color:#2b2b2b\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"padding:24px 12px\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden\">\n<tr><td style=\"background:#BA3995;color:#ffffff;padding:20px 28px;font-size:20px;font-weight:bold\">Bolsa de Trabajo</td></tr>\n<tr><td style=\"padding:28px\">\n<h1 style=\"font-size:20px;margin:0 0 12px\">${esc(title)}</h1>\n<p style=\"margin:0 0 20px;line-height:1.5\">${intro}</p>\n${blocks.join('')}\n<p style=\"margin:24px 0 0\"><a href=\"${esc(ctaUrl)}\" style=\"background:#BA3995;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:bold;display:inline-block\">${esc(ctaLabel)}</a></p>\n</td></tr>\n<tr><td style=\"padding:16px 28px;background:#faf7fb;font-size:12px;color:#6b6b6b;line-height:1.5\">${footer}</td></tr>\n</table></td></tr></table></body></html>`;\n\nconst matchBlock = ({ heading, sub, score, matched, missing }) => `\n<div style=\"border:1px solid #eadff0;border-radius:10px;padding:16px;margin:0 0 12px\">\n  <div style=\"font-weight:bold;font-size:16px\">${esc(heading)}</div>\n  <div style=\"color:#6b6b6b;font-size:13px;margin:2px 0 10px\">${esc(sub)}</div>\n  <div style=\"font-size:14px\"><span style=\"background:#e6f4ea;color:#1e6b34;border-radius:999px;padding:2px 10px;font-weight:bold\">Calculado por reglas · ${esc(scoreText(score))}</span></div>\n  ${matched.length ? `<div style=\"font-size:13px;margin-top:10px\">Cumplís: ${esc(matched.join(', '))}</div>` : ''}\n  ${missing.length ? `<div style=\"font-size:13px;margin-top:4px\">Te falta o podés reforzar: ${esc(missing.join(', '))}</div>` : ''}\n</div>`;\n\nconst RULES_NOTE = 'El puntaje lo calcula el motor de reglas de la bolsa de trabajo con criterios explícitos; no interviene ninguna IA.';\n\nconst STUDENT_FOOTER = `${RULES_NOTE}<br>Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.`;\nconst STUDENT_FOOTER_TEXT = [RULES_NOTE, 'Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.'];\nconst offerKey = (profileId, jobId) => `profile:${profileId}|job:${jobId}`;\n// Sólo a quien aceptó que lo contacten por mail (consents.contact_by_email).\nconst contactable = (profile) => Boolean(profile && profile.contact_by_email === true && profile.personal && profile.personal.email);\n\nconst ev = $input.first().json;\nconst cfg = await loadNotifySettings();\nif (!cfg.enabled) return [];\nconst key = offerKey(ev.profile_id, ev.job_id);\n\nconst profile = await getJson(`${SVC.profile}/api/v1/profiles/${encodeURIComponent(ev.profile_id)}`);\nif (!contactable(profile)) return [];\nconst job = await getJson(`${SVC.jobs}/api/v1/jobs/${encodeURIComponent(ev.job_id)}`);\nif (!job || job.status !== 'active') return [];\n// El puntaje lo recalcula el motor de reglas: nunca se confía en uno que venga en el evento.\nconst match = await postJson(`${SVC.matching}/api/v1/matches`, { profile_id: ev.profile_id, job_id: ev.job_id });\nif (!match || Number(match.score) < cfg.min_score) return [];\n\nconst company = (job.company_snapshot && job.company_snapshot.name) || 'Una empresa';\nconst where = place(job.location);\nconst matched = skillList(match.matched_skills);\nconst missing = skillList(match.missing_skills, 3);\nconst name = firstName(profile.personal.name);\nconst subject = `Nueva oferta para vos: ${job.title} (${company})`;\nconst html = mailHtml({\n  title: 'Hay una oferta nueva compatible con tu perfil',\n  intro: `${name ? `Hola ${esc(name)}, ` : ''}${esc(company)} publicó una búsqueda que encaja con tu perfil.`,\n  blocks: [matchBlock({ heading: job.title, sub: [company, where].filter(Boolean).join(' · '), score: match.score, matched, missing })],\n  ctaUrl: cfg.frontend_url,\n  ctaLabel: 'Ver la oferta',\n  footer: STUDENT_FOOTER,\n});\nconst text = [\n  `${name ? `Hola ${name}, ` : ''}${company} publicó una búsqueda que encaja con tu perfil.`,\n  '',\n  `${job.title}${where ? ` · ${where}` : ''}`,\n  `Puntaje calculado por reglas: ${scoreText(match.score)}`,\n  ...(matched.length ? [`Cumplís: ${matched.join(', ')}`] : []),\n  ...(missing.length ? [`Te falta o podés reforzar: ${missing.join(', ')}`] : []),\n  '',\n  `Ver la oferta: ${cfg.frontend_url}`,\n  '',\n  ...STUDENT_FOOTER_TEXT,\n].join('\\n');\nreturn [{ json: { notification_key: key, to: profile.personal.email, subject, html, text } }];\n"
+      },
+      "id": "e1a6b6f5-9f16-522f-81e1-667e9efcc241",
+      "name": "Armar Mail de Oferta Nueva",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO bolsa.notifications_sent (notification_key, workflow) VALUES ($1, 'WF-03') ON CONFLICT (notification_key) DO NOTHING RETURNING notification_key",
+        "options": {
+          "queryReplacement": "={{ $json.notification_key }}",
+          "queryBatching": "independently"
+        }
+      },
+      "id": "b49621cd-346c-5370-ae0b-bc895c307819",
+      "name": "Reservar Aviso de Oferta",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        1320,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "BolsaN8nPostgres1",
+          "name": "Postgres n8n (avisos)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst claimed = new Set($input.all().map((i) => i.json.notification_key).filter(Boolean));\nreturn $('Armar Mail de Oferta Nueva').all().filter((i) => claimed.has(i.json.notification_key));\n"
+      },
+      "id": "4290261d-d9ec-5569-afd6-3ff92e476242",
+      "name": "Sólo Avisos Nuevos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ \"Bolsa de Trabajo <\" + $env.SMTP_FROM + \">\" }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "both",
+        "text": "={{ $json.text }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "5cdad67a-5221-5005-bc9f-62fc2b7d1f48",
+      "name": "Enviar Mail",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1780,
+        100
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "BolsaSmtpMail0001",
+          "name": "SMTP Bolsa"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## WF-03 · Mails a estudiantes\n- `POST /webhook/profile-updated` (profile-service, en cada alta o `PATCH`): responde `202` y sigue sólo si `searchable = true`. Reenvía el evento a WF-04 y manda **un** resumen con las ofertas que superan `notifications.min_score` y todavía no le avisamos.\n- `POST /webhook/student-offer` (interno, desde WF-02): una oferta nueva compatible. El puntaje se recalcula con matching-service (`POST /matches`).\n- Las dos entradas comparten la cuenta de avisos (`notification_key = profile:{id}|job:{job_id}`): ninguna oferta se avisa dos veces.\n- Sólo si `contact_by_email = true`.",
+        "width": 520,
+        "height": 320
+      },
+      "id": "2edc673a-64c7-5709-8ec1-e3206167d627",
+      "name": "Nota WF-03",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook profile.updated": {
+      "main": [
+        [
+          {
+            "node": "Validar Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Evento": {
+      "main": [
+        [
+          {
+            "node": "Responder 202",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder 202": {
+      "main": [
+        [
+          {
+            "node": "¿Perfil Buscable?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Perfil Buscable?": {
+      "main": [
+        [
+          {
+            "node": "Reenviar a WF-04 (Empresas)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reenviar a WF-04 (Empresas)": {
+      "main": [
+        [
+          {
+            "node": "Elegir Ofertas para el Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Elegir Ofertas para el Resumen": {
+      "main": [
+        [
+          {
+            "node": "Reservar Ofertas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reservar Ofertas": {
+      "main": [
+        [
+          {
+            "node": "Armar Resumen al Estudiante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Resumen al Estudiante": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook student-offer": {
+      "main": [
+        [
+          {
+            "node": "Validar Oferta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Oferta": {
+      "main": [
+        [
+          {
+            "node": "Responder 202 (Oferta)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder 202 (Oferta)": {
+      "main": [
+        [
+          {
+            "node": "¿Oferta Válida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Oferta Válida?": {
+      "main": [
+        [
+          {
+            "node": "Armar Mail de Oferta Nueva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar Mail de Oferta Nueva": {
+      "main": [
+        [
+          {
+            "node": "Reservar Aviso de Oferta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reservar Aviso de Oferta": {
+      "main": [
+        [
+          {
+            "node": "Sólo Avisos Nuevos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sólo Avisos Nuevos": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "BolsaWf05Errores0000"
+  },
+  "active": true
+}

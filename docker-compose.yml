@@ -91,6 +91,12 @@ services:
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_FROM: ${SMTP_FROM}
+      # Opcionales (servidor SMTP real con usuario/TLS); Mailpit en dev no los necesita.
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      # WF-03 reenvía a WF-04 por un webhook interno del mismo n8n
+      N8N_INTERNAL_WEBHOOK_URL: http://localhost:5678/webhook
       # Comunicación directa n8n -> mcp-tools por red interna (nunca pasa por Nginx)
       MCP_URL: http://mcp-tools:8000/mcp
       N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN}

@@ -92,6 +92,7 @@ El access token dura 15 minutos; el refresh token dura 7 días y se almacena com
   - `WF-00-orquestador.json`: sub-workflow orquestador con lectura de adjunto vía MCP y reintento guiado.
   - `WF-01-procesar-cv.json`: webhook `POST /webhook/cv-extract` (`CV Structurer`).
   - `WF-06-recomendador.json`: webhook `POST /webhook/recommendations` (`Training Advisor` para postulantes y `Company Advisor` para empresas).
+  - `WF-02-oferta-nueva.json` a `WF-05-errores.json`: notificaciones por mail (oferta nueva, resumen al estudiante, candidato nuevo a la empresa) y aviso de errores al admin. Se ven en Mailpit; ver [`contracts/notificaciones_n8n.md`](contracts/notificaciones_n8n.md).
 
 **Los workflows se cargan solos.** Antes de n8n corre `n8n-init` ([`n8n/init/bootstrap.sh`](n8n/init/bootstrap.sh)), que en cada `docker compose up`:
 
