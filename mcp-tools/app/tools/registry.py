@@ -168,7 +168,8 @@ def register_tools(mcp: FastMCP, container: ServiceContainer) -> dict[str, Calla
     @_expose
     async def get_agent_settings() -> JsonDict:
         """Devuelve la configuración vigente de los agentes (modelos NVIDIA por rol, límites RPM,
-        reintentos del verificador, topes de recomendaciones y formatos de CV)."""
+        reintentos del verificador, topes de recomendaciones, formatos de CV y mails de
+        notificación: `notifications.min_score`, `max_per_event`, `admin_email`, `frontend_url`)."""
         return await _run_async(lambda: container.settings.get_settings())
 
     @_expose
