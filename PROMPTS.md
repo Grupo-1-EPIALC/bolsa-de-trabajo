@@ -38,9 +38,12 @@
 | P-020 | 2026-11-07 | Andres | Claude Code (`frontend-agent` + `devops-agent` + `matching-agent`) | `fix/infra/v0.1.1-integracion-busquedas` y `feature/frontend/v0.3.0-busquedas` | Revisar `contracts/jobs_busquedas.md` y hacer las integraciones que falten con matching y el front | Gateway con `location = /api/v1/jobs` (listado y alta daban 301); compose cablea `JOBS_SEED_DEMO`, `AUTH_SERVICE_URL` y `JOBS_DB_SCHEMA`; matching usa datos reales por defecto (`MATCHING_USE_MOCKS=false`, sin cambios de código). Front 0.3.0: búsquedas de la empresa (pestañas, alta/edición, cerrar/reabrir, 409/422, candidatos por reglas + IA) y "Todas las ofertas" para el estudiante. 34 tests Vitest y E2E en navegador | pendiente de revisión |
 | P-021 | 2026-11-07 | Andres | Claude Code (`devops-agent` + `mcp-agent`) | `fix/infra/v0.1.1-integracion-busquedas` | Corregir el gateway (redirecciones de `/api/v1/jobs/` sin puerto) y atender la revisión del PR: WF-06 consultaba MCP con mocks mientras matching usa datos reales | Gateway: `Host $http_host` (las 307 de FastAPI salían a `http://localhost/...` sin `:8080`). `MCP_USE_MOCKS=false` por defecto en compose y `.env.example`, alineado con `MATCHING_USE_MOCKS` (mcp-tools ya tenía los adaptadores HTTP, sin cambios de código). E2E con IDs reales: ranking MCP = REST y matching → WF-06 → MCP → `/recommendations/batch` completo en modo `student` y `company` | pendiente de revisión |
 | P-022 | 2026-11-07 | Andres | Claude Code (`auth-agent`) | `feature/auth/v0.1.0-admin-cuentas` | Atender la revisión del PR de admin: [P1] el evento de borrado se puede perder (best effort después del commit) y [P2] reset o borrado no revocan un access JWT ya emitido; completar la plantilla y coordinar con #18 | Outbox transaccional `auth.account_event_deliveries` (una fila por suscriptor, `event_id`, misma transacción que el cambio) y `AccountEventDispatcher` con reintentos sin límite, backoff 5 s–10 min, orden por cuenta, `SKIP LOCKED` + lease. `token_version` + claim `tv` comparado en cada request (`401 TOKEN_REVOKED`). 41 tests Jest; E2E con profile-service caído que se recupera y tokens de admin revocados |  |
-| P-023 | 2026-11-06 | Dario	| Gemini (`frontend-agent`)	| `feature/frontend/v0.2.2-correcciones-frontend` | Corregir fallos de integración y errores 422 en el envío de formularios de perfil mediante la limpieza de propiedades calculadas por el backend (como normalized o months), estabilizar la visualización de componentes en Bootstrap y asegurar la compatibilidad de los flujos de estudiante y empresa con la arquitectura actual	
-Sanitización del objeto de envío en ProfileWizard.tsx excluyendo atributos de solo lectura o calculados (normalized, months, etc.) para evitar conflictos de validación estricta con Pydantic/FastAPI en el backend; verificación y soporte de la estructura SPA basada en Bootstrap 5 manteniendo la separación visual estricta entre reglas (origin: "RULES", badges verdes) y sugerencias de IA (origin: "AI", badges ámbar con disclaimer); ajustes en la navegación y control de vistas privadas según los roles de usuario| pendiente de revisión | |
-| P-024 | 2026-11-06 | Dario	| Gemini (`frontend-agent`)	| `feature/frontend/v0.2.2-correcciones-frontend` | Actualización inmutable del estado `profile` en `StudentArea.tsx` mediante `setProfile((prev) => ({ ...prev, has_cv_suggestions: false }))` para forzar un re-render inmediato en la UI sin requerir recarga manual (`F5`).Ajuste en `ProfileWizard.tsx` para mutar explícitamente `updated.has_cv_suggestions = false` al guardar el paso del CV y conectar el evento de descarte con la API.Incorporación de un bloque de control para atrapar la excepción `ApiError` con estado `404` (`CV_SUGGESTIONS_NOT_FOUND`), evitando que se renderice una alerta de error global en la interfaz cuando las sugerencias ya habían sido borradas previamente.| pendiente de revisión | |
+| P-023 | 2026-11-06 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.2.2-correcciones-frontend` | Corregir fallos de integración y errores 422 en el envío de formularios de perfil mediante la limpieza de propiedades calculadas por el backend, estabilizar la visualización de componentes en Bootstrap y asegurar la compatibilidad de flujos | Sanitización del objeto de envío en ProfileWizard.tsx excluyendo atributos de solo lectura o calculados (normalized, months, etc.) para evitar conflictos de validación estricta con Pydantic/FastAPI en el backend; verificación y soporte de la estructura SPA basada en Bootstrap 5 manteniendo la separación visual estricta entre reglas (origin: "RULES", badges verdes) y sugerencias de IA (origin: "AI", badges ámbar con disclaimer) | aceptado |
+| P-024 | 2026-11-06 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.2.2-correcciones-frontend` | Corregir la persistencia del cartel de sugerencias de IA en el dashboard y perfil que requería F5, y solucionar el error visual provocado por la respuesta 404 del backend al descartar sugerencias | Actualización inmutable del estado profile en StudentArea.tsx mediante setProfile((prev) => ({ ...prev, has_cv_suggestions: false })) para forzar re-render inmediato; ajuste en ProfileWizard.tsx para mutar explícitamente updated.has_cv_suggestions = false al guardar paso CV; captura de excepción ApiError (404) para evitar alertas visuales residuales | aceptado |
+| P-025 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Crear modal y formulario de recuperación de clave (solicitud y confirmación por mail) interceptando tokens desde la URL | Implementación de ForgotPasswordModal.tsx y ResetPasswordConfirmPage.tsx conectados a authService y App.tsx respetando la UI de Bootstrap e interceptando tokens de recuperación | aceptado |
+| P-026 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Crear pantalla receptora de confirmación de cambio de correo electrónico con rotación de sesión | Implementación de ConfirmEmailPage.tsx con captura de ?token=..., limpieza de sesión activa y maquetado institucional | aceptado |
+| P-027 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Desarrollar modal "Mi cuenta" para estudiantes y empresas con cambio de clave y solicitud de cambio de correo | Componente AccountSettingsModal.tsx integrado en SiteHeader.tsx con pestañas para solicitar cambio de contraseña y nuevo email | aceptado |
+
 
 ---
 
@@ -251,27 +254,6 @@ Sanitización del objeto de envío en ProfileWizard.tsx excluyendo atributos de 
 - **Archivos afectados:** `contracts/jobs_busquedas.md`, `PROMPTS.md`.
 - **Decisión:** aceptado.
 
-##### P-023 — Arreglos y estabilización del Frontend (Bootstrap y sincronización)
-*   **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Copilot / Gemini (frontend-agent) · **Rama:** `feature/frontend/v0.2.1-estilo-bootstrap` · **HU:** Correcciones transversales de UI, flujos de sesión y sanitización de payloads (PATCH)
-*   **Prompt (resumido):**
-    > Corrige fallos de integración y errores 422 en el envío de formularios de perfil mediante la limpieza de propiedades calculadas por el backend (como `normalized` o `months`), estabilizar la visualización de componentes en Bootstrap y asegurar la compatibilidad de los flujos de estudiante y empresa con la arquitectura actual.
-*   **Resumen de la respuesta:**
-    * Sanitización del objeto de envío en `ProfileWizard.tsx` excluyendo atributos de solo lectura o calculados (`normalized`, `months`, etc.) para evitar conflictos de validación estricta con Pydantic/FastAPI en el backend.
-    * Verificación y soporte de la estructura SPA basada en Bootstrap 5, manteniendo la separación visual estricta entre reglas (`origin: "RULES"`, badges verdes) y sugerencias de IA (`origin: "AI"`, badges ámbar con disclaimer)[cite: 1, 3, 5].
-    * Ajustes en la navegación y control de vistas privadas según los roles de usuario (`student`, `company`, `admin`)[cite: 1, 5].
-*   **Archivos afectados:** frontend/src/components/profile/ProfileWizard.tsx, frontend/src/components/profile/StepCvData.tsx, PROMPTS.md.
-*   **Decisión:** aceptado.
-
-##### P-024 — Sincronización de estado y manejo de excepciones 404 en sugerencias de CV
-*   **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Gemini (frontend-agent) · **Rama:** `feature/frontend/v0.2.2-estilo-bootstrap` · **HU:** Correcciones de     sincronización de UI y flujos de perfil de estudiante cuando se completa un perfil a reaiz de sugerencia de IA.
-*   **Prompt (resumen):**
-    > Corrige la persistencia del cartel de sugerencias de IA en el dashboard y perfil cuando ya no hay sugerencias, o fueron reeemplazadas manualmente, este cartel persiste y se debe refrescar la pantalla (F5) para que desaparezca, este error se causa por la respuesta 404 del backend al descartar sugerencias o haberlas sobreescrito.
-*   **Resumen de la respuesta:**
-    * Actualización inmutable del estado `profile` en `StudentArea.tsx` mediante `setProfile((prev) => ({ ...prev, has_cv_suggestions: false }))` para forzar un re-render inmediato en la UI sin requerir recarga manual (`F5`).
-    * Ajuste en `ProfileWizard.tsx` para mutar explícitamente `updated.has_cv_suggestions = false` al guardar el paso del CV y conectar el evento de descarte con la API.
-    * Incorporación de un bloque de control para atrapar la excepción `ApiError` con estado `404` (`CV_SUGGESTIONS_NOT_FOUND`), evitando que se renderice una alerta de error global en la interfaz cuando las sugerencias ya habían sido borradas previamente.
-*   **Archivos afectados:** frontend/src/pages/StudentArea.tsx, frontend/src/components/profile/ProfileWizard.tsx, PROMPTS.md.
-*   **Decisión:** aceptado.
 ### P-018 — Panel de admin, fase 1: cuentas y empresas en auth-service
 - **Fecha:** 2026-11-06 · **Autor:** Andres · **Agente:** Claude Code (`auth-agent`) · **Rama:** `feature/auth/v0.1.0-admin-cuentas` · **HU:** administración de cuentas
 - **Prompt (resumido):**
@@ -337,29 +319,60 @@ Sanitización del objeto de envío en ProfileWizard.tsx excluyendo atributos de 
 - **Archivos afectados:** `services/auth-service/src/` (`admin/account-events.ts`, `admin/account-event-dispatcher.ts`, `admin/typeorm-account-event-outbox.ts`, `admin/http-account-event-sender.ts`, `admin/admin-users.service.ts`, `admin/admin.module.ts`, `auth/access-token-validator.ts`, `auth/jwt.strategy.ts`, `auth/auth.service.ts`, `auth/auth.module.ts`, `auth/current-user.decorator.ts`, `users/user.entity.ts`, 2 migraciones, specs), `contracts/account_events.md`, `contracts/auth_frontend.md`, `AGENTS.md`, `docker-compose.yml`, `.env.example`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 2).
 
-##### P-023 — Arreglos y estabilización del Frontend (Bootstrap y sincronización)
-*   **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Copilot / Gemini (frontend-agent) · **Rama:** `feature/frontend/v0.2.1-estilo-bootstrap` · **HU:** Correcciones transversales de UI, flujos de sesión y sanitización de payloads (PATCH)
-*   **Prompt (resumido):**
-    > Corrige fallos de integración y errores 422 en el envío de formularios de perfil mediante la limpieza de propiedades calculadas por el backend (como `normalized` o `months`), estabilizar la visualización de componentes en Bootstrap y asegurar la compatibilidad de los flujos de estudiante y empresa con la arquitectura actual.
-*   **Resumen de la respuesta:**
-    * Sanitización del objeto de envío en `ProfileWizard.tsx` excluyendo atributos de solo lectura o calculados (`normalized`, `months`, etc.) para evitar conflictos de validación estricta con Pydantic/FastAPI en el backend.
-    * Verificación y soporte de la estructura SPA basada en Bootstrap 5, manteniendo la separación visual estricta entre reglas (`origin: "RULES"`, badges verdes) y sugerencias de IA (`origin: "AI"`, badges ámbar con disclaimer)[cite: 1, 3, 5].
-    * Ajustes en la navegación y control de vistas privadas según los roles de usuario (`student`, `company`, `admin`)[cite: 1, 5].
-*   **Archivos afectados:** frontend/src/components/profile/ProfileWizard.tsx, frontend/src/components/profile/StepCvData.tsx, PROMPTS.md.
-*   **Decisión:** aceptado.
+##### P-023 — Arreglos y estabilización del Frontend (Bootstrap y sanitización)
+* **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Copilot / Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.2.1-estilo-bootstrap` · **HU:** Correcciones transversales de UI, flujos de sesión y sanitización de payloads (PATCH)
+* **Prompt (resumido):**
+  > Corrige fallos de integración y errores 422 en el envío de formularios de perfil mediante la limpieza de propiedades calculadas por el backend (como `normalized` o `months`), estabilizar la visualización de componentes en Bootstrap y asegurar la compatibilidad de los flujos de estudiante y empresa con la arquitectura actual.
+* **Resumen de la respuesta:**
+  - Sanitización del objeto de envío en `ProfileWizard.tsx` excluyendo atributos de solo lectura o calculados (`normalized`, `months`, etc.) para evitar conflictos de validación estricta con Pydantic/FastAPI en el backend.
+  - Verificación y soporte de la estructura SPA basada en Bootstrap 5, manteniendo la separación visual estricta entre reglas (`origin: "RULES"`, badges verdes) y sugerencias de IA (`origin: "AI"`, badges ámbar con disclaimer).
+  - Ajustes en la navegación y control de vistas privadas según los roles de usuario (`student`, `company`, `admin`).
+* **Archivos afectados:** `frontend/src/components/profile/ProfileWizard.tsx`, `frontend/src/components/profile/StepCvData.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
 
 ##### P-024 — Sincronización de estado y manejo de excepciones 404 en sugerencias de CV
-*   **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Gemini (frontend-agent) · **Rama:** `feature/frontend/v0.2.2-estilo-bootstrap` · **HU:** Correcciones de     sincronización de UI y flujos de perfil de estudiante cuando se completa un perfil a reaiz de sugerencia de IA.
-*   **Prompt (resumen):**
-    > Corrige la persistencia del cartel de sugerencias de IA en el dashboard y perfil cuando ya no hay sugerencias, o fueron reeemplazadas manualmente, este cartel persiste y se debe refrescar la pantalla (F5) para que desaparezca, este error se causa por la respuesta 404 del backend al descartar sugerencias o haberlas sobreescrito.
-*   **Resumen de la respuesta:**
-    * Actualización inmutable del estado `profile` en `StudentArea.tsx` mediante `setProfile((prev) => ({ ...prev, has_cv_suggestions: false }))` para forzar un re-render inmediato en la UI sin requerir recarga manual (`F5`).
-    * Ajuste en `ProfileWizard.tsx` para mutar explícitamente `updated.has_cv_suggestions = false` al guardar el paso del CV y conectar el evento de descarte con la API.
-    * Incorporación de un bloque de control para atrapar la excepción `ApiError` con estado `404` (`CV_SUGGESTIONS_NOT_FOUND`), evitando que se renderice una alerta de error global en la interfaz cuando las sugerencias ya habían sido borradas previamente.
-*   **Archivos afectados:** frontend/src/pages/StudentArea.tsx, frontend/src/components/profile/ProfileWizard.tsx, PROMPTS.md.
-*   **Decisión:** aceptado.
+* **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.2.2-estilo-bootstrap` · **HU:** Correcciones de sincronización de UI y flujos de perfil de estudiante
+* **Prompt (resumido):**
+  > Corregir la persistencia del cartel de sugerencias de IA en el dashboard y perfil que requería recargar con F5, y solucionar el error visual provocado por la respuesta 404 del backend al descartar sugerencias.
+* **Resumen de la respuesta:**
+  - Actualización inmutable del estado `profile` en `StudentArea.tsx` mediante `setProfile((prev) => ({ ...prev, has_cv_suggestions: false }))` para forzar un re-render inmediato en la UI sin requerir recarga manual (`F5`).
+  - Ajuste en `ProfileWizard.tsx` para mutar explícitamente `updated.has_cv_suggestions = false` al guardar el paso del CV y conectar el evento de descarte con la API.
+  - Incorporación de un bloque de control para atrapar la excepción `ApiError` con estado `404` (`CV_SUGGESTIONS_NOT_FOUND`), evitando que se renderice una alerta de error global en la interfaz cuando las sugerencias ya habían sido borradas previamente.
+* **Archivos afectados:** `frontend/src/pages/StudentArea.tsx`, `frontend/src/components/profile/ProfileWizard.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
 
-### P-025 — (plantilla)
+##### P-025 — Recuperación de contraseña (solicitud y confirmación con token)
+* **Fecha:** 2026-11-07 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.3.0-auth-flujos` · **HU:** HU-06 (Recuperar contraseña por mail)
+* **Prompt (resumido):**
+  > Crear modal y formulario de recuperación de clave (solicitud y confirmación por mail) interceptando tokens desde la URL.
+* **Resumen de la respuesta:**
+  - Métodos `requestPasswordReset` y `confirmPasswordReset` en `authService.ts`.
+  - Componentes `ForgotPasswordModal.tsx` (modal para solicitar link) y `ResetPasswordConfirmPage.tsx` (formulario para establecer clave de min 12 caracteres).
+  - Intercepción de ruta `/auth/password/reset/confirm?token=...` en `App.tsx` enmarcada dentro del layout institucional (`SiteHeader` / `SiteFooter`).
+* **Archivos afectados:** `frontend/src/services/authService.ts`, `frontend/src/components/auth/ForgotPasswordModal.tsx`, `frontend/src/pages/ResetPasswordConfirmPage.tsx`, `frontend/src/components/auth/AuthForm.tsx`, `frontend/src/App.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+##### P-026 — Confirmación de cambio de correo electrónico
+* **Fecha:** 2026-11-07 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.3.0-auth-flujos` · **HU:** HU-05 (Cambiar email con confirmación)
+* **Prompt (resumido):**
+  > Crear pantalla receptora de confirmación de cambio de correo electrónico con rotación de sesión.
+* **Resumen de la respuesta:**
+  - Método `confirmEmail` en `authService.ts` (`POST /api/v1/auth/email/confirm`).
+  - Creación de `ConfirmEmailPage.tsx` que procesa el token de la URL, invalida la sesión previa (`session.clear()`) y muestra la pantalla verde para re-iniciar sesión.
+* **Archivos afectados:** `frontend/src/services/authService.ts`, `frontend/src/pages/ConfirmEmailPage.tsx`, `frontend/src/App.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+##### P-027 — Sección "Mi cuenta" en cabecera de usuario
+* **Fecha:** 2026-11-07 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.3.0-auth-flujos` · **HU:** HU-04 (Cambiar clave conociendo la actual) / HU-05
+* **Prompt (resumido):**
+  > Desarrollar modal "Mi cuenta" para estudiantes y empresas con cambio de clave y solicitud de cambio de correo.
+* **Resumen de la respuesta:**
+  - Métodos `me`, `changePassword` y `requestEmailChange` en `authService.ts`.
+  - Formulario con pestañas `AccountSettingsModal.tsx` (Bootstrap 5) y su integración en `SiteHeader.tsx` (tanto en la barra superior como en el menú hamburguesa mobile).
+* **Archivos afectados:** `frontend/src/services/authService.ts`, `frontend/src/components/auth/AccountSettingsModal.tsx`, `frontend/src/components/layout/SiteHeader.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+### P-028 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

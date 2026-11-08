@@ -45,6 +45,51 @@ export const authService = {
     return data.user;
   },
 
+  /** POST /auth/password/reset → Solicita el enlace de recuperación por email. */
+  async requestPasswordReset(email: string): Promise<void> {
+    await apiFetch('/auth/password/reset', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  /** POST /auth/password/reset/confirm → Establece la nueva contraseña usando el token. */
+  async confirmPasswordReset(token: string, new_password: string): Promise<void> {
+    await apiFetch('/auth/password/reset/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password }),
+    });
+  },
+
+  /** POST /auth/email/confirm → Confirma la nueva dirección de email usando el token recibido. */
+  async confirmEmail(token: string): Promise<void> {
+    await apiFetch<void>('/auth/email/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+
+  /** GET /auth/me → Obtiene los datos de la cuenta activa (email y rol). */
+  async me(): Promise<SessionUser> {
+    return apiFetch<SessionUser>('/auth/me');
+  },
+
+  /** POST /auth/password/change → Cambia la contraseña actual por una nueva. Cierra las sesiones activas. */
+  async changePassword(current_password: string, new_password: string): Promise<void> {
+    await apiFetch<void>('/auth/password/change', {
+      method: 'POST',
+      body: JSON.stringify({ current_password, new_password }),
+    });
+  },
+
+  /** POST /auth/email/change → Solicita cambiar la dirección de correo (dispara email con token). */
+  async requestEmailChange(email: string, current_password: string): Promise<void> {
+    await apiFetch<void>('/auth/email/change', {
+      method: 'POST',
+      body: JSON.stringify({ email, current_password }),
+    });
+  },
+
   logout() {
     session.clear();
   },
