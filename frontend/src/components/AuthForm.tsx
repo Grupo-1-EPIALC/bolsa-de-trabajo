@@ -3,6 +3,7 @@ import { authService, PASSWORD_MIN_LENGTH } from '../services/authService';
 import { errorMessage, validationMessages } from '../services/api';
 import type { AuthMode } from '../navigation';
 import type { SessionUser } from '../services/session';
+import { ForgotPasswordModal } from './auth/ForgotPasswordModal';
 
 interface AuthFormProps {
   initialMode?: AuthMode;
@@ -78,6 +79,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'login', onSuc
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{ message: string; items: string[] } | null>(null);
+
+  // Estado para controlar la visibilidad del modal de Recuperar Clave
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const isRegister = mode === 'register';
 
@@ -195,19 +199,34 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'login', onSuc
             onChange={setEmail}
           />
 
-          <IconInput
-            id="auth-password"
-            label="Contraseña"
-            icon="bi-lock"
-            type="password"
-            value={password}
-            placeholder="••••••••••••"
-            autoComplete={isRegister ? 'new-password' : 'current-password'}
-            hint={isRegister ? `Mínimo ${PASSWORD_MIN_LENGTH} caracteres.` : undefined}
-            minLength={isRegister ? PASSWORD_MIN_LENGTH : undefined}
-            maxLength={128}
-            onChange={setPassword}
-          />
+          <div>
+            <IconInput
+              id="auth-password"
+              label="Contraseña"
+              icon="bi-lock"
+              type="password"
+              value={password}
+              placeholder="••••••••••••"
+              autoComplete={isRegister ? 'new-password' : 'current-password'}
+              hint={isRegister ? `Mínimo ${PASSWORD_MIN_LENGTH} caracteres.` : undefined}
+              minLength={isRegister ? PASSWORD_MIN_LENGTH : undefined}
+              maxLength={128}
+              onChange={setPassword}
+            />
+
+            {/* 👈 BOTÓN DE RECUPERACIÓN AGREGADO DEBAJO DEL INPUT DE CONTRASEÑA */}
+            {!isRegister && (
+              <div className="text-end mt-1">
+                <button
+                  type="button"
+                  className="btn btn-link text-magenta p-0 small text-decoration-none"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+            )}
+          </div>
 
           {isRegister && (
             <IconInput
@@ -222,7 +241,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'login', onSuc
             />
           )}
 
-          {/* Datos de la empresa (HU-02) */}
+          {/* Datos de la empresa */}
           {isRegister && role === 'company' && (
             <>
               <IconInput
@@ -277,6 +296,18 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'login', onSuc
           </div>
         )}
       </div>
+
+      {/* 👈 RENDERIZADO DEL MODAL SOBREPUESTO CON ESTILOS INSTITUCIONALES */}
+      {showForgotPassword && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}
+        >
+          <div style={{ maxWidth: '28rem', width: '100%' }}>
+            <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

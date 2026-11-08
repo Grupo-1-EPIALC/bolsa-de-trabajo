@@ -196,7 +196,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 **Debe:**
 - React 18 + Vite + TS, React Router, TanStack Query, React Hook Form + Zod, Tailwind / Bootstrap.
 - Cliente API único (`src/api/client.ts`) con interceptor JWT y refresh automático. La API es same-origin (`/api/v1`) detrás del gateway.
-- Rutas protegidas por rol (`student`, `company`).
+- Rutas protegidas por rol (`student`, `company`, `admin`). El `admin` tiene su área (`pages/AdminArea.tsx`): cuentas (`contracts/auth_frontend.md` §7) y configuración de matching (`contracts/matching_frontend.md` §4.5).
 - Componentes `ScoreCard` (badge “Calculado por reglas”) y `AIRecommendations` (badge “Sugerido por IA” + disclaimer), separados.
 - Flujo CV: subir → ver sugerencias → aceptar/editar/descartar cada ítem → guardar.
 - Accesibilidad: labels, contraste AA, foco visible. Textos en español.
