@@ -1,4 +1,4 @@
-"""Eventos de cuenta que publica auth-service (`contracts/account_events.md`).
+"""Eventos de cuenta que publica auth-service (`contracts/auth.md` (parte B)).
 
 auth-service es el dueño de las cuentas: jobs-service sólo reacciona sobre sus ofertas.
 """

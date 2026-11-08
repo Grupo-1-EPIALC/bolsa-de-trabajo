@@ -84,7 +84,7 @@ const Section: React.FC<{ title: string; icon: string; children: React.ReactNode
   </section>
 );
 
-/** Alta y edición de una búsqueda (contracts/jobs_frontend.md §3, §4 y §11). */
+/** Alta y edición de una búsqueda (contracts/jobs.md, parte A §4 y §5 y parte B §11). */
 export const JobForm: React.FC<JobFormProps> = ({ job, onSaved, onCancel }) => {
   const [base, setBase] = useState<JobOpportunity | undefined>(job);
   const [form, setForm] = useState<JobFormState>(() => (job ? jobToForm(job) : emptyJobForm()));

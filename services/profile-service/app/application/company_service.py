@@ -1,6 +1,6 @@
 """Casos de uso del perfil de empresa.
 
-Flujo (ver `contracts/company_profile_frontend.md`):
+Flujo (ver `contracts/profile.md` (parte B)):
 1. La empresa se registra en auth-service (razón social, CUIT, actividad) y entra con su JWT.
 2. `GET /profiles/companies/me` → 404: el front ofrece completar el perfil.
 3. `POST /profiles/companies/me` crea el borrador precargado con los datos de auth-service.

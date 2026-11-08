@@ -1,6 +1,6 @@
 """Casos de uso del perfil del estudiante.
 
-Flujo del alta (ver `contracts/profile_frontend.md`):
+Flujo del alta (ver `contracts/profile.md` (parte A)):
 1. El estudiante se registra en auth-service y entra con su JWT.
 2. `GET /profiles/me` → 404 `PROFILE_NOT_FOUND`: el front ofrece subir el CV o cargar a mano.
 3. Sube el CV (`POST /profiles/me/cv`) → n8n (WF-01) extrae los datos → borrador sugerido.

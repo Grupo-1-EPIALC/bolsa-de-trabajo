@@ -1,4 +1,4 @@
-// Formulario de búsqueda ↔ JobCreateInput (contracts/jobs_frontend.md §3 y §4).
+// Formulario de búsqueda ↔ JobCreateInput (contracts/jobs.md, parte A §4 y §5).
 // PATCH reemplaza bloques enteros: al editar se conservan los campos que el formulario no muestra.
 import { ApiError } from '../services/api';
 import type {

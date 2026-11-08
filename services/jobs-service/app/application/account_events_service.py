@@ -6,7 +6,7 @@
 - `account.updated`: se ignora. El `company_snapshot` sale del perfil de empresa
   (profile-service) y se refresca cuando la empresa crea o edita una oferta.
 
-Todo es idempotente: el mismo evento puede llegar dos veces (`contracts/account_events.md`).
+Todo es idempotente: el mismo evento puede llegar dos veces (`contracts/auth.md` (parte B)).
 """
 
 import logging

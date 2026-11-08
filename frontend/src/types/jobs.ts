@@ -1,4 +1,4 @@
-// Tipos de jobs-service según contracts/jobs_frontend.md §9 (sin `any`).
+// Tipos de jobs-service según contracts/historico/jobs_frontend.md §9 (sin `any`).
 // Los enums comunes con el perfil salen de ./profile (estructura_comun_perfil_oferta_match.md §3).
 
 import type {

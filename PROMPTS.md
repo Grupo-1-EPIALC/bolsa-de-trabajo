@@ -47,6 +47,7 @@
 | P-029 | 2026-11-08 | Dario | Gemini (`frontend-agent`) | `feature/v0.5.0-frontend/auth-flujos-panel-admin` | Fusionar localmente el PR del Panel Admin (v0.4.0) con la rama de flujos Auth (v0.3.0), resolviendo conflictos en App.tsx, SiteHeader.tsx y PROMPTS.md, consolidando todo el frontend en la versión v0.5.0 | Fusión completa de AdminArea.tsx con los 3 flujos de autenticación (HU-04, HU-05, HU-06, HU-10), enrutamiento por roles (student, company, admin), resolución manual de marcas de conflicto y sanitización integral del frontend (Prettier, typecheck y tests unitarios en verde) | aceptado |
 | P-030 | 2026-11-08 | Andres | Claude Code (`n8n-agent` + `mcp-agent` + `profile-agent`) | `feature/n8n/v0.4.0-notificaciones`, `feature/mcp/v0.4.0-config-notificaciones` y `feature/profile/v0.4.0-consentimiento-contacto` | Bloque 1 del plan: hacer WF-02 a WF-05 (notificaciones por mail y errores) | WF-02 oferta nueva → candidatos por reglas; WF-03 único que manda mails a estudiantes (resumen al quedar buscable + oferta nueva); WF-04 aviso a empresas sin datos personales; WF-05 error workflow → admin. Responden 202 enseguida, respetan `contact_by_email` (nuevo en la vista de servicio de profile), parámetros en `get_agent_settings.notifications` y reserva atómica de `notification_key` en `bolsa.notifications_sent` (staticData se pisaba con ejecuciones simultáneas). n8n-init crea credenciales SMTP/Postgres y la tabla. E2E 12/12 con Mailpit | pendiente de revisión |
 | P-031 | 2026-11-08 | Andres | Claude Code (`devops-agent` + `auth-agent` + `frontend-agent`) | `feature/infra/v0.2.0-swagger-redoc` | En el panel de admin, links a Swagger UI y ReDoc de cada servicio | FastAPI (profile, jobs, matching) publican `/docs`, `/redoc` y `/openapi.json` bajo `/api/v1/<recurso>/` (pasan por el gateway sin tocar Nginx). auth-service suma `@nestjs/swagger` (plugin que lee los DTOs) y una página de ReDoc. Panel de admin: sección "Documentación de las APIs" con Swagger UI, ReDoc y OpenAPI por servicio. Tests en los 4 servicios y el front; E2E en Chromium: las 8 páginas cargan | pendiente de revisión |
+| P-032 | 2026-11-08 | Andres | Claude Code (`devops-agent`) | `docs/contracts/v1.0.0-contratos-por-servicio` | Antes del PR, mover los contratos a una subcarpeta y dejar en la carpeta principal sólo los finales, uno por servicio | Seis contratos finales en `contracts/` (`auth.md`, `profile.md`, `jobs.md`, `matching.md`, `mcp_tools.md`, `n8n.md`), armados por partes desde los documentos vigentes (sin checklists ni pasos ya hechos) y con el OpenAPI vivo como fuente de verdad. Los anteriores pasan a `contracts/historico/` (con README de equivalencias) y el backlog del front a `docs/frontend/pendientes.md`. 45 archivos con referencias actualizadas; el test de contrato de jobs verifica el OpenAPI vivo | pendiente de revisión |
 
 ---
 
@@ -436,7 +437,25 @@
 - **Archivos afectados:** `services/auth-service/` (`src/docs/`, `main.ts`, controllers, `nest-cli.json`, `package.json`, `package-lock.json`), `services/{profile,jobs,matching}-service/app/main.py`, `pyproject.toml` y `tests/test_api_docs.py`, `frontend/src/admin/apiDocs.ts`, `frontend/src/components/admin/ApiDocsLinks.tsx`, `AdminDashboard.tsx`, `frontend/package*.json`, `README.md`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 1 por auth/gateway, Integrante 4 por el front).
 
-### P-032 — (plantilla)
+### P-032 — Contratos: uno por servicio y los anteriores al histórico
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`devops-agent`) · **Rama:** `docs/contracts/v1.0.0-contratos-por-servicio` · **HU:** — (documentación)
+- **Prompt (resumido):**
+  > En los contratos, antes de hacer un PR, mové lo que hay a una subcarpeta y dejá en la carpeta principal sólo los contratos finales, uno por servicio. (Decisión: seis contratos: auth, profile, jobs, matching, mcp-tools y n8n; lo transversal repartido.)
+- **Resumen de la respuesta:**
+  - **Contratos finales:** cada uno tiene un encabezado con a quién va dirigido, la versión del servicio, los links a Swagger UI, ReDoc y OpenAPI vivos, y sus partes. Se armaron con un script a partir de las secciones vigentes de cada fuente, sin las que no son contrato (checklists de PR, "cambios necesarios en el front", preguntas para la daily, el prompt del agente de CV).
+    - `auth.md`: API (A), eventos de cuenta (B) y documentación (C).
+    - `profile.md`: estudiante (A), empresa (B), servicios (C), CV con n8n (D), snapshot de empresa como propuesta (E) y anexo con la estructura común.
+    - `jobs.md`: búsquedas (A), guía del front (B) y servicios (C).
+    - `matching.md`: front (A) y endpoints internos + flujo con WF-06 (B).
+    - `mcp_tools.md` y `n8n.md`: nuevos. Herramientas, perfiles y endpoints sacados de mcp-tools en ejecución; workflows, webhooks, payloads, salidas de IA y notificaciones.
+  - **Histórico:** todos los documentos anteriores (md, OpenAPI estáticos, schemas JSON, yaml y pdf) en `contracts/historico/` con `git mv`, más un README de equivalencias. El backlog del front pasa a `docs/frontend/pendientes.md`.
+  - **Referencias:** 45 archivos (código, comentarios, AGENTS, README, compose, plantilla de PR) apuntan al contrato y la parte nuevos. Las secciones de `jobs_frontend.md`, con otra numeración, se mapearon a mano. AGENTS §2.1 regla 6 explica la estructura. PROMPTS no se reescribe (es historial).
+  - **Tests:** el test de jobs que leía `jobs_service.openapi.json` ahora verifica el OpenAPI vivo. Resumen de `GET /profiles/companies/me` corregido (ya no menciona búsquedas).
+  - **Verificación:** 0 links rotos en los contratos nuevos; jobs 116, matching 103, profile 104, auth 44 y front 47 tests; ruff, black, prettier y tsc limpios; los workflows regenerados no cambian.
+- **Archivos afectados:** `contracts/*.md` (nuevos), `contracts/historico/**` (movidos), `docs/frontend/pendientes.md`, `AGENTS.md`, `README.md`, `.github/pull_request_template.md`, `docker-compose.yml`, comentarios en `frontend/src`, `services/*`, `n8n/generate_workflows.py`, `services/jobs-service/tests/test_seed_and_contract.py`, `services/profile-service/app/api/routes_companies.py`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (todo el equipo: cada dueño revisa el contrato de su servicio).
+
+### P-033 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

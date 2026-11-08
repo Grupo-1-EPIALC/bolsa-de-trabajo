@@ -1,4 +1,4 @@
-// profile-service · /api/v1/profiles (contracts/profile_frontend.md)
+// profile-service · /api/v1/profiles (contracts/profile.md, parte A)
 import { ApiError, apiFetch, apiRequest } from './api';
 import type { CvJob, CvResult, ProfileSections, ProfileView } from '../types/profile';
 

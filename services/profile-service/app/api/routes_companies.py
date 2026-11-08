@@ -1,7 +1,7 @@
 """Endpoints del perfil de empresa (`/api/v1/profiles/companies`).
 
 Van bajo `/profiles/` porque el gateway envía `/api/v1/companies/` a jobs-service.
-Contrato para el front: `contracts/company_profile_frontend.md`.
+Contrato para el front: `contracts/profile.md` (parte B).
 """
 
 from typing import Annotated, Any
@@ -15,7 +15,9 @@ from app.domain.errors import InvalidLogoError
 router = APIRouter(prefix="/api/v1/profiles/companies", tags=["company-profiles"])
 
 
-@router.get("/me", summary="Perfil de mi empresa + completitud + búsquedas activas")
+@router.get(
+    "/me", summary="Perfil de mi empresa con su completitud (las búsquedas están en jobs-service)"
+)
 def get_my_company(container: ContainerDep, principal: PrincipalDep) -> dict[str, Any]:
     return container.companies.get_mine(principal)
 
