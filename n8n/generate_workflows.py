@@ -57,6 +57,15 @@ SMTP_CREDENTIAL = {
     }
 }
 
+# Base propia de n8n: la tabla bolsa.notifications_sent la crea n8n/init/bootstrap.sh.
+POSTGRES_CREDENTIAL = {
+    "postgres": {
+        "id": "BolsaN8nPostgres1",
+        "name": "Postgres n8n (avisos)",
+    }
+}
+NOTIFICATIONS_TABLE = "bolsa.notifications_sent"
+
 NVIDIA_CREDENTIAL = {
     "openAiApi": {
         "id": "PnIocs172tEX8ebB",
@@ -2478,24 +2487,10 @@ const loadNotifySettings = async () => {
   };
 };
 
-// Idempotencia (AGENTS §4.6): cada mail tiene un notification_key que se guarda en los
-// datos persistentes del workflow; sobreviven a reinicios y a la reimportación de n8n-init.
-const MAX_KEYS = 5000;
-const sentStore = () => {
-  const data = $getWorkflowStaticData('global');
-  data.sent = data.sent || {};
-  return {
-    has: (key) => Boolean(data.sent[key]),
-    claim: (key) => {
-      data.sent[key] = new Date().toISOString();
-      const keys = Object.keys(data.sent);
-      if (keys.length > MAX_KEYS) {
-        keys.sort((a, b) => String(data.sent[a]).localeCompare(String(data.sent[b])));
-        keys.slice(0, keys.length - MAX_KEYS).forEach((k) => delete data.sent[k]);
-      }
-    },
-  };
-};
+// Idempotencia (AGENTS §4.6): cada mail lleva un notification_key. El nodo Postgres
+// "Reservar Aviso" lo inserta en bolsa.notifications_sent (clave primaria) con
+// ON CONFLICT DO NOTHING: sólo sale el mail cuya clave se reservó, aunque haya
+// ejecuciones simultáneas del mismo workflow.
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
@@ -2594,6 +2589,38 @@ def _webhook_node(seed: str, name: str, path: str, pos: list[int]) -> dict[str, 
         {"httpMethod": "POST", "path": path, "responseMode": "responseNode", "options": {}},
         webhookId=_nid(f"{seed}-id"),
     )
+
+
+def _claim_node(seed: str, name: str, workflow: str, pos: list[int]) -> dict[str, Any]:
+    """Reserva cada `notification_key` (una consulta por ítem). Devuelve la clave sólo si es nueva."""
+    return _node(
+        seed,
+        name,
+        "n8n-nodes-base.postgres",
+        2.8,
+        pos,
+        {
+            "operation": "executeQuery",
+            "query": (
+                f"INSERT INTO {NOTIFICATIONS_TABLE} (notification_key, workflow) VALUES ($1, '{workflow}') "
+                "ON CONFLICT (notification_key) DO NOTHING RETURNING notification_key"
+            ),
+            "options": {
+                "queryReplacement": "={{ $json.notification_key }}",
+                "queryBatching": "independently",
+            },
+        },
+        credentials=POSTGRES_CREDENTIAL,
+    )
+
+
+def _keep_claimed_code(seed: str, name: str, source: str, pos: list[int]) -> dict[str, Any]:
+    """Deja pasar sólo los mails cuya clave reservó el nodo anterior (los demás ya se mandaron)."""
+    js = f"""
+const claimed = new Set($input.all().map((i) => i.json.notification_key).filter(Boolean));
+return $('{source}').all().filter((i) => claimed.has(i.json.notification_key));
+"""
+    return _code(seed, name, js, pos)
 
 
 def build_wf_new_job() -> dict[str, Any]:
@@ -2740,7 +2767,7 @@ const offerKey = (profileId, jobId) => `profile:${profileId}|job:${jobId}`;
 // Sólo a quien aceptó que lo contacten por mail (consents.contact_by_email).
 const contactable = (profile) => Boolean(profile && profile.contact_by_email === true && profile.personal && profile.personal.email);
 """
-    digest_js = (
+    pick_js = (
         MCP_HELPER_JS
         + NOTIFY_HELPER_JS
         + footer_js
@@ -2753,22 +2780,35 @@ const profile = await getJson(`${SVC.profile}/api/v1/profiles/${encodeURICompone
 if (!contactable(profile)) return [];
 
 const ranking = await getJson(`${SVC.matching}/api/v1/matches/students/${encodeURIComponent(ev.profile_id)}/jobs`);
-const store = sentStore();
-// Sólo ofertas que todavía no le avisamos (por este resumen o por WF-02).
-const fresh = ((ranking && ranking.items) || [])
-  .filter((it) => Number(it.match && it.match.score) >= cfg.min_score)
-  .filter((it) => it.job && it.job.job_id && !store.has(offerKey(ev.profile_id, it.job.job_id)))
-  .slice(0, cfg.max_per_event);
+// Un ítem por oferta: "Reservar Ofertas" se queda con las que todavía no le avisamos
+// (por un resumen anterior o por WF-02).
+return ((ranking && ranking.items) || [])
+  .filter((it) => it.job && it.job.job_id && Number(it.match && it.match.score) >= cfg.min_score)
+  .slice(0, cfg.max_per_event)
+  .map((it) => ({
+    json: {
+      notification_key: offerKey(ev.profile_id, it.job.job_id),
+      to: profile.personal.email,
+      name: firstName(profile.personal.name),
+      frontend_url: cfg.frontend_url,
+      job: { title: it.job.title, company_name: it.job.company_name, location: it.job.location },
+      score: it.match.score,
+      matched: skillList(it.match.matched_skills),
+      missing: skillList(it.match.missing_skills, 3),
+    },
+  }));
+"""
+    )
+    digest_js = (
+        NOTIFY_HELPER_JS.split("// GET a un microservicio")[0]
+        + NOTIFY_HELPER_JS[NOTIFY_HELPER_JS.index("// Idempotencia (AGENTS"):]
+        + footer_js
+        + r"""
+const claimed = new Set($input.all().map((i) => i.json.notification_key).filter(Boolean));
+const fresh = $('Elegir Ofertas para el Resumen').all().map((i) => i.json).filter((j) => claimed.has(j.notification_key));
 if (!fresh.length) return [];
 
-const name = firstName(profile.personal.name);
-const blocks = fresh.map((it) => matchBlock({
-  heading: it.job.title,
-  sub: [it.job.company_name, place(it.job.location)].filter(Boolean).join(' · '),
-  score: it.match.score,
-  matched: skillList(it.match.matched_skills),
-  missing: skillList(it.match.missing_skills, 3),
-}));
+const { to, name, frontend_url: url } = fresh[0];
 const count = fresh.length;
 const subject = count === 1
   ? `Tenés 1 oferta compatible: ${fresh[0].job.title}`
@@ -2776,23 +2816,27 @@ const subject = count === 1
 const html = mailHtml({
   title: count === 1 ? 'Encontramos una oferta para vos' : `Encontramos ${count} ofertas para vos`,
   intro: `${name ? `Hola ${esc(name)}, ` : ''}con tu perfil actualizado, estas búsquedas activas encajan con lo que sabés hacer.`,
-  blocks,
-  ctaUrl: cfg.frontend_url,
+  blocks: fresh.map((j) => matchBlock({
+    heading: j.job.title,
+    sub: [j.job.company_name, place(j.job.location)].filter(Boolean).join(' · '),
+    score: j.score,
+    matched: j.matched,
+    missing: j.missing,
+  })),
+  ctaUrl: url,
   ctaLabel: 'Ver mis ofertas',
   footer: STUDENT_FOOTER,
 });
 const text = [
   `${name ? `Hola ${name}, ` : ''}con tu perfil actualizado, estas búsquedas activas encajan con lo que sabés hacer:`,
   '',
-  ...fresh.map((it) => `- ${it.job.title}${it.job.company_name ? ` (${it.job.company_name})` : ''}: ${scoreText(it.match.score)} calculado por reglas`),
+  ...fresh.map((j) => `- ${j.job.title}${j.job.company_name ? ` (${j.job.company_name})` : ''}: ${scoreText(j.score)} calculado por reglas`),
   '',
-  `Ver mis ofertas: ${cfg.frontend_url}`,
+  `Ver mis ofertas: ${url}`,
   '',
   ...STUDENT_FOOTER_TEXT,
 ].join('\n');
-const keys = fresh.map((it) => offerKey(ev.profile_id, it.job.job_id));
-keys.forEach((k) => store.claim(k));
-return [{ json: { notification_key: keys.join(','), to: profile.personal.email, subject, html, text } }];
+return [{ json: { notification_key: fresh.map((j) => j.notification_key).join(' '), to, subject, html, text } }];
 """
     )
     offer_js = (
@@ -2803,9 +2847,7 @@ return [{ json: { notification_key: keys.join(','), to: profile.personal.email, 
 const ev = $input.first().json;
 const cfg = await loadNotifySettings();
 if (!cfg.enabled) return [];
-const store = sentStore();
 const key = offerKey(ev.profile_id, ev.job_id);
-if (store.has(key)) return [];
 
 const profile = await getJson(`${SVC.profile}/api/v1/profiles/${encodeURIComponent(ev.profile_id)}`);
 if (!contactable(profile)) return [];
@@ -2841,7 +2883,6 @@ const text = [
   '',
   ...STUDENT_FOOTER_TEXT,
 ].join('\n');
-store.claim(key);
 return [{ json: { notification_key: key, to: profile.personal.email, subject, html, text } }];
 """
     )
@@ -2851,13 +2892,17 @@ return [{ json: { notification_key: key, to: profile.personal.email, subject, ht
         _respond_node("wf03-respond", "Responder 202", [440, 0]),
         _if_node("wf03-if", "¿Perfil Buscable?", "={{ $json.valid && $json.proceed }}", [660, 0]),
         _code("wf03-forward", "Reenviar a WF-04 (Empresas)", forward_js, [880, -100]),
-        _code("wf03-build", "Armar Resumen al Estudiante", digest_js, [1100, -100]),
+        _code("wf03-pick", "Elegir Ofertas para el Resumen", pick_js, [1100, -100]),
+        _claim_node("wf03-claim", "Reservar Ofertas", "WF-03", [1320, -100]),
+        _code("wf03-build", "Armar Resumen al Estudiante", digest_js, [1540, -100]),
         _webhook_node("wf03-offer-webhook", "Webhook student-offer", "student-offer", [0, 300]),
         _code("wf03-offer-validate", "Validar Oferta", validate_offer_js, [220, 300]),
         _respond_node("wf03-offer-respond", "Responder 202 (Oferta)", [440, 300]),
         _if_node("wf03-offer-if", "¿Oferta Válida?", "={{ $json.valid }}", [660, 300]),
         _code("wf03-offer-build", "Armar Mail de Oferta Nueva", offer_js, [1100, 300]),
-        _send_email_node("wf03-send", "Enviar Mail", [1340, 100]),
+        _claim_node("wf03-offer-claim", "Reservar Aviso de Oferta", "WF-03", [1320, 300]),
+        _keep_claimed_code("wf03-offer-keep", "Sólo Avisos Nuevos", "Armar Mail de Oferta Nueva", [1540, 300]),
+        _send_email_node("wf03-send", "Enviar Mail", [1780, 100]),
         _note(
             "wf03-note",
             "Nota WF-03",
@@ -2875,13 +2920,17 @@ return [{ json: { notification_key: key, to: profile.personal.email, subject, ht
         ("Validar Evento", 0, "Responder 202"),
         ("Responder 202", 0, "¿Perfil Buscable?"),
         ("¿Perfil Buscable?", 0, "Reenviar a WF-04 (Empresas)"),
-        ("Reenviar a WF-04 (Empresas)", 0, "Armar Resumen al Estudiante"),
+        ("Reenviar a WF-04 (Empresas)", 0, "Elegir Ofertas para el Resumen"),
+        ("Elegir Ofertas para el Resumen", 0, "Reservar Ofertas"),
+        ("Reservar Ofertas", 0, "Armar Resumen al Estudiante"),
         ("Armar Resumen al Estudiante", 0, "Enviar Mail"),
         ("Webhook student-offer", 0, "Validar Oferta"),
         ("Validar Oferta", 0, "Responder 202 (Oferta)"),
         ("Responder 202 (Oferta)", 0, "¿Oferta Válida?"),
         ("¿Oferta Válida?", 0, "Armar Mail de Oferta Nueva"),
-        ("Armar Mail de Oferta Nueva", 0, "Enviar Mail"),
+        ("Armar Mail de Oferta Nueva", 0, "Reservar Aviso de Oferta"),
+        ("Reservar Aviso de Oferta", 0, "Sólo Avisos Nuevos"),
+        ("Sólo Avisos Nuevos", 0, "Enviar Mail"),
     )
     return _wf(WF_IDS["profile_ready"], "WF-03 · Mails a estudiantes (resumen y ofertas nuevas)", nodes, connections)
 
@@ -2909,7 +2958,6 @@ if (!cfg.enabled) return [];
 const ranking = await getJson(`${SVC.matching}/api/v1/matches/students/${encodeURIComponent(ev.profile_id)}/jobs`);
 // Snapshot del candidato sin datos personales (lo arma matching-service): titular, zona, experiencia, skills.
 const candidate = (ranking && ranking.profile) || {};
-const store = sentStore();
 const out = [];
 for (const it of ((ranking && ranking.items) || [])) {
   if (out.length >= cfg.max_per_event) break;
@@ -2917,7 +2965,6 @@ for (const it of ((ranking && ranking.items) || [])) {
   const jobId = it.job && it.job.job_id;
   if (!jobId) continue;
   const key = `job:${jobId}|profile:${ev.profile_id}`;
-  if (store.has(key)) continue;
   const job = await getJson(`${SVC.jobs}/api/v1/jobs/${encodeURIComponent(jobId)}`);
   if (!job || job.status !== 'active') continue;
   const company = await getJson(`${SVC.profile}/api/v1/profiles/companies/${encodeURIComponent(job.company_id)}`);
@@ -2956,7 +3003,6 @@ for (const it of ((ranking && ranking.items) || [])) {
     RULES_NOTE,
     'Por privacidad, este aviso no incluye nombre ni datos de contacto del candidato.',
   ].join('\n');
-  store.claim(key);
   out.push({ json: { notification_key: key, to, subject, html, text } });
 }
 return out;
@@ -2968,7 +3014,9 @@ return out;
         _respond_node("wf04-respond", "Responder 202", [440, 0]),
         _if_node("wf04-if", "¿Evento Válido?", "={{ $json.valid }}", [660, 0]),
         _code("wf04-build", "Armar Avisos a Empresas", build_js, [880, -100]),
-        _send_email_node("wf04-send", "Enviar Mail", [1100, -100]),
+        _claim_node("wf04-claim", "Reservar Avisos", "WF-04", [1100, -100]),
+        _keep_claimed_code("wf04-keep", "Sólo Avisos Nuevos", "Armar Avisos a Empresas", [1320, -100]),
+        _send_email_node("wf04-send", "Enviar Mail", [1540, -100]),
         _note(
             "wf04-note",
             "Nota WF-04",
@@ -2985,7 +3033,9 @@ return out;
         ("Validar Evento", 0, "Responder 202"),
         ("Responder 202", 0, "¿Evento Válido?"),
         ("¿Evento Válido?", 0, "Armar Avisos a Empresas"),
-        ("Armar Avisos a Empresas", 0, "Enviar Mail"),
+        ("Armar Avisos a Empresas", 0, "Reservar Avisos"),
+        ("Reservar Avisos", 0, "Sólo Avisos Nuevos"),
+        ("Sólo Avisos Nuevos", 0, "Enviar Mail"),
     )
     return _wf(WF_IDS["company_alerts"], "WF-04 · Candidato nuevo → empresas", nodes, connections)
 
@@ -3006,8 +3056,6 @@ const workflow = data.workflow || {};
 const error = execution.error || trigger.error || {};
 const executionId = String(execution.id || `trigger-${Date.now()}`);
 const key = `execution:${workflow.id || 'desconocido'}|${executionId}`;
-const store = sentStore();
-if (store.has(key)) return [];
 
 const node = execution.lastNodeExecuted || (error.node && error.node.name) || 'desconocido';
 const message = String(error.message || 'Error sin mensaje');
@@ -3034,14 +3082,15 @@ const html = mailHtml({
   footer: 'Aviso automático de WF-05 (manejo de errores). Lo recibís porque figurás como notifications.admin_email.',
 });
 const text = ['Un workflow de n8n falló.', '', ...rows.map(([k, v]) => `${k}: ${v}`)].join('\n');
-store.claim(key);
 return [{ json: { notification_key: key, to: cfg.admin_email, subject, html, text } }];
 """
     )
     nodes = [
         _node("wf05-trigger", "Error Trigger", "n8n-nodes-base.errorTrigger", 1, [0, 0]),
         _code("wf05-build", "Armar Aviso al Admin", build_js, [240, 0]),
-        _send_email_node("wf05-send", "Enviar Mail", [480, 0]),
+        _claim_node("wf05-claim", "Reservar Aviso", "WF-05", [480, 0]),
+        _keep_claimed_code("wf05-keep", "Sólo Avisos Nuevos", "Armar Aviso al Admin", [720, 0]),
+        _send_email_node("wf05-send", "Enviar Mail", [960, 0]),
         _note(
             "wf05-note",
             "Nota WF-05",
@@ -3054,7 +3103,9 @@ return [{ json: { notification_key: key, to: cfg.admin_email, subject, html, tex
     ]
     connections = _conn(
         ("Error Trigger", 0, "Armar Aviso al Admin"),
-        ("Armar Aviso al Admin", 0, "Enviar Mail"),
+        ("Armar Aviso al Admin", 0, "Reservar Aviso"),
+        ("Reservar Aviso", 0, "Sólo Avisos Nuevos"),
+        ("Sólo Avisos Nuevos", 0, "Enviar Mail"),
     )
     return _wf(WF_IDS["errors"], "WF-05 · Manejo de errores", nodes, connections, error_workflow=False)
 
