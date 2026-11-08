@@ -1,7 +1,7 @@
 # Contrato · matching-service
 
 > **Para:** el frontend (recomendaciones y score), n8n (WF-06), mcp-tools y el panel de admin.
-> **Servicio:** `matching-service` 0.1.1 (FastAPI) · base `/api/v1/matches` · motor `engine_version` 1.0.0.
+> **Servicio:** `matching-service` 0.2.0 (FastAPI) · base `/api/v1/matches` · motor `engine_version` 1.0.0.
 > **Fuente de verdad viva:** [Swagger UI](/api/v1/matches/docs) · [ReDoc](/api/v1/matches/redoc) · [OpenAPI](/api/v1/matches/openapi.json) (por el gateway, en dev `http://localhost:8080`).
 > **Partes:** A. Recomendaciones y score (front) · B. Endpoints internos y flujo con n8n. Los `§` de cada parte se refieren a esa parte.
 > Los documentos de los que sale este contrato están en [`historico/`](historico/). Todos los ejemplos usan datos ficticios.
@@ -67,6 +67,8 @@ Reglas para la UI:
 | Empresa: "Candidatos para tu búsqueda" | `GET /api/v1/matches/recommendations/jobs/{job_id}?limit=10` | `CompanyRecommendationsView` (§4.2) |
 | Botón "Generar recomendaciones con IA" | `POST /api/v1/matches/recommendations/requests` | `202` + `RecommendationRequest` (§4.3) |
 | Polling del pedido | `GET /api/v1/matches/recommendations/requests/{request_id}` | `RecommendationRequest` |
+| Estudiante: "¿Cómo mejorar para esta oferta?" (pedir) | `POST /api/v1/matches/recommendations/requests` con `{ "mode": "training", "profile_id", "job_id" }` | `202` + `RecommendationRequest` (con `job_id`) |
+| Estudiante: ver la formación sugerida | `GET /api/v1/matches/recommendations/students/{profile_id}/training/{job_id}` | `TrainingView` (parte B §B.2) |
 | Detalle de un match puntual (modal "¿Por qué este puntaje?") | `POST /api/v1/matches` con `{ "profile_id", "job_id" }` | `Match` (§4.4) |
 | Admin: ver la configuración | `GET /api/v1/matches/settings` | `RecommendationSettings` (§4.5) |
 | Admin: cambiar cuántas ofertas y candidatos se recomiendan | `PATCH /api/v1/matches/settings` | `RecommendationSettings` (§4.5) |
@@ -608,10 +610,45 @@ Sólo con `X-Service-Token` (por la red interna; el gateway lo borra). Un usuari
 | `POST /api/v1/matches/recommendations` | mcp-tools (`save_recommendation`) | Guarda una recomendación de IA (`origin: "AI"`) |
 | `POST /api/v1/matches/recommendations/batch` | n8n WF-06 | Guarda el resultado completo de un pedido de análisis (`request_id`) |
 
+### B.2 Formación para una oferta (`mode=training`)
+
+Un estudiante pide qué hacer para encajar mejor en una oferta concreta. La IA (`training_advisor`) propone cursos, proyectos y consejos de perfil sobre el match y las faltantes **calculados por reglas**; nunca toca el puntaje.
+
+- **Pedido:** `POST /api/v1/matches/recommendations/requests` con `{ "mode": "training", "profile_id": "...", "job_id": "..." }`.
+  - Sólo el estudiante dueño del perfil, un admin o un servicio. Una empresa recibe `403`; un perfil ajeno, `404`; sin `job_id`, `422`.
+  - La respuesta trae `job_id`. Se sigue con el mismo polling de `GET /recommendations/requests/{request_id}`.
+- **Vista:** `GET /api/v1/matches/recommendations/students/{profile_id}/training/{job_id}` (mismos permisos).
+
+```json
+{
+  "profile_id": "stu-001",
+  "job_id": "job-002",
+  "rule_based": { "origin": "RULES", "score": 51.67, "missing_skills": [ { "skill": "React", "priority": "alta", "gap": 3 } ], "...": "Match (parte A §4.4)" },
+  "ai_recommendations": {
+    "origin": "AI",
+    "status": "ready",
+    "request_id": "req-…",
+    "model": "nvidia/…",
+    "prompt_version": "1.0.0",
+    "generated_at": "2026-11-08T21:00:00Z",
+    "disclaimer": "Recomendación orientativa generada por IA. El puntaje y el ranking provienen exclusivamente del motor de reglas.",
+    "items": [
+      { "type": "course", "skill": "React", "text": "Realizá el curso …", "priority": "alta" },
+      { "type": "project", "skill": "React", "text": "Desarrollá una aplicación …", "priority": "alta" },
+      { "type": "profile_tip", "skill": "Git", "text": "Destacá en tu perfil …", "priority": "media" }
+    ]
+  }
+}
+```
+
+- `status`: `not_requested` · `pending` · `processing` · `ready` · `failed`, igual que en las otras vistas (parte A §4.1).
+- `items`: hasta 5, ordenados por prioridad (`alta` · `media` · `baja`). `type` es `course`, `project` o `profile_tip`. Nunca traen `score`.
+- La formación se guarda aparte (`mode=training`): no aparece en "Ofertas para vos" ni pisa la recomendación de esa oferta.
+
 ### B.1 Pedido de análisis con IA (WF-06)
 
 1. El front llama a `POST /api/v1/matches/recommendations/requests` (parte A §3.1). matching-service crea el pedido (`pending`) y llama al webhook de n8n:
-   `POST {N8N_WEBHOOK_BASE_URL}/recommendations` · `X-Service-Token` · cuerpo `{ "mode": "student" | "company", "request_id": "...", "limit": N, "profile_id" | "job_id": "..." }`. `limit` es la cantidad que configuró el admin (`/settings`), o menos si el pedido trae un `limit` menor.
+   `POST {N8N_WEBHOOK_BASE_URL}/recommendations` · `X-Service-Token` · cuerpo `{ "mode": "student" | "company" | "training", "request_id": "...", "limit": N, "profile_id" | "job_id": "..." }` (`training` lleva `profile_id` y `job_id`, `limit: 1`). `limit` es la cantidad que configuró el admin (`/settings`), o menos si el pedido trae un `limit` menor.
 2. WF-06 arma el ranking por reglas con mcp-tools, ejecuta al agente y guarda el resultado con `POST /recommendations/batch`.
 3. El front consulta `GET /recommendations/requests/{request_id}` hasta `completed` o `failed` y lee la vista combinada (`GET /recommendations/{students|jobs}/{id}`).
 4. matching-service descarta cualquier `score` o `rank` que venga en el contenido de IA: el valor mostrado sale siempre del motor.

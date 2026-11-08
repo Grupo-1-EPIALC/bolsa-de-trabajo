@@ -14,7 +14,7 @@ from app.api.routes import router as matches_router
 from app.domain.errors import MatchingError
 
 SERVICE_NAME = "matching-service"
-SERVICE_VERSION = "0.1.1"
+SERVICE_VERSION = "0.2.0"
 
 # Docs bajo el prefijo del servicio: pasan por el gateway (/api/v1/matches/) sin rutas nuevas.
 app = FastAPI(

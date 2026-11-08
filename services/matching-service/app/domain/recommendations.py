@@ -19,6 +19,7 @@ DEFAULT_AI_DISCLAIMER = (
 class RecommendationMode(StrEnum):
     STUDENT = "student"  # ofertas recomendadas a un estudiante
     COMPANY = "company"  # candidatos recomendados para una oferta
+    TRAINING = "training"  # cursos, proyectos y consejos para un estudiante y una oferta
 
 
 class RequestStatus(StrEnum):
@@ -69,8 +70,9 @@ class AiRecommendation:
 class RecommendationRequest:
     id: str
     mode: RecommendationMode
-    subject_id: str  # profile_id (student) o job_id (company)
+    subject_id: str  # profile_id (student, training) o job_id (company)
     status: RequestStatus
     created_at: str
     updated_at: str
     error: Mapping[str, object] = field(default_factory=dict)
+    job_id: str = ""  # sólo training: la oferta para la que se pide la formación

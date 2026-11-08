@@ -2177,6 +2177,8 @@ if (mode === 'training') {
     json: {
       valid: true,
       mode: 'training',
+      request_id: requestId,
+      subject_id: profileId,
       profile_id: profileId,
       primary_job_id: topMatch ? topMatch.job_id : 'job-general',
       rule_based: {
@@ -2303,33 +2305,50 @@ if (ctx.mode === 'student' || ctx.mode === 'company') {
   }];
 }
 
+// mode=training: formación (cursos, proyectos, consejos) para una oferta. Se guarda igual que
+// los otros modos (`/recommendations/batch`, mode=training) para cerrar el pedido con su request_id.
 const aiData = orq.data || {};
-let itemsToSave = [];
-// mode=training: recomendaciones de formación (training_advisor) vía MCP save_recommendation
-if (ctx.mode === 'training') {
-  itemsToSave = Array.isArray(aiData.items) ? aiData.items : [];
-  await callMcpTool('save_recommendation', {
-    profile_id: ctx.profile_id,
-    job_id: ctx.primary_job_id,
-    items: itemsToSave,
-    model: orq.model || 'nvidia',
-    prompt_version: ctx.prompt_version || '1.0.0',
-  }).catch(() => null);
-}
+const ALLOWED_TYPES = new Set(['course', 'project', 'profile_tip']);
+const ALLOWED_PRIORITIES = new Set(['alta', 'media', 'baja']);
+const items = (Array.isArray(aiData.items) ? aiData.items : [])
+  .filter((it) => it && typeof it === 'object' && String(it.text || '').trim())
+  .map((it) => ({
+    type: ALLOWED_TYPES.has(it.type) ? it.type : 'profile_tip',
+    skill: String(it.skill || ''),
+    text: String(it.text).trim(),
+    priority: ALLOWED_PRIORITIES.has(it.priority) ? it.priority : 'media',
+  }))
+  .slice(0, 5);
+const meta = {
+  origin: 'AI',
+  model: orq.model || 'nvidia',
+  prompt_version: ctx.prompt_version || '1.0.0',
+  generated_at: new Date().toISOString(),
+  disclaimer: DISCLAIMER,
+  verified: Boolean(orq.verified),
+};
+const saved = await callMatching('POST', '/api/v1/matches/recommendations/batch', {
+  mode: 'training',
+  subject_id: ctx.subject_id || ctx.profile_id,
+  request_id: ctx.request_id || '',
+  summary: String(aiData.summary || ''),
+  entries: [{ job_id: ctx.primary_job_id, items }],
+  ...meta,
+});
 
 return [{
   json: {
     status_code: 200,
     mode: ctx.mode,
+    request_id: ctx.request_id,
     rule_based: ctx.rule_based,
     ai_recommendations: {
-      ...aiData,
-      origin: 'AI',
-      model: orq.model,
-      prompt_version: ctx.prompt_version || '1.0.0',
-      generated_at: new Date().toISOString(),
-      disclaimer: 'Recomendación orientativa generada por IA. El puntaje y el ranking provienen exclusivamente del motor de reglas.',
-      verified: Boolean(orq.verified),
+      ...meta,
+      status: 'ready',
+      summary: String(aiData.summary || ''),
+      items,
+      persisted: saved.ok,
+      persist_error: saved.ok ? null : saved.error,
     },
   },
 }];
@@ -2382,7 +2401,7 @@ return [{
             "- `mode=student` (`profile_id`): obtiene el ranking de ofertas por reglas con la herramienta MCP `rank_jobs_for_student` y ejecuta al agente `match_advisor` (Jean Grey, `perfil=postulante`).\n"
             "- `mode=company` (`job_id`): obtiene el ranking de candidatos con `rank_candidates_for_job` y ejecuta a `match_advisor` (`perfil=empresa`).\n"
             "- La cantidad de ofertas y candidatos la define un admin en matching-service (`/api/v1/matches/settings`).\n"
-            "- `mode=training` (`profile_id`): flujo de formación con `training_advisor` (Professor X).\n"
+            "- `mode=training` (`profile_id` + `job_id`): formación (cursos, proyectos, consejos) con `training_advisor` (Professor X) sobre el match y las faltantes por reglas; se guarda con `mode=training` en `/recommendations/batch`.\n"
             "- Guarda el resultado en matching-service (`POST /api/v1/matches/recommendations/batch`) con el `request_id` y descarta score/rank que invente el LLM.\n"
             '- Separa estrictamente `rule_based` (`origin: "RULES"`) de `ai_recommendations` (`origin: "AI"`).',
             [0, -260],
