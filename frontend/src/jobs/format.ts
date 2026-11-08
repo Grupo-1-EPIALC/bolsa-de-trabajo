@@ -1,4 +1,4 @@
-// Cómo se muestran las ofertas (contracts/jobs_frontend.md §7 y §10).
+// Cómo se muestran las ofertas (contracts/jobs.md, parte A §7 y parte B §10).
 import { SALARY_PERIOD, SENIORITY, WORK_MODALITY, labelOf } from '../profile/labels';
 import type { JobLocation, JobOpportunity, JobSalary } from '../types/jobs';
 

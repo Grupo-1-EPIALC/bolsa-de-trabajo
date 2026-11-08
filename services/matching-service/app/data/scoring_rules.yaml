@@ -1,5 +1,5 @@
 # Reglas del motor de matching (origin = "RULES").
-# Ver contracts/estructura_comun_perfil_oferta_match.md §7.
+# Ver contracts/profile.md, anexo §7.
 # Cambiar pesos o condiciones => subir `version` (MINOR) para que quede trazado en cada match.
 version: "1.0.0"
 

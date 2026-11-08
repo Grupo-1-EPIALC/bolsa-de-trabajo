@@ -1,4 +1,4 @@
-// matching-service · /api/v1/matches (contracts/matching_frontend.md)
+// matching-service · /api/v1/matches (contracts/matching.md, parte A)
 import { apiFetch } from './api';
 import type {
   CompanyRecommendationsView,

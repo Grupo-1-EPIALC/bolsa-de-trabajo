@@ -1,6 +1,6 @@
 """Entidades del dominio compartidas por perfil, oferta y match.
 
-Siguen `contracts/estructura_comun_perfil_oferta_match.md` (§3 y §4): los mismos bloques
+Siguen `contracts/profile.md` (anexo) (§3 y §4): los mismos bloques
 describen lo que el estudiante tiene/busca y lo que la oferta pide/ofrece.
 El dominio no depende de FastAPI, ORM ni SDKs externos (AGENTS.md §2.1).
 """

@@ -22,7 +22,7 @@ interface CompanySearchesProps {
   onNotice: (message: string) => void;
 }
 
-/** "Mis búsquedas" (contracts/jobs_frontend.md §11): listar, crear, editar, cerrar y reabrir. */
+/** "Mis búsquedas" (contracts/jobs.md, parte B §11): listar, crear, editar, cerrar y reabrir. */
 export const CompanySearches: React.FC<CompanySearchesProps> = ({ startWithNew, onNotice }) => {
   const [mode, setMode] = useState<Mode>(startWithNew ? { kind: 'new' } : { kind: 'list' });
   const [status, setStatus] = useState<JobStatusFilter>('active');

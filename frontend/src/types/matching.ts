@@ -1,4 +1,4 @@
-// Tipos de matching-service según contracts/matching_frontend.md (§4).
+// Tipos de matching-service según contracts/matching.md, parte A (§4).
 // El score y el orden salen siempre de rule_based (origin RULES); la IA nunca trae score.
 
 import type { ApiErrorBody, Location, WorkConditions } from './profile';
@@ -201,7 +201,7 @@ export interface RecommendationRequest {
   error: ApiErrorBody | null;
 }
 
-/** GET/PATCH /matches/settings (contracts/matching_frontend.md §4.5) · sólo admin. */
+/** GET/PATCH /matches/settings (contracts/matching.md, parte A §4.5) · sólo admin. */
 export interface RecommendationSettings {
   student_jobs_limit: number;
   company_candidates_limit: number;

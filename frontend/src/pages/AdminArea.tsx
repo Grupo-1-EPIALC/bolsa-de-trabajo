@@ -27,8 +27,8 @@ const HEADERS: Partial<Record<StudentSection, { title: string; subtitle: string;
   };
 
 /**
- * Área del administrador: resumen, cuentas (contracts/auth_frontend.md §7) y
- * configuración de matching (contracts/matching_frontend.md §4.5).
+ * Área del administrador: resumen, cuentas (contracts/auth.md, parte A §7) y
+ * configuración de matching (contracts/matching.md, parte A §4.5).
  */
 export const AdminArea: React.FC<AdminAreaProps> = ({ user, section, onSection }) => {
   const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);

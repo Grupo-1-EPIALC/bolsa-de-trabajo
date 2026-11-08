@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 /**
  * Outbox de eventos de cuenta: una fila por evento y suscriptor, escrita en la misma
  * transacción que el cambio de la cuenta. El despachador la entrega con reintentos
- * hasta que el suscriptor responde 2xx (contracts/account_events.md §1).
+ * hasta que el suscriptor responde 2xx (contracts/auth.md, parte B §1).
  *
  * `id` es una identidad creciente: ordena las entregas de un mismo usuario y suscriptor.
  */

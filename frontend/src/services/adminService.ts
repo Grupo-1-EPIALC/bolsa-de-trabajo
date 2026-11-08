@@ -1,4 +1,4 @@
-// auth-service · /api/v1/auth/admin/users (contracts/auth_frontend.md §7) · sólo rol admin.
+// auth-service · /api/v1/auth/admin/users (contracts/auth.md, parte A §7) · sólo rol admin.
 import { apiFetch } from './api';
 import { userListQuery } from '../admin/users';
 import type {
