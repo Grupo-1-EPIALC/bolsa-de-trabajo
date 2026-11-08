@@ -49,6 +49,7 @@ Para empezar de cero hay que borrarlos a mano (**se pierde todo**): `docker comp
 | Formulario de prueba CV (`profile-service → n8n`) | http://localhost:8080/api/v1/profiles/cv-test |
 | n8n | http://localhost:5678 (o el `N8N_PORT` definido en `.env`) |
 | Mailpit (correos de prueba) | http://localhost:8025 |
+| Documentación de las APIs (Swagger UI / ReDoc / OpenAPI) | `http://localhost:8080/api/v1/<recurso>/docs` · `/redoc` · `/openapi.json`, con `<recurso>` = `auth`, `profiles`, `jobs` o `matches`. También desde el panel de admin |
 | PostgreSQL (solo dev) | `localhost:5432` · base `bolsa` |
 
 Si algún puerto está ocupado en tu máquina, cambialo en `.env` (`GATEWAY_PORT`, `N8N_PORT`, `MAIL_UI_PORT`, `POSTGRES_HOST_PORT`).

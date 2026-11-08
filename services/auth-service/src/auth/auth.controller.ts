@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
   ChangeEmailDto,
@@ -13,6 +14,7 @@ import {
 import { CurrentUser, AuthenticatedUser } from './current-user.decorator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
+@ApiTags('auth')
 @Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -36,6 +38,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   getProfile(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.getProfile(user.sub);
   }
@@ -43,6 +46,7 @@ export class AuthController {
   @Post('password/change')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   changePassword(@CurrentUser() user: AuthenticatedUser, @Body() request: ChangePasswordDto) {
     return this.authService.changePassword(user.sub, request);
   }
@@ -62,6 +66,7 @@ export class AuthController {
   @Post('email/change')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   requestEmailChange(@CurrentUser() user: AuthenticatedUser, @Body() request: ChangeEmailDto) {
     return this.authService.requestEmailChange(user.sub, request);
   }
