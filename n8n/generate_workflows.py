@@ -18,8 +18,8 @@ Genera en `n8n/workflows/`:
   - `WF-00-orquestador.json`     (NVIDIA · Orquestador multi-agente Captain + Chat/Webhook/Sub-workflow)
   - `WF-01-procesar-cv.json`     (WF-01 · Procesar CV · CV Structurer con MCP Client)
   - `WF-06-recomendador.json`    (WF-06 · Recomendador Postulantes y Empresas con Match Advisor)
-  - `WF-02-oferta-nueva.json`    (WF-02 · Oferta nueva → mail a estudiantes compatibles)
-  - `WF-03-perfil-buscable.json` (WF-03 · Perfil buscable → resumen de ofertas al estudiante)
+  - `WF-02-oferta-nueva.json`    (WF-02 · Oferta nueva → detecta estudiantes compatibles y se los pasa a WF-03)
+  - `WF-03-perfil-buscable.json` (WF-03 · Mails a estudiantes: resumen al quedar buscable y ofertas nuevas)
   - `WF-04-aviso-empresas.json`  (WF-04 · Candidato nuevo → aviso a empresas, sin datos personales)
   - `WF-05-errores.json`         (WF-05 · Error workflow → mail al admin)
 """
@@ -2446,6 +2446,24 @@ const getJson = async (url) => {
   }
 };
 
+// POST JSON a un microservicio (p. ej. matching-service `POST /matches`). 404 → null.
+const postJson = async (url, body) => {
+  try {
+    return await this.helpers.httpRequest({
+      method: 'POST',
+      url,
+      headers: { 'X-Service-Token': SERVICE_TOKEN, Accept: 'application/json', 'Content-Type': 'application/json' },
+      body,
+      json: true,
+      timeout: 15000,
+    });
+  } catch (err) {
+    const status = Number(err?.response?.status ?? err?.httpCode ?? err?.statusCode ?? err?.cause?.response?.status);
+    if (status === 404) return null;
+    throw new Error(`POST ${url} falló (${status || 'sin respuesta'}): ${err.message}`);
+  }
+};
+
 // Parámetros dinámicos: get_agent_settings (mcp-tools), nunca valores fijos.
 const loadNotifySettings = async () => {
   const res = await callMcpTool('get_agent_settings');
@@ -2579,7 +2597,11 @@ def _webhook_node(seed: str, name: str, path: str, pos: list[int]) -> dict[str, 
 
 
 def build_wf_new_job() -> dict[str, Any]:
-    """WF-02: `job.created` → mail a los estudiantes compatibles por reglas (que aceptaron mails)."""
+    """WF-02: `job.created` → detecta a los estudiantes compatibles y se los pasa a WF-03.
+
+    WF-03 es el único que manda mails a estudiantes: así lleva una sola cuenta de lo ya avisado
+    (una oferta que llegó por WF-02 no se repite en el resumen cuando el estudiante edita el perfil).
+    """
     validate_js = (
         NOTIFY_HELPER_JS.split("// GET a un microservicio")[0]
         + r"""
@@ -2592,7 +2614,7 @@ if (body.event !== 'job.created' || !body.job_id) {
 return [{ json: { valid: true, status_code: 202, event: body.event, job_id: String(body.job_id) } }];
 """
     )
-    build_js = (
+    detect_js = (
         MCP_HELPER_JS
         + NOTIFY_HELPER_JS
         + r"""
@@ -2604,51 +2626,23 @@ const job = await getJson(`${SVC.jobs}/api/v1/jobs/${encodeURIComponent(ev.job_i
 if (!job || job.status !== 'active') return [];
 const ranking = await getJson(`${SVC.matching}/api/v1/matches/jobs/${encodeURIComponent(ev.job_id)}/candidates`);
 const candidates = ((ranking && ranking.items) || [])
-  .filter((it) => Number(it.match && it.match.score) >= cfg.min_score);
+  .filter((it) => it.candidate && it.candidate.profile_id)
+  .filter((it) => Number(it.match && it.match.score) >= cfg.min_score)
+  .slice(0, cfg.max_per_event);
 
-const company = (job.company_snapshot && job.company_snapshot.name) || 'Una empresa';
-const where = place(job.location);
-const store = sentStore();
+// WF-03 decide si manda el mail (permiso de contacto y si ya se lo avisamos).
+const base = ($env.N8N_INTERNAL_WEBHOOK_URL || 'http://localhost:5678/webhook').replace(/\/$/, '');
 const out = [];
 for (const it of candidates) {
-  if (out.length >= cfg.max_per_event) break;
-  const profileId = it.candidate && it.candidate.profile_id;
-  if (!profileId) continue;
-  const key = `job:${ev.job_id}|profile:${profileId}`;
-  if (store.has(key)) continue;
-  const profile = await getJson(`${SVC.profile}/api/v1/profiles/${encodeURIComponent(profileId)}`);
-  const email = profile && profile.personal && profile.personal.email;
-  // Sólo a quien aceptó que lo contacten por mail (consents.contact_by_email).
-  if (!profile || profile.contact_by_email !== true || !email) continue;
-
-  const matched = skillList(it.match.matched_skills);
-  const missing = skillList(it.match.missing_skills, 3);
-  const name = firstName(profile.personal.name);
-  const subject = `Nueva oferta para vos: ${job.title} (${company})`;
-  const intro = `${name ? `Hola ${esc(name)}, ` : ''}${esc(company)} publicó una búsqueda que encaja con tu perfil.`;
-  const html = mailHtml({
-    title: 'Hay una oferta nueva compatible con tu perfil',
-    intro,
-    blocks: [matchBlock({ heading: job.title, sub: [company, where].filter(Boolean).join(' · '), score: it.match.score, matched, missing })],
-    ctaUrl: cfg.frontend_url,
-    ctaLabel: 'Ver la oferta',
-    footer: `${RULES_NOTE}<br>Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.`,
+  await this.helpers.httpRequest({
+    method: 'POST',
+    url: `${base}/student-offer`,
+    headers: { 'X-Service-Token': SERVICE_TOKEN, 'Content-Type': 'application/json' },
+    body: { event: 'job.matched', job_id: ev.job_id, profile_id: it.candidate.profile_id },
+    json: true,
+    timeout: 10000,
   });
-  const text = [
-    `${name ? `Hola ${name}, ` : ''}${company} publicó una búsqueda que encaja con tu perfil.`,
-    '',
-    `${job.title}${where ? ` · ${where}` : ''}`,
-    `Puntaje calculado por reglas: ${scoreText(it.match.score)}`,
-    matched.length ? `Cumplís: ${matched.join(', ')}` : '',
-    missing.length ? `Te falta o podés reforzar: ${missing.join(', ')}` : '',
-    '',
-    `Ver la oferta: ${cfg.frontend_url}`,
-    '',
-    RULES_NOTE,
-    'Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.',
-  ].filter((l) => l !== null).join('\n');
-  store.claim(key);
-  out.push({ json: { notification_key: key, to: email, subject, html, text } });
+  out.push({ json: { job_id: ev.job_id, profile_id: it.candidate.profile_id, score: it.match.score } });
 }
 return out;
 """
@@ -2658,16 +2652,14 @@ return out;
         _code("wf02-validate", "Validar Evento", validate_js, [220, 0]),
         _respond_node("wf02-respond", "Responder 202", [440, 0]),
         _if_node("wf02-if", "¿Evento Válido?", "={{ $json.valid }}", [660, 0]),
-        _code("wf02-build", "Armar Mails a Estudiantes", build_js, [880, -100]),
-        _send_email_node("wf02-send", "Enviar Mail", [1100, -100]),
+        _code("wf02-detect", "Detectar Estudiantes y Avisar a WF-03", detect_js, [880, -100]),
         _note(
             "wf02-note",
             "Nota WF-02",
             "## WF-02 · Oferta nueva → estudiantes (`POST /webhook/job-created`)\n"
             "- Lo dispara jobs-service al publicar una oferta (`job.created`, `X-Service-Token`). Responde `202` enseguida.\n"
-            "- Toma los candidatos por reglas de matching-service (`/matches/jobs/{id}/candidates`) con `score ≥ notifications.min_score`.\n"
-            "- Manda mail sólo a quien tiene `contact_by_email = true` (profile-service), hasta `notifications.max_per_event`.\n"
-            "- Idempotente: `notification_key = job:{job_id}|profile:{profile_id}` en los datos del workflow.\n"
+            "- Toma los candidatos por reglas de matching-service (`/matches/jobs/{id}/candidates`) con `score ≥ notifications.min_score`, hasta `notifications.max_per_event`.\n"
+            "- Le pasa cada uno a WF-03 (`/webhook/student-offer`, interno): WF-03 controla `contact_by_email`, arma el mail y no repite avisos.\n"
             "- El puntaje es el del motor de reglas (`origin: RULES`); no hay IA en este flujo.",
             [0, -280],
         ),
@@ -2676,15 +2668,18 @@ return out;
         ("Webhook job.created", 0, "Validar Evento"),
         ("Validar Evento", 0, "Responder 202"),
         ("Responder 202", 0, "¿Evento Válido?"),
-        ("¿Evento Válido?", 0, "Armar Mails a Estudiantes"),
-        ("Armar Mails a Estudiantes", 0, "Enviar Mail"),
+        ("¿Evento Válido?", 0, "Detectar Estudiantes y Avisar a WF-03"),
     )
     return _wf(WF_IDS["new_job"], "WF-02 · Oferta nueva → estudiantes compatibles", nodes, connections)
 
 
 def build_wf_profile_ready() -> dict[str, Any]:
-    """WF-03: `profile.updated` (buscable) → resumen de ofertas al estudiante; reenvía a WF-04."""
-    validate_js = (
+    """WF-03: mails a estudiantes. Dos entradas que comparten la cuenta de avisos enviados:
+
+    - `profile.updated` (buscable): resumen de ofertas compatibles; reenvía el evento a WF-04.
+    - `student-offer` (interno, desde WF-02): una oferta nueva compatible.
+    """
+    validate_profile_js = (
         NOTIFY_HELPER_JS.split("// GET a un microservicio")[0]
         + r"""
 const incoming = $input.first().json;
@@ -2707,6 +2702,18 @@ return [{
 }];
 """
     )
+    validate_offer_js = (
+        NOTIFY_HELPER_JS.split("// GET a un microservicio")[0]
+        + r"""
+const incoming = $input.first().json;
+const { ok, body } = checkToken(incoming);
+if (!ok) return [{ json: unauthorized() }];
+if (!body.profile_id || !body.job_id) {
+  return [{ json: invalid('Se espera { "profile_id": "...", "job_id": "..." }') }];
+}
+return [{ json: { valid: true, status_code: 202, event: body.event || 'job.matched', profile_id: String(body.profile_id), job_id: String(body.job_id) } }];
+"""
+    )
     forward_js = r"""
 // WF-04 (avisos a empresas) escucha en un webhook interno propio: así cada workflow guarda sus
 // notification_key y un fallo de uno no frena al otro. Best-effort.
@@ -2726,24 +2733,31 @@ try {
   return [{ json: { ...ev, forwarded: false, forward_error: err.message } }];
 }
 """
-    build_js = (
+    footer_js = r"""
+const STUDENT_FOOTER = `${RULES_NOTE}<br>Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.`;
+const STUDENT_FOOTER_TEXT = [RULES_NOTE, 'Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.'];
+const offerKey = (profileId, jobId) => `profile:${profileId}|job:${jobId}`;
+// Sólo a quien aceptó que lo contacten por mail (consents.contact_by_email).
+const contactable = (profile) => Boolean(profile && profile.contact_by_email === true && profile.personal && profile.personal.email);
+"""
+    digest_js = (
         MCP_HELPER_JS
         + NOTIFY_HELPER_JS
+        + footer_js
         + r"""
 const ev = $input.first().json;
 const cfg = await loadNotifySettings();
 if (!cfg.enabled) return [];
 
 const profile = await getJson(`${SVC.profile}/api/v1/profiles/${encodeURIComponent(ev.profile_id)}`);
-const email = profile && profile.personal && profile.personal.email;
-if (!profile || profile.contact_by_email !== true || !email) return [];
+if (!contactable(profile)) return [];
 
 const ranking = await getJson(`${SVC.matching}/api/v1/matches/students/${encodeURIComponent(ev.profile_id)}/jobs`);
 const store = sentStore();
-// Sólo ofertas que todavía no le avisamos: editar el perfil no repite el mismo resumen.
+// Sólo ofertas que todavía no le avisamos (por este resumen o por WF-02).
 const fresh = ((ranking && ranking.items) || [])
   .filter((it) => Number(it.match && it.match.score) >= cfg.min_score)
-  .filter((it) => it.job && it.job.job_id && !store.has(`profile:${ev.profile_id}|job:${it.job.job_id}`))
+  .filter((it) => it.job && it.job.job_id && !store.has(offerKey(ev.profile_id, it.job.job_id)))
   .slice(0, cfg.max_per_event);
 if (!fresh.length) return [];
 
@@ -2765,7 +2779,7 @@ const html = mailHtml({
   blocks,
   ctaUrl: cfg.frontend_url,
   ctaLabel: 'Ver mis ofertas',
-  footer: `${RULES_NOTE}<br>Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.`,
+  footer: STUDENT_FOOTER,
 });
 const text = [
   `${name ? `Hola ${name}, ` : ''}con tu perfil actualizado, estas búsquedas activas encajan con lo que sabés hacer:`,
@@ -2774,31 +2788,86 @@ const text = [
   '',
   `Ver mis ofertas: ${cfg.frontend_url}`,
   '',
-  RULES_NOTE,
-  'Recibís este mail porque aceptaste que te contactemos por email. Podés desactivarlo en tu perfil, en el paso de privacidad.',
+  ...STUDENT_FOOTER_TEXT,
 ].join('\n');
-const keys = fresh.map((it) => `profile:${ev.profile_id}|job:${it.job.job_id}`);
+const keys = fresh.map((it) => offerKey(ev.profile_id, it.job.job_id));
 keys.forEach((k) => store.claim(k));
-return [{ json: { notification_key: keys.join(','), to: email, subject, html, text } }];
+return [{ json: { notification_key: keys.join(','), to: profile.personal.email, subject, html, text } }];
+"""
+    )
+    offer_js = (
+        MCP_HELPER_JS
+        + NOTIFY_HELPER_JS
+        + footer_js
+        + r"""
+const ev = $input.first().json;
+const cfg = await loadNotifySettings();
+if (!cfg.enabled) return [];
+const store = sentStore();
+const key = offerKey(ev.profile_id, ev.job_id);
+if (store.has(key)) return [];
+
+const profile = await getJson(`${SVC.profile}/api/v1/profiles/${encodeURIComponent(ev.profile_id)}`);
+if (!contactable(profile)) return [];
+const job = await getJson(`${SVC.jobs}/api/v1/jobs/${encodeURIComponent(ev.job_id)}`);
+if (!job || job.status !== 'active') return [];
+// El puntaje lo recalcula el motor de reglas: nunca se confía en uno que venga en el evento.
+const match = await postJson(`${SVC.matching}/api/v1/matches`, { profile_id: ev.profile_id, job_id: ev.job_id });
+if (!match || Number(match.score) < cfg.min_score) return [];
+
+const company = (job.company_snapshot && job.company_snapshot.name) || 'Una empresa';
+const where = place(job.location);
+const matched = skillList(match.matched_skills);
+const missing = skillList(match.missing_skills, 3);
+const name = firstName(profile.personal.name);
+const subject = `Nueva oferta para vos: ${job.title} (${company})`;
+const html = mailHtml({
+  title: 'Hay una oferta nueva compatible con tu perfil',
+  intro: `${name ? `Hola ${esc(name)}, ` : ''}${esc(company)} publicó una búsqueda que encaja con tu perfil.`,
+  blocks: [matchBlock({ heading: job.title, sub: [company, where].filter(Boolean).join(' · '), score: match.score, matched, missing })],
+  ctaUrl: cfg.frontend_url,
+  ctaLabel: 'Ver la oferta',
+  footer: STUDENT_FOOTER,
+});
+const text = [
+  `${name ? `Hola ${name}, ` : ''}${company} publicó una búsqueda que encaja con tu perfil.`,
+  '',
+  `${job.title}${where ? ` · ${where}` : ''}`,
+  `Puntaje calculado por reglas: ${scoreText(match.score)}`,
+  ...(matched.length ? [`Cumplís: ${matched.join(', ')}`] : []),
+  ...(missing.length ? [`Te falta o podés reforzar: ${missing.join(', ')}`] : []),
+  '',
+  `Ver la oferta: ${cfg.frontend_url}`,
+  '',
+  ...STUDENT_FOOTER_TEXT,
+].join('\n');
+store.claim(key);
+return [{ json: { notification_key: key, to: profile.personal.email, subject, html, text } }];
 """
     )
     nodes = [
         _webhook_node("wf03-webhook", "Webhook profile.updated", "profile-updated", [0, 0]),
-        _code("wf03-validate", "Validar Evento", validate_js, [220, 0]),
+        _code("wf03-validate", "Validar Evento", validate_profile_js, [220, 0]),
         _respond_node("wf03-respond", "Responder 202", [440, 0]),
         _if_node("wf03-if", "¿Perfil Buscable?", "={{ $json.valid && $json.proceed }}", [660, 0]),
         _code("wf03-forward", "Reenviar a WF-04 (Empresas)", forward_js, [880, -100]),
-        _code("wf03-build", "Armar Resumen al Estudiante", build_js, [1100, -100]),
-        _send_email_node("wf03-send", "Enviar Mail", [1320, -100]),
+        _code("wf03-build", "Armar Resumen al Estudiante", digest_js, [1100, -100]),
+        _webhook_node("wf03-offer-webhook", "Webhook student-offer", "student-offer", [0, 300]),
+        _code("wf03-offer-validate", "Validar Oferta", validate_offer_js, [220, 300]),
+        _respond_node("wf03-offer-respond", "Responder 202 (Oferta)", [440, 300]),
+        _if_node("wf03-offer-if", "¿Oferta Válida?", "={{ $json.valid }}", [660, 300]),
+        _code("wf03-offer-build", "Armar Mail de Oferta Nueva", offer_js, [1100, 300]),
+        _send_email_node("wf03-send", "Enviar Mail", [1340, 100]),
         _note(
             "wf03-note",
             "Nota WF-03",
-            "## WF-03 · Perfil buscable → resumen al estudiante (`POST /webhook/profile-updated`)\n"
-            "- Lo dispara profile-service en cada alta o `PATCH` (`profile.updated`). Responde `202` enseguida; sigue sólo si `searchable = true`.\n"
-            "- Reenvía el evento a WF-04 (`/webhook/company-alerts`, interno) para avisar a las empresas.\n"
-            "- Pide a matching-service las ofertas por reglas del estudiante y le manda **un** mail con las que superan `notifications.min_score` y todavía no le avisamos.\n"
-            "- Sólo si `contact_by_email = true`. Idempotente: `notification_key = profile:{id}|job:{job_id}` por oferta.",
-            [0, -280],
+            "## WF-03 · Mails a estudiantes\n"
+            "- `POST /webhook/profile-updated` (profile-service, en cada alta o `PATCH`): responde `202` y sigue sólo si `searchable = true`. Reenvía el evento a WF-04 y manda **un** resumen con las ofertas que superan `notifications.min_score` y todavía no le avisamos.\n"
+            "- `POST /webhook/student-offer` (interno, desde WF-02): una oferta nueva compatible. El puntaje se recalcula con matching-service (`POST /matches`).\n"
+            "- Las dos entradas comparten la cuenta de avisos (`notification_key = profile:{id}|job:{job_id}`): ninguna oferta se avisa dos veces.\n"
+            "- Sólo si `contact_by_email = true`.",
+            [0, -300],
+            height=320,
         ),
     ]
     connections = _conn(
@@ -2808,8 +2877,13 @@ return [{ json: { notification_key: keys.join(','), to: email, subject, html, te
         ("¿Perfil Buscable?", 0, "Reenviar a WF-04 (Empresas)"),
         ("Reenviar a WF-04 (Empresas)", 0, "Armar Resumen al Estudiante"),
         ("Armar Resumen al Estudiante", 0, "Enviar Mail"),
+        ("Webhook student-offer", 0, "Validar Oferta"),
+        ("Validar Oferta", 0, "Responder 202 (Oferta)"),
+        ("Responder 202 (Oferta)", 0, "¿Oferta Válida?"),
+        ("¿Oferta Válida?", 0, "Armar Mail de Oferta Nueva"),
+        ("Armar Mail de Oferta Nueva", 0, "Enviar Mail"),
     )
-    return _wf(WF_IDS["profile_ready"], "WF-03 · Perfil buscable → resumen al estudiante", nodes, connections)
+    return _wf(WF_IDS["profile_ready"], "WF-03 · Mails a estudiantes (resumen y ofertas nuevas)", nodes, connections)
 
 
 def build_wf_company_alerts() -> dict[str, Any]:
