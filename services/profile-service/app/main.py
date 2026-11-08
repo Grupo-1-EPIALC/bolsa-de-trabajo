@@ -19,6 +19,7 @@ SERVICE_NAME = "profile-service"
 SERVICE_VERSION = "0.4.1"
 
 
+
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
     """Crea el schema y carga el seed al arrancar (salvo que un test inyecte el contenedor)."""
