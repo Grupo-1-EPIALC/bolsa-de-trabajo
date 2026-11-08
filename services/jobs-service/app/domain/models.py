@@ -1,7 +1,7 @@
 """Modelos de dominio de una oferta de trabajo.
 
 No dependen de FastAPI, SQLAlchemy ni de ningún SDK externo (AGENTS.md §2.1).
-Los bloques siguen `contracts/estructura_comun_perfil_oferta_match.md`.
+Los bloques siguen `contracts/profile.md` (anexo).
 """
 
 from dataclasses import dataclass

@@ -1,6 +1,6 @@
 """Traduce el JSON de profile-service / jobs-service al dominio (capa anticorrupción).
 
-Acepta la estructura común de `contracts/estructura_comun_perfil_oferta_match.md` y, por
+Acepta la estructura común de `contracts/profile.md` (anexo) y, por
 compatibilidad, la forma "legacy" de los mocks de `mcp-tools` (`requirements` como lista,
 `min_years_experience`, `education_level`, `full_name`, etc.).
 Los valores `"COMPLETAR_MANUALMENTE"` de la IA se tratan como datos faltantes.

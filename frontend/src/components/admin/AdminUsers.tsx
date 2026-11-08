@@ -16,7 +16,7 @@ interface AdminUsersProps {
   onNotice: (message: string) => void;
 }
 
-/** Cuentas (contracts/auth_frontend.md §7): buscar, filtrar y abrir el detalle de cada una. */
+/** Cuentas (contracts/auth.md, parte A §7): buscar, filtrar y abrir el detalle de cada una. */
 export const AdminUsers: React.FC<AdminUsersProps> = ({ currentUserId, initialRole, onNotice }) => {
   const [role, setRole] = useState<Role | ''>(initialRole ?? '');
   const [search, setSearch] = useState('');

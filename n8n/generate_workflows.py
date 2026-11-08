@@ -2404,7 +2404,7 @@ return [{
 
 # =============================================================================
 # WF-02 a WF-05 · Notificaciones por mail (Match Notifier) y errores
-# Contrato: contracts/notificaciones_n8n.md
+# Contrato: contracts/n8n.md §7
 # =============================================================================
 
 NOTIFY_HELPER_JS = r"""

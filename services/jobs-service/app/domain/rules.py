@@ -251,7 +251,7 @@ def _as_utc(value: datetime) -> datetime:
 
 
 def ensure_company_snapshot(snapshot: CompanySnapshot) -> None:
-    """Garantía 1 de `contracts/jobs_matching.md` §4: `company_snapshot.name` no vacío.
+    """Garantía 1 de `contracts/jobs.md` (parte C) §4: `company_snapshot.name` no vacío.
 
     Se aplica al crear (data provista por auth-service) y al cargar el seed de demo;
     con esto matching y el front reciben siempre un `company_name` utilizable.

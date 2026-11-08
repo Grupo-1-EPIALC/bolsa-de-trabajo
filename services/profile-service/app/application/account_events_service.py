@@ -6,7 +6,7 @@
 - `account.updated`: se actualiza la copia de sólo lectura de los datos legales de la empresa.
   El email del estudiante no se toca: `personal.email` es un dato de contacto que edita él.
 
-Todo es idempotente: el mismo evento puede llegar dos veces (`contracts/account_events.md`).
+Todo es idempotente: el mismo evento puede llegar dos veces (`contracts/auth.md` (parte B)).
 """
 
 import dataclasses

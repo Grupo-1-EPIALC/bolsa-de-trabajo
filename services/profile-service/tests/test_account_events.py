@@ -1,4 +1,4 @@
-"""UT-PROF-09: eventos de cuenta de auth-service (`contracts/account_events.md`)."""
+"""UT-PROF-09: eventos de cuenta de auth-service (`contracts/auth.md` (parte B))."""
 
 from datetime import UTC, datetime
 from pathlib import Path

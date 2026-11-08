@@ -40,7 +40,7 @@ interface JobDetailProps {
   backLabel?: string;
 }
 
-/** Detalle completo de una oferta (contracts/jobs_frontend.md §6 y §7). */
+/** Detalle completo de una oferta (contracts/jobs.md, parte A §6 y §7). */
 export const JobDetail: React.FC<JobDetailProps> = ({
   job,
   actions,

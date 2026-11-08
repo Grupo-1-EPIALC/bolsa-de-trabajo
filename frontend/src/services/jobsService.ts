@@ -1,4 +1,4 @@
-// jobs-service · ofertas y búsquedas de empresas (contracts/jobs_frontend.md).
+// jobs-service · ofertas y búsquedas de empresas (contracts/jobs.md, parte A).
 import { apiFetch } from './api';
 import type {
   JobCreateInput,

@@ -1,4 +1,4 @@
-// Configuración de matching (contracts/matching_frontend.md §4.5): validación y cambios.
+// Configuración de matching (contracts/matching.md, parte A §4.5): validación y cambios.
 import type { RecommendationSettings, RecommendationSettingsUpdate } from '../types/matching';
 
 export interface SettingsForm {
