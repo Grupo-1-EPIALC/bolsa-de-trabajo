@@ -65,6 +65,7 @@
 | **`years_experience`** | **Nuevo, calculado por reglas**: suma de `experience[].months` / 12. matching lo usa directo (campo `explicit_years` del mapper) |
 | `academic_status.career / current_year / progress_percent / student_shift` | `AcademicStatus` |
 | `target.roles` | `target_roles` |
+| **`contact_by_email`** | **Nuevo (v0.4.0).** `true` si el estudiante aceptó recibir mails. matching no lo usa; n8n (WF-02/WF-03) no le manda mails a quien tenga `false` |
 
 ### Garantías
 
@@ -78,7 +79,7 @@
 
 ### Lo que la vista de servicio **no** incluye (minimización de datos)
 
-`personal.phone`, `personal.birth_year`, `inclusion` (datos de discapacidad: nunca a IA), `consents`, `cv_files` y `cv_suggestions`. `personal.email` **sí** viaja, para las notificaciones de WF-02/WF-03.
+`personal.phone`, `personal.birth_year`, `inclusion` (datos de discapacidad: nunca a IA), `consents` (salvo el permiso `contact_by_email`, que viaja aparte), `cv_files` y `cv_suggestions`. `personal.email` **sí** viaja, para las notificaciones de WF-02/WF-03.
 
 > **mcp-tools / n8n:** `get_profile` devuelve esta vista. Antes de mandarla a un prompt, quitar `personal.name`, `personal.email` y los montos de `salary` si `visibility = "hidden"`, como ya hace WF-06 en el contexto de `match_advisor`.
 
