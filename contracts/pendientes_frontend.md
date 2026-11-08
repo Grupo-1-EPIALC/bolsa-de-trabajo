@@ -6,9 +6,9 @@
 
 | # | Qué | Backend | Prioridad |
 |---|---|---|---|
-| 1 | Recuperar clave (pedir mail + pantalla del link) | auth ✅ | Alta |
-| 2 | Confirmar cambio de email (pantalla del link) | auth ✅ | Alta |
-| 3 | "Mi cuenta": cambiar clave y email | auth ✅ | Alta |
+| 1 | ~~Recuperar clave (pedir mail + pantalla del link)~~ | ✅ Hecho en PR v0.5.0 | Alta |
+| 2 | ~~Confirmar cambio de email (pantalla del link)~~ | ✅ Hecho en PR v0.5.0 | Alta |
+| 3 | ~~"Mi cuenta": cambiar clave y email~~ | ✅ Hecho en PR v0.5.0 | Alta |
 | 4 | ~~Panel de administración de cuentas~~ ✅ hecho en front 0.4.0 (P-025) | auth ✅ | Alta (fase 2) |
 | 5 | ~~Admin: configuración de matching~~ ✅ hecho en front 0.4.0 (P-025) | matching ✅ | Media |
 | 6 | Modal "¿Por qué este puntaje?" | matching ✅ | Media |
@@ -20,6 +20,8 @@
 ---
 
 ## 1. Recuperar clave
+
+> Implementado en front 0.5.0.
 
 **Contrato:** `auth_frontend.md` §1, §3 y §5.
 
@@ -34,6 +36,8 @@
 
 ## 2. Confirmar el cambio de email
 
+> Implementado en front 0.5.0. 
+
 **Contrato:** `auth_frontend.md` §5.
 
 - **Pantalla del link:** `{FRONTEND_URL}/auth/email/confirm?token=…`.
@@ -41,6 +45,8 @@
   - Como el cambio rota la sesión, conviene pedir que vuelva a ingresar.
 
 ## 3. "Mi cuenta" (estudiante y empresa)
+
+> Implementado en front 0.5.0.
 
 **Contrato:** `auth_frontend.md` §1, §3 y §6.
 
