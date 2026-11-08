@@ -245,3 +245,13 @@ def test_training_requires_job_and_existing_ids(container: Container) -> None:
         container.recommendations.request_analysis("training", "stu-001", "job-999")
     with pytest.raises(NotFoundError):
         container.recommendations.request_analysis("training", "stu-999", "job-001")
+
+
+def test_job_snapshot_includes_company_id(container: Container) -> None:
+    """El front abre el perfil público de la empresa desde "Ofertas para vos"."""
+    items = container.recommendations.student_view("stu-001")["rule_based"]["items"]
+    assert items
+    for item in items:
+        job = container.matching.load_job(item["job"]["job_id"])
+        assert job.company_id
+        assert item["job"]["company_id"] == job.company_id
