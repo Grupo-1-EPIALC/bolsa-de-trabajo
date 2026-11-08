@@ -6,6 +6,7 @@ import type {
   RecommendationSettings,
   RecommendationSettingsUpdate,
   StudentRecommendationsView,
+  TrainingView,
 } from '../types/matching';
 
 export const matchingService = {
@@ -36,6 +37,21 @@ export const matchingService = {
     return apiFetch<RecommendationRequest>('/matches/recommendations/requests', {
       method: 'POST',
       body: JSON.stringify({ mode: 'company', job_id: jobId }),
+    });
+  },
+
+  /** GET /matches/recommendations/students/{id}/training/{job_id} · formación para una oferta. */
+  getTraining(profileId: string, jobId: string): Promise<TrainingView> {
+    return apiFetch<TrainingView>(
+      `/matches/recommendations/students/${encodeURIComponent(profileId)}/training/${encodeURIComponent(jobId)}`,
+    );
+  },
+
+  /** POST /matches/recommendations/requests · pide la formación a la IA (WF-06, mode=training). */
+  requestTraining(profileId: string, jobId: string): Promise<RecommendationRequest> {
+    return apiFetch<RecommendationRequest>('/matches/recommendations/requests', {
+      method: 'POST',
+      body: JSON.stringify({ mode: 'training', profile_id: profileId, job_id: jobId }),
     });
   },
 

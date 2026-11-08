@@ -49,6 +49,7 @@
 | P-031 | 2026-11-08 | Andres | Claude Code (`devops-agent` + `auth-agent` + `frontend-agent`) | `feature/infra/v0.2.0-swagger-redoc` | En el panel de admin, links a Swagger UI y ReDoc de cada servicio | FastAPI (profile, jobs, matching) publican `/docs`, `/redoc` y `/openapi.json` bajo `/api/v1/<recurso>/` (pasan por el gateway sin tocar Nginx). auth-service suma `@nestjs/swagger` (plugin que lee los DTOs) y una página de ReDoc. Panel de admin: sección "Documentación de las APIs" con Swagger UI, ReDoc y OpenAPI por servicio. Tests en los 4 servicios y el front; E2E en Chromium: las 8 páginas cargan | pendiente de revisión |
 | P-032 | 2026-11-08 | Andres | Claude Code (`devops-agent`) | `docs/contracts/v1.0.0-contratos-por-servicio` | Antes del PR, mover los contratos a una subcarpeta y dejar en la carpeta principal sólo los finales, uno por servicio | Seis contratos finales en `contracts/` (`auth.md`, `profile.md`, `jobs.md`, `matching.md`, `mcp_tools.md`, `n8n.md`), armados por partes desde los documentos vigentes (sin checklists ni pasos ya hechos) y con el OpenAPI vivo como fuente de verdad. Los anteriores pasan a `contracts/historico/` (con README de equivalencias) y el backlog del front a `docs/frontend/pendientes.md`. 45 archivos con referencias actualizadas; el test de contrato de jobs verifica el OpenAPI vivo | pendiente de revisión |
 | P-033 | 2026-11-08 | Andres | Claude Code (`matching-agent` + `n8n-agent`) | `feature/matching/v0.2.0-pedido-formacion` | Etapa 2 del plan: recomendaciones de formación (`mode=training`) de punta a punta en el back | matching 0.2.0: modo `training` con `profile_id` + `job_id` (pedido, guardado por batch y vista `GET /recommendations/students/{id}/training/{job_id}` con el match por reglas y la formación de IA, separada de las recomendaciones de ofertas). WF-06: el resultado de `training` se guarda por `/recommendations/batch` con el `request_id` (antes iba por `save_recommendation` como `student` y pisaba la recomendación de la oferta), ítems saneados (≤ 5, sin score). Tests UT-MATCH-11; E2E con IA real | pendiente de revisión |
+| P-034 | 2026-11-08 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.7.0-formacion` | Etapa 2 del plan (front): que el estudiante pida "¿Cómo mejorar para esta oferta?" y vea la formación con el badge ámbar | `TrainingAdvice` en cada oferta de "Ofertas para vos" y en el detalle de "Todas las ofertas": muestra las faltantes por reglas, pide la formación (`mode=training`) y sigue el pedido con `useAiAnalysis`; panel "Sugerido por IA" separado del de reglas, hasta 5 ítems priorizados y disclaimer. Front 0.7.0; 50 tests Vitest (UT-FE-TRAIN-01); E2E en Chromium con IA real: 5 ítems sobre las faltantes Docker y Testing | pendiente de revisión |
 
 ---
 
@@ -476,7 +477,22 @@
 - **Archivos afectados:** `services/matching-service/app/` (`domain/recommendations.py`, `domain/ports.py`, `application/recommendation_service.py`, `application/access_policy.py`, `api/routes.py`, `infrastructure/n8n_trigger.py`, `infrastructure/repositories_memory.py`, `main.py`), `pyproject.toml`, tests, `n8n/generate_workflows.py`, `n8n/workflows/WF-06-recomendador.json`, `contracts/matching.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 3).
 
-### P-034 — (plantilla)
+### P-034 — "¿Cómo mejorar para esta oferta?" en el front
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`frontend-agent`) · **Rama:** `feature/frontend/v0.7.0-formacion` · **HU:** recomendaciones de IA para el estudiante (Plan MVP)
+- **Prompt (resumido):**
+  > Avanzá con la etapa 2 (formación): que el estudiante la pida desde una oferta y vea los ítems con el badge "Sugerido por IA".
+- **Resumen de la respuesta:**
+  - **Tipos y servicio:** `TrainingItem` y `TrainingView`; `matchingService.getTraining` y `requestTraining`; `RecommendationRequest.mode` suma `training`.
+  - **Componente `TrainingAdvice`:**
+    - se despliega con "¿Cómo mejorar para esta oferta?" y muestra las competencias que faltan según el motor de reglas;
+    - pide la formación y sigue el pedido con `useAiAnalysis`;
+    - lista hasta 5 ítems de prioridad alta a baja (Curso, Proyecto, Consejo para tu perfil) en un panel ámbar "Sugerido por IA" con el disclaimer, separado del panel de reglas (AGENTS §2.2).
+  - **Dónde:** en cada oferta de "Ofertas para vos" y en el detalle de "Todas las ofertas" (`JobBoard` recibe el `profileId`; `JobDetail` acepta contenido al pie). Lógica de presentación en `src/matching/training.ts`.
+  - **Verificación:** 50 tests Vitest (UT-FE-TRAIN-01 nuevo), tsc y prettier limpios. E2E en Chromium con un estudiante ficticio e IA real: el panel muestra las faltantes (Docker, Testing), el pedido devuelve 5 ítems y el detalle de "Todas las ofertas" también ofrece la formación. Nota: en `dev`, "Todas las ofertas" sólo se abre desde el footer (el menú del estudiante no la tiene desde la 0.5.0).
+- **Archivos afectados:** `frontend/src/components/matching/TrainingAdvice.tsx`, `JobRecommendations.tsx`, `frontend/src/components/jobs/JobBoard.tsx`, `JobDetail.tsx`, `frontend/src/pages/StudentArea.tsx`, `frontend/src/matching/training.ts` (+ test), `frontend/src/services/matchingService.ts`, `frontend/src/types/matching.ts`, `frontend/package*.json`, `docs/frontend/pendientes.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 4).
+
+### P-035 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
