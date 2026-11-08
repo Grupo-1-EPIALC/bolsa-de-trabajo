@@ -50,6 +50,7 @@
 | P-032 | 2026-11-08 | Andres | Claude Code (`devops-agent`) | `docs/contracts/v1.0.0-contratos-por-servicio` | Antes del PR, mover los contratos a una subcarpeta y dejar en la carpeta principal sólo los finales, uno por servicio | Seis contratos finales en `contracts/` (`auth.md`, `profile.md`, `jobs.md`, `matching.md`, `mcp_tools.md`, `n8n.md`), armados por partes desde los documentos vigentes (sin checklists ni pasos ya hechos) y con el OpenAPI vivo como fuente de verdad. Los anteriores pasan a `contracts/historico/` (con README de equivalencias) y el backlog del front a `docs/frontend/pendientes.md`. 45 archivos con referencias actualizadas; el test de contrato de jobs verifica el OpenAPI vivo | pendiente de revisión |
 | P-033 | 2026-11-08 | Andres | Claude Code (`matching-agent` + `n8n-agent`) | `feature/matching/v0.2.0-pedido-formacion` | Etapa 2 del plan: recomendaciones de formación (`mode=training`) de punta a punta en el back | matching 0.2.0: modo `training` con `profile_id` + `job_id` (pedido, guardado por batch y vista `GET /recommendations/students/{id}/training/{job_id}` con el match por reglas y la formación de IA, separada de las recomendaciones de ofertas). WF-06: el resultado de `training` se guarda por `/recommendations/batch` con el `request_id` (antes iba por `save_recommendation` como `student` y pisaba la recomendación de la oferta), ítems saneados (≤ 5, sin score). Tests UT-MATCH-11; E2E con IA real | pendiente de revisión |
 | P-034 | 2026-11-08 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.7.0-formacion` | Etapa 2 del plan (front): que el estudiante pida "¿Cómo mejorar para esta oferta?" y vea la formación con el badge ámbar | `TrainingAdvice` en cada oferta de "Ofertas para vos" y en el detalle de "Todas las ofertas": muestra las faltantes por reglas, pide la formación (`mode=training`) y sigue el pedido con `useAiAnalysis`; panel "Sugerido por IA" separado del de reglas, hasta 5 ítems priorizados y disclaimer. Front 0.7.0; 50 tests Vitest (UT-FE-TRAIN-01); E2E en Chromium con IA real: 5 ítems sobre las faltantes Docker y Testing | pendiente de revisión |
+| P-035 | 2026-11-08 | Andres | Claude Code (`matching-agent`) | `fix/matching/v0.2.1-company-id-en-snapshot` | Aplicar el fix: el resumen de ofertas de matching no incluye `company_id`, así que "Ofertas para vos" no puede abrir el perfil público de la empresa | matching 0.2.1: `job_snapshot` suma `company_id` (el mismo que jobs-service ya publica en el detalle); contrato `matching.md` (ejemplo y `JobSnapshot`). Test nuevo; 107 tests; verificado en vivo con el perfil público de la empresa | pendiente de revisión |
 
 ---
 
@@ -492,7 +493,20 @@
 - **Archivos afectados:** `frontend/src/components/matching/TrainingAdvice.tsx`, `JobRecommendations.tsx`, `frontend/src/components/jobs/JobBoard.tsx`, `JobDetail.tsx`, `frontend/src/pages/StudentArea.tsx`, `frontend/src/matching/training.ts` (+ test), `frontend/src/services/matchingService.ts`, `frontend/src/types/matching.ts`, `frontend/package*.json`, `docs/frontend/pendientes.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 4).
 
-### P-035 — (plantilla)
+### P-035 — `company_id` en el resumen de ofertas de matching
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`matching-agent`) · **Rama:** `fix/matching/v0.2.1-company-id-en-snapshot` · **HU:** perfil público de la empresa desde una oferta (etapa 3, ítem 2)
+- **Prompt (resumido):**
+  > Aplicá este fix y subilo como un PR individual: el resumen de ofertas de matching no incluye `company_id`, así que "Ofertas para vos" necesita sumarlo en matching o pedir el detalle a jobs.
+- **Resumen de la respuesta:**
+  - Se suma en matching (más simple que un pedido extra a jobs por oferta): `job_snapshot` incluye `company_id`. Llega en "Ofertas para vos" y en la vista de candidatos.
+  - No expone nada nuevo: jobs-service ya publica `company_id` en el detalle de cada oferta.
+  - matching-service 0.2.1; `contracts/matching.md` actualizado (ejemplo y `JobSnapshot`).
+  - **Verificación:** test nuevo (`company_id` de cada ítem = el de la oferta); 107 tests, ruff, black y mypy limpios. En vivo, `stu-001` → `job-004` trae `company_id` y con él `GET /profiles/companies/{company_id}` devuelve el perfil público de la empresa.
+  - **PR individual** sobre la rama de #34 (matching 0.2.0) para que el diff muestre sólo este cambio; cuando #34 se mergee, se cambia la base a `dev`.
+- **Archivos afectados:** `services/matching-service/app/application/serializers.py`, `app/main.py`, `pyproject.toml`, `tests/test_services.py`, `contracts/matching.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 3).
+
+### P-036 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
