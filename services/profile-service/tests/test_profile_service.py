@@ -179,9 +179,11 @@ def test_ut_prof_05_vistas_minimizan_datos(container: Container, student: Princi
     assert service["personal"]["email"] == "lucia.ficticia@example.com"
     assert service["work_conditions"]["salary"]["min"] == 600000  # matching aplica visibility
     assert service["years_experience"] == 1.75
+    assert service["contact_by_email"] is False  # sólo el permiso, sin el resto de consents
 
     company = container.profiles.get_profile(Principal("c1", Role.COMPANY), profile_id)
     assert "email" not in company["personal"]
+    assert "contact_by_email" not in company
     assert "salary" not in company["work_conditions"]  # visibility on_match
 
     admin = container.profiles.get_profile(Principal("a1", Role.ADMIN), profile_id)
@@ -194,6 +196,21 @@ def test_ut_prof_05_vistas_minimizan_datos(container: Container, student: Princi
         container.profiles.get_profile(Principal("otro", Role.STUDENT), profile_id)
     with pytest.raises(ProfileNotFoundError):
         container.profiles.get_profile(SERVICE_PRINCIPAL, "no-existe")
+
+
+def test_ut_prof_05_servicios_ven_el_permiso_de_contacto(
+    container: Container, student: Principal
+) -> None:
+    profile_id = _complete(container, student)["id"]
+    container.profiles.update_mine(
+        student,
+        {"consents": {"data_processing": True, "ai_processing": True, "contact_by_email": True}},
+    )
+    service = container.profiles.get_profile(SERVICE_PRINCIPAL, profile_id)
+    assert service["contact_by_email"] is True
+    listed = container.profiles.list_profiles(SERVICE_PRINCIPAL, include_all=True)
+    mine = next(p for p in listed["items"] if p["id"] == profile_id)
+    assert mine["contact_by_email"] is True
 
 
 def test_ut_prof_05_empresa_no_ve_perfiles_ocultos(

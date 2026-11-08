@@ -1,6 +1,6 @@
 [project]
 name = "profile-service"
-version = "0.3.0"
+version = "0.4.0"
 description = "Perfiles de estudiantes, carga de CV con IA y generación de CV en PDF/DOCX"
 requires-python = ">=3.12,<3.13"
 dependencies = [
