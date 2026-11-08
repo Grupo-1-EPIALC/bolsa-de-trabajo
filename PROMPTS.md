@@ -45,6 +45,7 @@
 | P-027 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Desarrollar modal "Mi cuenta" para estudiantes y empresas con cambio de clave y solicitud de cambio de correo | Componente AccountSettingsModal.tsx integrado en SiteHeader.tsx con pestañas para solicitar cambio de contraseña y nuevo email | aceptado |
 | P-028 | 2026-11-07 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.4.0-panel-admin` | Revisar por qué no se ven las opciones de admin en el front, borrar las cuentas e2e de prueba y crear el panel | El front no tenía panel (sólo el aviso "todavía no está disponible"); además auth-service en dev había quedado con el watcher trabado tras los cambios de rama. `AdminArea` con Panel (cuentas activas por rol + config de matching), Cuentas (buscar, filtrar por rol, incluir borradas, detalle, editar email/empresa con CUIT validado, forzar cambio de clave y borrar con confirmación; sin borrar la propia) y Matching (`GET/PATCH /matches/settings`). 46 tests Vitest y E2E en Chromium 9/9 | pendiente de revisión |
 | P-029 | 2026-11-08 | Dario | Gemini (`frontend-agent`) | `feature/v0.5.0-frontend/auth-flujos-panel-admin` | Fusionar localmente el PR del Panel Admin (v0.4.0) con la rama de flujos Auth (v0.3.0), resolviendo conflictos en App.tsx, SiteHeader.tsx y PROMPTS.md, consolidando todo el frontend en la versión v0.5.0 | Fusión completa de AdminArea.tsx con los 3 flujos de autenticación (HU-04, HU-05, HU-06, HU-10), enrutamiento por roles (student, company, admin), resolución manual de marcas de conflicto y sanitización integral del frontend (Prettier, typecheck y tests unitarios en verde) | aceptado |
+| P-030 | 2026-11-08 | Andres | Claude Code (`n8n-agent` + `mcp-agent` + `profile-agent`) | `feature/n8n/v0.4.0-notificaciones`, `feature/mcp/v0.4.0-config-notificaciones` y `feature/profile/v0.4.0-consentimiento-contacto` | Bloque 1 del plan: hacer WF-02 a WF-05 (notificaciones por mail y errores) | WF-02 oferta nueva → candidatos por reglas; WF-03 único que manda mails a estudiantes (resumen al quedar buscable + oferta nueva); WF-04 aviso a empresas sin datos personales; WF-05 error workflow → admin. Responden 202 enseguida, respetan `contact_by_email` (nuevo en la vista de servicio de profile), parámetros en `get_agent_settings.notifications` y reserva atómica de `notification_key` en `bolsa.notifications_sent` (staticData se pisaba con ejecuciones simultáneas). n8n-init crea credenciales SMTP/Postgres y la tabla. E2E 12/12 con Mailpit | pendiente de revisión |
 
 ---
 
@@ -396,7 +397,33 @@
 * **Archivos afectados:** `frontend/src/App.tsx`, `frontend/src/components/layout/SiteHeader.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-### P-030 — (plantilla)
+### P-030 — Notificaciones por mail en n8n (WF-02 a WF-05)
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`n8n-agent` + `mcp-agent` + `profile-agent`) · **Ramas:** `feature/n8n/v0.4.0-notificaciones`, `feature/mcp/v0.4.0-config-notificaciones`, `feature/profile/v0.4.0-consentimiento-contacto` · **HU:** automatización con n8n (Plan MVP)
+- **Prompt (resumido):**
+  > Armá un plan para completar lo que falta del plan original. Arrancá por el bloque 1: WF-02 a WF-05 (notificaciones y errores).
+- **Resumen de la respuesta:**
+  - **Workflows** (generados en `n8n/generate_workflows.py`):
+    - WF-02 `job.created` → candidatos por reglas (`score ≥ min_score`), se los pasa a WF-03 por `/webhook/student-offer`.
+    - WF-03 es el único que manda mails a estudiantes: resumen al quedar buscable (`profile.updated`) y oferta nueva (desde WF-02); recalcula el puntaje con `POST /matches`. Reenvía el evento a WF-04.
+    - WF-04 avisa al contacto de RR. HH. de cada empresa con el snapshot de matching, sin nombre ni contacto del candidato.
+    - WF-05 es el `errorWorkflow` de todos los demás y avisa a `notifications.admin_email`.
+    - Todos responden `202` enseguida (los servicios esperan 3 s), validan `X-Service-Token` y respetan `contact_by_email`.
+  - **Idempotencia:** primero con `staticData`; el E2E mostró mails repetidos porque las ejecuciones simultáneas se pisan (la última sobrescribe). Se pasó a una reserva atómica: un nodo Postgres inserta la clave en `bolsa.notifications_sent` con `ON CONFLICT DO NOTHING` y sólo sale el mail reservado.
+  - **mcp-tools 0.4.0:** `get_agent_settings` suma `notifications` (`NOTIFY_ENABLED`, `NOTIFY_MIN_SCORE`, `NOTIFY_MAX_PER_EVENT`, `NOTIFY_ADMIN_EMAIL`, `FRONTEND_URL`). UT-MCP-03.
+  - **profile-service 0.4.0:** la vista de servicio incluye `contact_by_email` (sólo ese consentimiento; la vista de empresa no). Tests UT-PROF-05.
+  - **Infra:** `n8n-init` crea las credenciales SMTP (Mailpit; `SMTP_USER`/`SMTP_PASSWORD`/`SMTP_SECURE` opcionales) y Postgres, y la tabla `bolsa.notifications_sent`. Compose suma `N8N_INTERNAL_WEBHOOK_URL`.
+  - **Verificación:** mcp-tools 20 tests (90 % cobertura) y profile-service 103 tests (97 %), ruff/black/mypy limpios. E2E en Docker con Mailpit, 12/12:
+    - resumen al estudiante y aviso a la empresa sin datos personales;
+    - oferta nueva;
+    - repetir el evento o editar el perfil no reenvía;
+    - 6 avisos simultáneos → 1 mail;
+    - sin consentimiento no hay mail;
+    - 401/400;
+    - WF-05 avisa cuando WF-02 falla con matching caído.
+- **Archivos afectados:** `n8n/generate_workflows.py`, `n8n/workflows/*.json`, `n8n/init/bootstrap.sh`, `mcp-tools/app/domain/settings.py`, `mcp-tools/app/infrastructure/settings_env.py`, `mcp-tools/app/tools/registry.py`, `services/profile-service/app/application/views.py`, tests, `docker-compose.yml`, `.env.example`, `contracts/notificaciones_n8n.md` (nuevo), `contracts/profiles_matching.md`, `contracts/jobs_busquedas.md`, `AGENTS.md`, `README.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 1 por n8n/mcp-tools, Integrante 3 por profile).
+
+### P-031 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

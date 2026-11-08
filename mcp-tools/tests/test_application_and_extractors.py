@@ -167,3 +167,23 @@ def test_verification_service_schemas_and_grounding() -> None:
     )
     assert g_tampered["grounded"] is False
     assert g_tampered["score_tampered"] is True
+
+
+async def test_ut_mcp_03_env_notification_settings() -> None:
+    cfg = await EnvSettingsProvider(
+        {
+            "NOTIFY_ENABLED": "false",
+            "NOTIFY_MIN_SCORE": "65",
+            "NOTIFY_MAX_PER_EVENT": "3",
+            "NOTIFY_ADMIN_EMAIL": " admin@bolsa.local ",
+            "FRONTEND_URL": "http://localhost:8080/",
+        }
+    ).get()
+    assert cfg.notifications.enabled is False
+    assert cfg.notifications.min_score == 65
+    assert cfg.notifications.max_per_event == 3
+    assert cfg.notifications.admin_email == "admin@bolsa.local"
+    assert cfg.notifications.frontend_url == "http://localhost:8080"
+    defaults = await EnvSettingsProvider({}).get()
+    assert defaults.notifications.enabled is True
+    assert defaults.notifications.min_score == 70
