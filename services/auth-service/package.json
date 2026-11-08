@@ -1,6 +1,6 @@
 {
   "name": "auth-service",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Autenticación, usuarios y empresas (JWT RS256)",
   "private": true,
   "license": "UNLICENSED",
@@ -22,6 +22,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/swagger": "^11.4.8",
     "@nestjs/typeorm": "^11.0.3",
     "argon2": "^0.45.2",
     "class-transformer": "^0.5.1",

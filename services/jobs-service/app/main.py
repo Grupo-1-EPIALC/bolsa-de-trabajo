@@ -15,7 +15,7 @@ from app.api.routes_internal import router as internal_router
 from app.api.routes_jobs import router as jobs_router
 
 SERVICE_NAME = "jobs-service"
-SERVICE_VERSION = "0.2.0"
+SERVICE_VERSION = "0.2.1"
 
 
 @asynccontextmanager
@@ -26,7 +26,15 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION, lifespan=lifespan)
+# Docs bajo el prefijo del servicio: pasan por el gateway (/api/v1/jobs/) sin rutas nuevas.
+app = FastAPI(
+    title=SERVICE_NAME,
+    version=SERVICE_VERSION,
+    docs_url="/api/v1/jobs/docs",
+    redoc_url="/api/v1/jobs/redoc",
+    openapi_url="/api/v1/jobs/openapi.json",
+    lifespan=lifespan,
+)
 install_error_handlers(app)
 app.include_router(internal_router)
 app.include_router(jobs_router)

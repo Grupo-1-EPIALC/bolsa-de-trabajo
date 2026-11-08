@@ -11,6 +11,7 @@ import {
   validateUserForm,
 } from './users';
 import { settingsToForm, settingsUpdate, validateSettings } from './settings';
+import { API_DOCS } from './apiDocs';
 import type { AdminUser } from '../types/admin';
 import type { RecommendationSettings } from '../types/matching';
 
@@ -174,5 +175,22 @@ describe('UT-FE-ADM-05 configuración de matching', () => {
     expect(
       settingsUpdate({ student_jobs_limit: '8', company_candidates_limit: '10' }, current),
     ).toEqual({ student_jobs_limit: 8 });
+  });
+});
+
+describe('UT-FE-ADM-06 links a la documentación de las APIs', () => {
+  it('un servicio REST por entrada, con Swagger UI, ReDoc y OpenAPI bajo su prefijo del gateway', () => {
+    expect(API_DOCS.map((a) => a.service)).toEqual([
+      'auth-service',
+      'profile-service',
+      'jobs-service',
+      'matching-service',
+    ]);
+    const prefixes = ['auth', 'profiles', 'jobs', 'matches'];
+    API_DOCS.forEach((api, i) => {
+      expect(api.swagger).toBe(`/api/v1/${prefixes[i]}/docs`);
+      expect(api.redoc).toBe(`/api/v1/${prefixes[i]}/redoc`);
+      expect(api.openapi).toBe(`/api/v1/${prefixes[i]}/openapi.json`);
+    });
   });
 });
