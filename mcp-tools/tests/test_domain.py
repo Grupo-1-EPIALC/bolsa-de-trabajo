@@ -6,7 +6,12 @@ from app.domain.errors import InvalidInputError
 from app.domain.grounding import find_ungrounded, normalize
 from app.domain.ports import JsonDict
 from app.domain.router import MINUTE_MS, ModelRouter
-from app.domain.settings import AgentSettings, CvSettings, RecommendationSettings
+from app.domain.settings import (
+    AgentSettings,
+    CvSettings,
+    NotificationSettings,
+    RecommendationSettings,
+)
 
 
 class FakeClock:
@@ -175,3 +180,22 @@ def test_model_router_reserve_cooldown_and_rpm() -> None:
     assert ok == {"ok": True}
     status = router.status()
     assert status["models"]["m1"]["strikes"] == 0
+
+
+def test_ut_mcp_03_notification_settings_defaults_and_validation() -> None:
+    cfg = _valid_settings()
+    assert cfg.to_dict()["notifications"] == {
+        "enabled": True,
+        "min_score": 70.0,
+        "max_per_event": 10,
+        "admin_email": "",
+        "frontend_url": "http://localhost:8080",
+    }
+    with pytest.raises(InvalidInputError, match="min_score"):
+        NotificationSettings(min_score=101)
+    with pytest.raises(InvalidInputError, match="max_per_event"):
+        NotificationSettings(max_per_event=0)
+    with pytest.raises(InvalidInputError, match="admin_email"):
+        NotificationSettings(admin_email="sin-arroba")
+    with pytest.raises(InvalidInputError, match="frontend_url"):
+        NotificationSettings(frontend_url="localhost:8080")

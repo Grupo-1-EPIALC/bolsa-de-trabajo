@@ -176,6 +176,7 @@ async def test_ut_mcp_02_http_gateways_with_respx() -> None:
                 json={
                     "rpm_limit": 30,
                     "recommendations": {"max_jobs_per_student": 4},
+                    "notifications": {"min_score": 80, "admin_email": "ops@example.test"},
                 },
             )
         )
@@ -210,6 +211,8 @@ async def test_ut_mcp_02_http_gateways_with_respx() -> None:
         assert cfg.source == "panel"
         assert cfg.rpm_limit == 30
         assert cfg.recommendations.max_jobs_per_student == 4
+        assert cfg.notifications.min_score == 80
+        assert cfg.notifications.admin_email == "ops@example.test"
 
 
 def test_service_token_middleware() -> None:

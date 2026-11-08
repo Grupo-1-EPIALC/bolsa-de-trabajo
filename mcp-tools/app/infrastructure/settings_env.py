@@ -8,7 +8,12 @@ import httpx
 
 from app.domain.errors import InvalidInputError, UpstreamError
 from app.domain.ports import SettingsProvider
-from app.domain.settings import AgentSettings, CvSettings, RecommendationSettings
+from app.domain.settings import (
+    AgentSettings,
+    CvSettings,
+    NotificationSettings,
+    RecommendationSettings,
+)
 
 DEFAULT_MODELS = (
     "nvidia/nemotron-3-ultra-550b-a55b",
@@ -24,6 +29,12 @@ DEFAULT_MODELS_VERIFIER = (
     "deepseek-ai/deepseek-v4.1-flash",
     "nvidia/nemotron-3-ultra-550b-a55b",
 )
+
+
+def _flag(raw: str | None, default: bool) -> bool:
+    if raw is None or not raw.strip():
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "si", "sí")
 
 
 def _split_csv(raw: str | None, fallback: tuple[str, ...]) -> tuple[str, ...]:
@@ -61,6 +72,13 @@ class EnvSettingsProvider:
                 ),
                 max_text_chars=int(e.get("CV_MAX_TEXT_CHARS", "40000")),
             )
+            notifications = NotificationSettings(
+                enabled=_flag(e.get("NOTIFY_ENABLED"), True),
+                min_score=float(e.get("NOTIFY_MIN_SCORE", "70")),
+                max_per_event=int(e.get("NOTIFY_MAX_PER_EVENT", "10")),
+                admin_email=e.get("NOTIFY_ADMIN_EMAIL", "").strip(),
+                frontend_url=e.get("FRONTEND_URL", "http://localhost:8080").strip().rstrip("/"),
+            )
             models = {
                 "default": _split_csv(e.get("AGENT_MODELS"), DEFAULT_MODELS),
                 "cv": _split_csv(e.get("AGENT_MODELS_CV"), DEFAULT_MODELS_CV),
@@ -77,6 +95,7 @@ class EnvSettingsProvider:
                 max_verify_retries=int(e.get("AGENT_MAX_VERIFY_RETRIES", "1")),
                 recommendations=reco,
                 cv=cv,
+                notifications=notifications,
                 source="env",
             )
         except ValueError as exc:
@@ -113,6 +132,7 @@ class PanelSettingsProvider:
             raise UpstreamError(f"No se pudo leer la configuración del panel: {exc}") from exc
 
         reco_raw = data.get("recommendations") or {}
+        notif_raw = data.get("notifications") or {}
         cv_raw = data.get("cv") or {}
         models_raw = data.get("models") or {}
         return AgentSettings(
@@ -140,6 +160,15 @@ class PanelSettingsProvider:
                     cv_raw.get("allowed_extensions") or ("pdf", "docx", "doc", "md")
                 ),
                 max_text_chars=int(cv_raw.get("max_text_chars", 40000)),
+            ),
+            notifications=NotificationSettings(
+                enabled=bool(notif_raw.get("enabled", True)),
+                min_score=float(notif_raw.get("min_score", 70)),
+                max_per_event=int(notif_raw.get("max_per_event", 10)),
+                admin_email=str(notif_raw.get("admin_email", "")).strip(),
+                frontend_url=str(notif_raw.get("frontend_url", "http://localhost:8080")).rstrip(
+                    "/"
+                ),
             ),
             source="panel",
         )

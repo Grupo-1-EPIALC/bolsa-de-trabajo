@@ -31,6 +31,27 @@ class CvSettings:
 
 
 @dataclass(frozen=True)
+class NotificationSettings:
+    """Mails de n8n (WF-02 a WF-05): a quién, desde qué puntaje y cuántos por evento."""
+
+    enabled: bool = True
+    min_score: float = 70.0
+    max_per_event: int = 10
+    admin_email: str = ""
+    frontend_url: str = "http://localhost:8080"
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.min_score <= 100:
+            raise InvalidInputError("notifications.min_score debe estar entre 0 y 100")
+        if self.max_per_event <= 0:
+            raise InvalidInputError("notifications.max_per_event debe ser mayor que 0")
+        if self.admin_email and "@" not in self.admin_email:
+            raise InvalidInputError("notifications.admin_email no es un email válido")
+        if not self.frontend_url.startswith(("http://", "https://")):
+            raise InvalidInputError("notifications.frontend_url debe empezar con http(s)://")
+
+
+@dataclass(frozen=True)
 class AgentSettings:
     """Parámetros que usan los workflows de n8n en cada ejecución."""
 
@@ -42,6 +63,7 @@ class AgentSettings:
     max_verify_retries: int
     recommendations: RecommendationSettings
     cv: CvSettings
+    notifications: NotificationSettings = field(default_factory=NotificationSettings)
     source: str = field(default="env")
 
     def __post_init__(self) -> None:
