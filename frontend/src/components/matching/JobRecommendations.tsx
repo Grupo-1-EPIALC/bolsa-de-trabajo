@@ -4,6 +4,7 @@ import { ApiError, errorMessage } from '../../services/api';
 import { WORK_MODALITY, labelOf } from '../../profile/labels';
 import { PRIORITY_CLASS, RuleMatch } from './RuleMatch';
 import { useAiAnalysis } from './useAiAnalysis';
+import { TrainingAdvice } from './TrainingAdvice';
 import type {
   StudentAIItem,
   StudentRecommendationsView,
@@ -70,7 +71,11 @@ const AiAdvice: React.FC<{ item?: StudentAIItem }> = ({ item }) => {
   );
 };
 
-const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem }> = ({ item, ai }) => {
+const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem; profileId: string }> = ({
+  item,
+  ai,
+  profileId,
+}) => {
   const { job } = item;
   const place = [job.location?.city, job.location?.province].filter(Boolean).join(', ');
   const modality = job.work_conditions?.work_modality ?? [];
@@ -112,6 +117,7 @@ const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem }> = ({ item
             </div>
           )}
         </div>
+        <TrainingAdvice profileId={profileId} jobId={job.job_id} />
       </div>
     </article>
   );
@@ -263,7 +269,12 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
         </div>
       ) : (
         rules.items.map((item) => (
-          <JobCard key={item.job.job_id} item={item} ai={aiByJob.get(item.job.job_id)} />
+          <JobCard
+            key={item.job.job_id}
+            item={item}
+            ai={aiByJob.get(item.job.job_id)}
+            profileId={profileId}
+          />
         ))
       )}
     </div>
