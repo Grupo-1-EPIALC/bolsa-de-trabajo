@@ -7,6 +7,8 @@ Flujo:
    resultado con `save_batch` (`origin = "AI"`), que marca el pedido como `completed`.
 4. `student_view` / `company_view` devuelven el bloque por reglas recalculado en el momento
    junto a la última recomendación de IA, siempre en bloques separados (AGENTS.md §2.2).
+5. `mode=training` (un estudiante y una oferta): la IA propone cursos, proyectos y consejos
+   para cubrir lo que falta; `training_view` devuelve el match por reglas y esa formación.
 
 El LLM nunca fija el score: cualquier `score` que venga en el contenido de IA se descarta y
 el valor mostrado sale siempre del motor de reglas.
@@ -17,8 +19,10 @@ from typing import Any
 
 from app.application.matching_service import MatchingService
 from app.application.serializers import (
+    VIEWER_STUDENT,
     candidate_ranking_to_dict,
     job_ranking_to_dict,
+    match_to_dict,
     recommendation_to_dict,
 )
 from app.domain.errors import InvalidInputError, MatchingError, NotFoundError
@@ -50,7 +54,9 @@ def _mode(value: object) -> RecommendationMode:
     try:
         return RecommendationMode(str(value or "student").strip().lower())
     except ValueError as exc:
-        raise InvalidInputError("mode debe ser 'student' o 'company'", {"mode": value}) from exc
+        raise InvalidInputError(
+            "mode debe ser 'student', 'company' o 'training'", {"mode": value}
+        ) from exc
 
 
 def _clean_content(content: object) -> JsonDict:
@@ -133,7 +139,7 @@ class RecommendationService:
         for entry in entries:
             if not isinstance(entry, Mapping):
                 continue
-            if mode is RecommendationMode.STUDENT:
+            if mode in (RecommendationMode.STUDENT, RecommendationMode.TRAINING):
                 profile_id, job_id = subject_id, str(entry.get("job_id") or "")
             else:
                 profile_id, job_id = str(entry.get("profile_id") or ""), subject_id
@@ -163,17 +169,27 @@ class RecommendationService:
 
     # ------------------------------------------------------- pedidos a n8n ---
 
-    def request_analysis(self, mode: object, subject_id: str) -> RecommendationRequest:
+    def request_analysis(
+        self, mode: object, subject_id: str, job_id: str = ""
+    ) -> RecommendationRequest:
         parsed = _mode(mode)
         clean = (subject_id or "").strip()
+        clean_job = (job_id or "").strip()
         if not clean:
-            field = "profile_id" if parsed is RecommendationMode.STUDENT else "job_id"
+            field = "job_id" if parsed is RecommendationMode.COMPANY else "profile_id"
             raise InvalidInputError(f"{field} es obligatorio", {"field": field})
+        if parsed is RecommendationMode.TRAINING and not clean_job:
+            raise InvalidInputError(
+                "job_id es obligatorio para mode=training (la oferta a la que apunta la formación)",
+                {"field": "job_id"},
+            )
         # Falla rápido (404) si el perfil o la oferta no existen.
-        if parsed is RecommendationMode.STUDENT:
-            self._matching.load_profile(clean)
-        else:
+        if parsed is RecommendationMode.COMPANY:
             self._matching.load_job(clean)
+        else:
+            self._matching.load_profile(clean)
+        if parsed is RecommendationMode.TRAINING:
+            self._matching.load_job(clean_job)
         now = self._clock.iso_now()
         request = RecommendationRequest(
             id=self._ids.new_id("req"),
@@ -182,11 +198,14 @@ class RecommendationService:
             status=RequestStatus.PENDING,
             created_at=now,
             updated_at=now,
+            job_id=clean_job if parsed is RecommendationMode.TRAINING else "",
         )
         return self._requests.save(request)
 
     def analysis_limit(self, mode: RecommendationMode, requested: int | None) -> int:
         """Cantidad de ítems que analiza la IA: la configurada por el admin (o menos)."""
+        if mode is RecommendationMode.TRAINING:
+            return 1  # una sola oferta: la que eligió el estudiante
         current = self._settings.get()
         configured = (
             current.student_jobs_limit
@@ -206,6 +225,7 @@ class RecommendationService:
                 mode=request.mode.value,
                 subject_id=request.subject_id,
                 limit=limit,
+                job_id=request.job_id,
             )
         except MatchingError as exc:
             return self._update_request(
@@ -248,15 +268,20 @@ class RecommendationService:
             created_at=current.created_at,
             updated_at=self._clock.iso_now(),
             error=dict(error or {}),
+            job_id=current.job_id,
         )
         return self._requests.save(updated)
 
     # --------------------------------------------------------------- lectura ---
 
     def _ai_block(
-        self, mode: RecommendationMode, subject_id: str, recs: list[AiRecommendation]
+        self,
+        mode: RecommendationMode,
+        subject_id: str,
+        recs: list[AiRecommendation],
+        job_id: str = "",
     ) -> JsonDict:
-        request = self._requests.latest_for(mode.value, subject_id)
+        request = self._requests.latest_for(mode.value, subject_id, job_id)
         latest = max(recs, key=lambda r: r.created_at) if recs else None
         if request is not None and request.status in (
             RequestStatus.PENDING,
@@ -314,5 +339,18 @@ class RecommendationService:
         return {
             "job_id": ranking.job.id,
             "rule_based": candidate_ranking_to_dict(ranking),
+            "ai_recommendations": ai,
+        }
+
+    def training_view(self, profile_id: str, job_id: str) -> JsonDict:
+        """Formación para una oferta: match por reglas (con faltantes) + recomendaciones de IA."""
+        result, profile, job = self._matching.compute(profile_id, job_id)
+        rec = self._repo.latest_training(profile.id, job.id)
+        ai = self._ai_block(RecommendationMode.TRAINING, profile.id, [rec] if rec else [], job.id)
+        ai["items"] = [dict(i) for i in rec.items] if rec else []
+        return {
+            "profile_id": profile.id,
+            "job_id": job.id,
+            "rule_based": match_to_dict(result, profile, job, viewer=VIEWER_STUDENT),
             "ai_recommendations": ai,
         }

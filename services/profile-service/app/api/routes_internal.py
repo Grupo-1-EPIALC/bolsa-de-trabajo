@@ -20,7 +20,7 @@ class AccountEventCompanyIn(BaseModel):
 
 
 class AccountEventIn(BaseModel):
-    """Cuerpo de `contracts/account_events.md` (los campos extra se ignoran)."""
+    """Cuerpo de `contracts/auth.md` (parte B) (los campos extra se ignoran)."""
 
     event: str = Field(max_length=64)
     user_id: str = Field(min_length=1, max_length=64)

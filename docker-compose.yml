@@ -91,6 +91,12 @@ services:
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_FROM: ${SMTP_FROM}
+      # Opcionales (servidor SMTP real con usuario/TLS); Mailpit en dev no los necesita.
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      # WF-03 reenvía a WF-04 por un webhook interno del mismo n8n
+      N8N_INTERNAL_WEBHOOK_URL: http://localhost:5678/webhook
       # Comunicación directa n8n -> mcp-tools por red interna (nunca pasa por Nginx)
       MCP_URL: http://mcp-tools:8000/mcp
       N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN}
@@ -150,7 +156,7 @@ services:
       SMTP_FROM: ${SMTP_FROM}
       FRONTEND_URL: ${FRONTEND_URL}
       N8N_WEBHOOK_BASE_URL: http://n8n:5678/webhook
-      # Suscriptores de eventos de cuenta (borrado y edición). Ver contracts/account_events.md
+      # Suscriptores de eventos de cuenta (borrado y edición). Ver contracts/auth.md, parte B
       ACCOUNT_EVENT_WEBHOOKS: ${ACCOUNT_EVENT_WEBHOOKS:-http://profile-service:8000/api/v1/profiles/internal/account-events,http://jobs-service:8000/api/v1/jobs/internal/account-events}
       ACCOUNT_EVENT_RETRY_INTERVAL_MS: ${ACCOUNT_EVENT_RETRY_INTERVAL_MS:-5000}
       ACCOUNT_EVENT_RETRY_BASE_MS: ${ACCOUNT_EVENT_RETRY_BASE_MS:-5000}
@@ -229,6 +235,12 @@ services:
       RECO_MAX_PROFILES_PER_JOB: ${RECO_MAX_PROFILES_PER_JOB}
       RECO_MAX_ITEMS_PER_JOB: ${RECO_MAX_ITEMS_PER_JOB}
       RECO_MIN_SCORE: ${RECO_MIN_SCORE}
+      # Notificaciones por mail de n8n (WF-02 a WF-05), leídas con get_agent_settings
+      NOTIFY_ENABLED: ${NOTIFY_ENABLED:-true}
+      NOTIFY_MIN_SCORE: ${NOTIFY_MIN_SCORE:-70}
+      NOTIFY_MAX_PER_EVENT: ${NOTIFY_MAX_PER_EVENT:-10}
+      NOTIFY_ADMIN_EMAIL: ${NOTIFY_ADMIN_EMAIL:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       CV_MAX_SIZE_MB: ${CV_MAX_SIZE_MB}
       CV_ALLOWED_EXTENSIONS: ${CV_ALLOWED_EXTENSIONS}
       CV_MAX_TEXT_CHARS: ${CV_MAX_TEXT_CHARS}

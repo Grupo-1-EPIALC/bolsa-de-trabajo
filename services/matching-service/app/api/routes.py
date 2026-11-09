@@ -45,7 +45,8 @@ class MatchRequest(BaseModel):
 
 
 class AnalysisRequest(BaseModel):
-    mode: Literal["student", "company"]
+    # training: formación (cursos, proyectos, consejos) de un estudiante para una oferta.
+    mode: Literal["student", "company", "training"]
     profile_id: str | None = None
     job_id: str | None = None
     # Sin `limit` usa el configurado por el admin; con `limit`, el menor de los dos.
@@ -68,6 +69,7 @@ def _request_to_dict(req: RecommendationRequest) -> dict[str, Any]:
         "created_at": req.created_at,
         "updated_at": req.updated_at,
         "error": dict(req.error) if req.error else None,
+        **({"job_id": req.job_id} if req.job_id else {}),
     }
 
 
@@ -163,10 +165,11 @@ def request_recommendations(
     container: ContainerDep,
     principal: PrincipalDep,
 ) -> dict[str, Any]:
-    subject = (body.profile_id if body.mode == "student" else body.job_id) or ""
+    subject = (body.job_id if body.mode == "company" else body.profile_id) or ""
     if subject:
         container.access.subject(principal, body.mode, subject)
-    request = container.recommendations.request_analysis(body.mode, subject)
+    job_id = (body.job_id or "") if body.mode == "training" else ""
+    request = container.recommendations.request_analysis(body.mode, subject, job_id)
     limit = container.recommendations.analysis_limit(RecommendationMode(body.mode), body.limit)
     background.add_task(container.recommendations.run_analysis, request.id, limit)
     return {**_request_to_dict(request), "limit": limit}
@@ -190,6 +193,17 @@ def student_recommendations(
 ) -> dict[str, Any]:
     container.access.student_profile(principal, profile_id)
     return container.recommendations.student_view(profile_id, limit)
+
+
+@router.get(
+    "/recommendations/students/{profile_id}/training/{job_id}",
+    summary="Formación sugerida por IA para encajar en una oferta (+ match por reglas)",
+)
+def training_recommendations(
+    profile_id: str, job_id: str, container: ContainerDep, principal: PrincipalDep
+) -> dict[str, Any]:
+    container.access.student_profile(principal, profile_id)
+    return container.recommendations.training_view(profile_id, job_id)
 
 
 @router.get(

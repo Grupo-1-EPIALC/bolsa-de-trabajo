@@ -1,4 +1,4 @@
-// Tipos de matching-service según contracts/matching_frontend.md (§4).
+// Tipos de matching-service según contracts/matching.md, parte A (§4).
 // El score y el orden salen siempre de rule_based (origin RULES); la IA nunca trae score.
 
 import type { ApiErrorBody, Location, WorkConditions } from './profile';
@@ -192,7 +192,9 @@ export interface CompanyRecommendationsView {
 /** Pedido de análisis con IA (§4.3). */
 export interface RecommendationRequest {
   request_id: string;
-  mode: 'student' | 'company';
+  mode: 'student' | 'company' | 'training';
+  /** Sólo training: la oferta para la que se pidió la formación. */
+  job_id?: string;
   subject_id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: string;
@@ -201,7 +203,7 @@ export interface RecommendationRequest {
   error: ApiErrorBody | null;
 }
 
-/** GET/PATCH /matches/settings (contracts/matching_frontend.md §4.5) · sólo admin. */
+/** GET/PATCH /matches/settings (contracts/matching.md, parte A §4.5) · sólo admin. */
 export interface RecommendationSettings {
   student_jobs_limit: number;
   company_candidates_limit: number;
@@ -213,3 +215,19 @@ export interface RecommendationSettings {
 export type RecommendationSettingsUpdate = Partial<
   Pick<RecommendationSettings, 'student_jobs_limit' | 'company_candidates_limit'>
 >;
+
+/** Ítem de formación sugerido por IA (contracts/matching.md, parte B §B.2): sin score. */
+export interface TrainingItem {
+  type: 'course' | 'project' | 'profile_tip';
+  skill: string;
+  text: string;
+  priority: Priority;
+}
+
+/** GET /matches/recommendations/students/{profile_id}/training/{job_id}. */
+export interface TrainingView {
+  profile_id: string;
+  job_id: string;
+  rule_based: Match;
+  ai_recommendations: AIBlock<TrainingItem>;
+}

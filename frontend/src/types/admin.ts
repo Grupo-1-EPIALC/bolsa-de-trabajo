@@ -1,4 +1,4 @@
-// Administración de cuentas · auth-service (contracts/auth_frontend.md §7)
+// Administración de cuentas · auth-service (contracts/auth.md, parte A §7)
 import type { Role } from '../services/session';
 
 export interface AdminCompany {

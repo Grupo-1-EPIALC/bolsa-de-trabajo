@@ -47,7 +47,7 @@ const HEADERS: Record<StudentOnlySection, Header> = {
 };
 
 /**
- * Área del estudiante (contracts/profile_frontend.md §1):
+ * Área del estudiante (contracts/profile.md, parte A §1):
  * sin perfil → elegir CV o carga manual · perfil incompleto → asistente en el paso pendiente ·
  * perfil listo → panel con recomendaciones, edición y descarga del CV.
  */
@@ -175,7 +175,7 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
     );
   } else if (section === 'jobs') {
     // El listado no depende del perfil: se ve aunque todavía no lo haya cargado.
-    content = <JobBoard />;
+    content = <JobBoard profileId={profile?.id} />;
   } else if (profile === undefined) {
     content = (
       <div className="text-center py-5">

@@ -1,4 +1,4 @@
-// Tipos del perfil del estudiante según contracts/profile_frontend.md (profile-service v0.2.0)
+// Tipos del perfil del estudiante según contracts/profile.md, parte A (profile-service v0.2.0)
 // y la estructura común §3–§5. Los opcionales sin valor no vienen en el JSON (no hay null).
 
 export type WorkSchedule = 'full_time' | 'part_time' | 'hourly' | 'flexible';

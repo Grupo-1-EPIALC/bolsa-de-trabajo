@@ -16,7 +16,7 @@ from app.api.routes_internal import router as internal_router
 from app.api.routes_profiles import router as profiles_router
 
 SERVICE_NAME = "profile-service"
-SERVICE_VERSION = "0.3.0"
+SERVICE_VERSION = "0.4.1"
 
 
 @asynccontextmanager
@@ -27,7 +27,15 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
     yield
 
 
-app = FastAPI(title=SERVICE_NAME, version=SERVICE_VERSION, lifespan=lifespan)
+# Docs bajo el prefijo del servicio: pasan por el gateway (/api/v1/profiles/) sin rutas nuevas.
+app = FastAPI(
+    title=SERVICE_NAME,
+    version=SERVICE_VERSION,
+    docs_url="/api/v1/profiles/docs",
+    redoc_url="/api/v1/profiles/redoc",
+    openapi_url="/api/v1/profiles/openapi.json",
+    lifespan=lifespan,
+)
 install_error_handlers(app)
 # Primero las rutas fijas (`/cv-test`, `/cv-extract/...`, `/companies/...`) y después
 # `/{profile_id}` del perfil de estudiante.

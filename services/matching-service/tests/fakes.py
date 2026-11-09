@@ -17,10 +17,16 @@ class FakeTrigger:
         self.on_call: Any = None
 
     def request_analysis(
-        self, request_id: str, mode: str, subject_id: str, limit: int
+        self, request_id: str, mode: str, subject_id: str, limit: int, job_id: str = ""
     ) -> dict[str, Any]:
         self.calls.append(
-            {"request_id": request_id, "mode": mode, "subject_id": subject_id, "limit": limit}
+            {
+                "request_id": request_id,
+                "mode": mode,
+                "subject_id": subject_id,
+                "limit": limit,
+                "job_id": job_id,
+            }
         )
         if self.fail:
             raise UpstreamError("n8n no disponible", {"status": 503})

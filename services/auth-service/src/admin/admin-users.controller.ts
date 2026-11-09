@@ -12,6 +12,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser, CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/roles.guard';
@@ -20,6 +21,8 @@ import { AdminUpdateUserDto, ListUsersQuery } from './admin.dto';
 import { AdminUsersService } from './admin-users.service';
 
 /** /api/v1/auth/admin/users · sólo rol admin. Estudiantes y empresas se filtran con ?role=. */
+@ApiTags('admin')
+@ApiBearerAuth()
 @Controller('admin/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)

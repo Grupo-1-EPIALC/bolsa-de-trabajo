@@ -49,6 +49,7 @@ Para empezar de cero hay que borrarlos a mano (**se pierde todo**): `docker comp
 | Formulario de prueba CV (`profile-service → n8n`) | http://localhost:8080/api/v1/profiles/cv-test |
 | n8n | http://localhost:5678 (o el `N8N_PORT` definido en `.env`) |
 | Mailpit (correos de prueba) | http://localhost:8025 |
+| Documentación de las APIs (Swagger UI / ReDoc / OpenAPI) | `http://localhost:8080/api/v1/<recurso>/docs` · `/redoc` · `/openapi.json`, con `<recurso>` = `auth`, `profiles`, `jobs` o `matches`. También desde el panel de admin |
 | PostgreSQL (solo dev) | `localhost:5432` · base `bolsa` |
 
 Si algún puerto está ocupado en tu máquina, cambialo en `.env` (`GATEWAY_PORT`, `N8N_PORT`, `MAIL_UI_PORT`, `POSTGRES_HOST_PORT`).
@@ -92,6 +93,7 @@ El access token dura 15 minutos; el refresh token dura 7 días y se almacena com
   - `WF-00-orquestador.json`: sub-workflow orquestador con lectura de adjunto vía MCP y reintento guiado.
   - `WF-01-procesar-cv.json`: webhook `POST /webhook/cv-extract` (`CV Structurer`).
   - `WF-06-recomendador.json`: webhook `POST /webhook/recommendations` (`Training Advisor` para postulantes y `Company Advisor` para empresas).
+  - `WF-02-oferta-nueva.json` a `WF-05-errores.json`: notificaciones por mail (oferta nueva, resumen al estudiante, candidato nuevo a la empresa) y aviso de errores al admin. Se ven en Mailpit; ver [`contracts/n8n.md`](contracts/n8n.md) (§7).
 
 **Los workflows se cargan solos.** Antes de n8n corre `n8n-init` ([`n8n/init/bootstrap.sh`](n8n/init/bootstrap.sh)), que en cada `docker compose up`:
 
@@ -141,7 +143,7 @@ El script corre sólo cuando el volumen `bolsa_pg_data` está vacío. Si lo camb
 │   ├── workflows/                # WF-0X-<nombre>.json (sin credenciales)
 │   └── generate_workflows.py     # generador determinístico de workflows
 ├── frontend/                     # React + Vite
-├── contracts/                    # esquemas JSON y contratos OpenAPI
+├── contracts/                    # un contrato por servicio (auth, profile, jobs, matching, mcp_tools, n8n); historico/ con los anteriores
 ├── ruff.toml · .prettierrc.json · .editorconfig   # estilo común
 └── .github/                      # CI + plantilla de PR
 ```

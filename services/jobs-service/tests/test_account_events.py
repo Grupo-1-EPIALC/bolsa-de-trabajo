@@ -1,4 +1,4 @@
-"""UT-JOBS-03: eventos de cuenta de auth-service (`contracts/account_events.md`)."""
+"""UT-JOBS-03: eventos de cuenta de auth-service (`contracts/auth.md` (parte B))."""
 
 import json
 from datetime import UTC, datetime

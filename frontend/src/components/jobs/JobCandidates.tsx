@@ -109,7 +109,7 @@ const CandidateCard: React.FC<{ item: CompanyRuleItem; ai?: CompanyAIItem }> = (
 };
 
 /**
- * Candidatos para una búsqueda propia (contracts/matching_frontend.md §4.2): ranking por reglas
+ * Candidatos para una búsqueda propia (contracts/matching.md, parte A §4.2): ranking por reglas
  * y, si se pide, análisis de la IA. Los candidatos vienen sin nombre ni contacto, a propósito.
  */
 export const JobCandidates: React.FC<JobCandidatesProps> = ({ job, onBack }) => {

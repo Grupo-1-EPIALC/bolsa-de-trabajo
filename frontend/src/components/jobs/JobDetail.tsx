@@ -38,14 +38,17 @@ interface JobDetailProps {
   actions?: React.ReactNode;
   onBack: () => void;
   backLabel?: string;
+  /** Contenido extra al pie (p. ej. la formación sugerida para el estudiante). */
+  children?: React.ReactNode;
 }
 
-/** Detalle completo de una oferta (contracts/jobs_frontend.md §6 y §7). */
+/** Detalle completo de una oferta (contracts/jobs.md, parte A §6 y §7). */
 export const JobDetail: React.FC<JobDetailProps> = ({
   job,
   actions,
   onBack,
   backLabel = 'Volver',
+  children,
 }) => {
   const wc = job.work_conditions;
   const req = job.requirements;
@@ -157,6 +160,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({
           {job.published_at && `Publicada el ${dateLabel(job.published_at)}`}
           {job.expires_at && ` · Cierra el ${dateLabel(job.expires_at)}`}
         </p>
+        {children}
       </div>
     </article>
   );

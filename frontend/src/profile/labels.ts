@@ -1,4 +1,4 @@
-// Etiquetas es-AR de los enums (contracts/profile_frontend.md §9).
+// Etiquetas es-AR de los enums (contracts/profile.md, parte A §9).
 
 export type Options<T extends string = string> = ReadonlyArray<readonly [T, string]>;
 
@@ -131,7 +131,7 @@ export const STEP_LABEL: Record<string, string> = {
   branding: 'Marca empleadora',
 };
 
-// ---- Empresa (contracts/company_profile_frontend.md §9) ----
+// ---- Empresa (contracts/profile.md, parte B §9) ----
 
 export const COMPANY_SIZE = [
   ['1-10', '1 a 10 empleados'],
@@ -162,7 +162,7 @@ export const COMPANY_LINK_TYPE = [
   ['other', 'Otro'],
 ] as const;
 
-// ---- Búsquedas (contracts/jobs_frontend.md §10) ----
+// ---- Búsquedas (contracts/jobs.md, parte B §10) ----
 
 export const JOB_STATUS = [
   ['active', 'Activa'],

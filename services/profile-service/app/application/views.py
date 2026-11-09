@@ -62,6 +62,9 @@ def service_view(profile: StudentProfile) -> dict[str, Any]:
     # Años de experiencia calculados por reglas (matching-service los usa tal cual).
     months = sum(e.months or 0 for e in profile.experience)
     body["years_experience"] = round(months / 12, 2)
+    # Sólo el permiso de contacto (no el resto de los consentimientos): n8n lo usa para no
+    # mandar mails a quien no los aceptó (WF-02/WF-03, contracts/n8n.md §7).
+    body["contact_by_email"] = profile.consents.contact_by_email
     return body
 
 
@@ -71,6 +74,6 @@ def company_view(profile: StudentProfile) -> dict[str, Any]:
     salary = profile.work_conditions.salary
     if salary is not None and salary.visibility is not SalaryVisibility.PUBLIC:
         body.get("work_conditions", {}).pop("salary", None)
-    for key in ("version", "created_at", "visibility"):
+    for key in ("version", "created_at", "visibility", "contact_by_email"):
         body.pop(key, None)
     return body

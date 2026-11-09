@@ -13,7 +13,7 @@
 | 5 | ~~Admin: configuración de matching~~ ✅ hecho en front 0.4.0 (P-025) | matching ✅ | Media |
 | 6 | Modal "¿Por qué este puntaje?" | matching ✅ | Media |
 | 7 | Perfil público de la empresa desde una oferta | profile ✅ | Media |
-| 8 | Recomendaciones de formación (`mode=training`) | n8n WF-06 ✅ / matching ❓ | Media |
+| 8 | ~~Recomendaciones de formación (`mode=training`)~~ ✅ hecho en front 0.7.0 (P-034) | n8n WF-06 ✅ / matching ✅ (0.2.0) | Media |
 | 9 | Manejo de `401 ACCOUNT_DELETED` | profile/jobs ✅ | Baja |
 | 10 | Deuda técnica de `AGENTS.md` §4.7 | — | Para discutir |
 
@@ -106,7 +106,9 @@
   - El logo se carga directo en un `<img src="/api/v1/profiles/companies/{id}/logo">`, sin token.
 - `CompanyLogo` ya existe y se puede reutilizar.
 
-## 8. Recomendaciones de formación (`mode=training`)
+## 8. Recomendaciones de formación (`mode=training`) · ✅ hecho
+
+> Front 0.7.0: "¿Cómo mejorar para esta oferta?" en "Ofertas para vos" y en el detalle de "Todas las ofertas" (`components/matching/TrainingAdvice.tsx`). Back: matching 0.2.0 (P-033).
 
 **Contrato:** `AGENTS.md` §5 (Training Advisor, `student_recommendations.schema.json`).
 

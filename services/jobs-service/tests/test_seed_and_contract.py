@@ -15,7 +15,6 @@ SERVICE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SERVICE_ROOT.parents[1]
 SEED_PATH = SERVICE_ROOT / "app" / "infrastructure" / "data" / "jobs_seed.json"
 MATCHING_SEED = REPO_ROOT / "services" / "matching-service" / "app" / "data" / "mock" / "jobs.json"
-CONTRACT = REPO_ROOT / "contracts" / "jobs_service.openapi.json"
 NOW = datetime(2026, 11, 5, 12, 0, tzinfo=UTC)
 
 
@@ -63,29 +62,18 @@ def test_seed_is_loaded_only_when_repository_is_empty() -> None:
     assert repository.count() == 12
 
 
-def test_openapi_contract_declares_all_endpoints() -> None:
-    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
-    paths = contract["paths"]
-    assert "/api/v1/jobs" in paths
-    assert "/api/v1/jobs/{job_id}" in paths
-    assert "/api/v1/companies/me/searches" in paths
-    assert {"get", "post"} <= set(paths["/api/v1/jobs"])
-    assert {"get", "patch", "delete"} <= set(paths["/api/v1/jobs/{job_id}"])
-    assert contract["components"]["schemas"]["JobOpportunity"]["required"]
-    assert contract["components"]["schemas"]["JobStatus"]["enum"] == ["active", "closed"]
-
-
-def test_runtime_openapi_matches_contract_paths() -> None:
-    runtime = app.openapi()
-    paths = runtime["paths"]
+def test_openapi_declares_all_endpoints() -> None:
+    """El OpenAPI vivo (/api/v1/jobs/openapi.json) es la fuente de verdad (contracts/jobs.md)."""
+    paths = app.openapi()["paths"]
     assert "/api/v1/jobs" in paths
     assert "/api/v1/jobs/{job_id}" in paths
     assert "/api/v1/companies/me/searches" in paths
     assert "/health" in paths
+    assert {"get", "post"} <= set(paths["/api/v1/jobs"])
+    assert {"get", "patch", "delete"} <= set(paths["/api/v1/jobs/{job_id}"])
 
 
-def test_contract_listing_supports_limit_alias() -> None:
-    contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
-    parameters = contract["paths"]["/api/v1/jobs"]["get"]["parameters"]
+def test_listing_supports_limit_alias() -> None:
+    parameters = app.openapi()["paths"]["/api/v1/jobs"]["get"]["parameters"]
     names = {parameter["name"] for parameter in parameters}
     assert {"status", "page", "size", "limit"} <= names

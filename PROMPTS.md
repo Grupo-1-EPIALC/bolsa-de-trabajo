@@ -45,6 +45,12 @@
 | P-027 | 2026-11-07 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.3.0-auth-flujos` | Desarrollar modal "Mi cuenta" para estudiantes y empresas con cambio de clave y solicitud de cambio de correo | Componente AccountSettingsModal.tsx integrado en SiteHeader.tsx con pestañas para solicitar cambio de contraseña y nuevo email | aceptado |
 | P-028 | 2026-11-07 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.4.0-panel-admin` | Revisar por qué no se ven las opciones de admin en el front, borrar las cuentas e2e de prueba y crear el panel | El front no tenía panel (sólo el aviso "todavía no está disponible"); además auth-service en dev había quedado con el watcher trabado tras los cambios de rama. `AdminArea` con Panel (cuentas activas por rol + config de matching), Cuentas (buscar, filtrar por rol, incluir borradas, detalle, editar email/empresa con CUIT validado, forzar cambio de clave y borrar con confirmación; sin borrar la propia) y Matching (`GET/PATCH /matches/settings`). 46 tests Vitest y E2E en Chromium 9/9 | pendiente de revisión |
 | P-029 | 2026-11-08 | Dario | Gemini (`frontend-agent`) | `feature/v0.5.0-frontend/auth-flujos-panel-admin` | Fusionar localmente el PR del Panel Admin (v0.4.0) con la rama de flujos Auth (v0.3.0), resolviendo conflictos en App.tsx, SiteHeader.tsx y PROMPTS.md, consolidando todo el frontend en la versión v0.5.0 | Fusión completa de AdminArea.tsx con los 3 flujos de autenticación (HU-04, HU-05, HU-06, HU-10), enrutamiento por roles (student, company, admin), resolución manual de marcas de conflicto y sanitización integral del frontend (Prettier, typecheck y tests unitarios en verde) | aceptado |
+| P-030 | 2026-11-08 | Andres | Claude Code (`n8n-agent` + `mcp-agent` + `profile-agent`) | `feature/n8n/v0.4.0-notificaciones`, `feature/mcp/v0.4.0-config-notificaciones` y `feature/profile/v0.4.0-consentimiento-contacto` | Bloque 1 del plan: hacer WF-02 a WF-05 (notificaciones por mail y errores) | WF-02 oferta nueva → candidatos por reglas; WF-03 único que manda mails a estudiantes (resumen al quedar buscable + oferta nueva); WF-04 aviso a empresas sin datos personales; WF-05 error workflow → admin. Responden 202 enseguida, respetan `contact_by_email` (nuevo en la vista de servicio de profile), parámetros en `get_agent_settings.notifications` y reserva atómica de `notification_key` en `bolsa.notifications_sent` (staticData se pisaba con ejecuciones simultáneas). n8n-init crea credenciales SMTP/Postgres y la tabla. E2E 12/12 con Mailpit | pendiente de revisión |
+| P-031 | 2026-11-08 | Andres | Claude Code (`devops-agent` + `auth-agent` + `frontend-agent`) | `feature/infra/v0.2.0-swagger-redoc` | En el panel de admin, links a Swagger UI y ReDoc de cada servicio | FastAPI (profile, jobs, matching) publican `/docs`, `/redoc` y `/openapi.json` bajo `/api/v1/<recurso>/` (pasan por el gateway sin tocar Nginx). auth-service suma `@nestjs/swagger` (plugin que lee los DTOs) y una página de ReDoc. Panel de admin: sección "Documentación de las APIs" con Swagger UI, ReDoc y OpenAPI por servicio. Tests en los 4 servicios y el front; E2E en Chromium: las 8 páginas cargan | pendiente de revisión |
+| P-032 | 2026-11-08 | Andres | Claude Code (`devops-agent`) | `docs/contracts/v1.0.0-contratos-por-servicio` | Antes del PR, mover los contratos a una subcarpeta y dejar en la carpeta principal sólo los finales, uno por servicio | Seis contratos finales en `contracts/` (`auth.md`, `profile.md`, `jobs.md`, `matching.md`, `mcp_tools.md`, `n8n.md`), armados por partes desde los documentos vigentes (sin checklists ni pasos ya hechos) y con el OpenAPI vivo como fuente de verdad. Los anteriores pasan a `contracts/historico/` (con README de equivalencias) y el backlog del front a `docs/frontend/pendientes.md`. 45 archivos con referencias actualizadas; el test de contrato de jobs verifica el OpenAPI vivo | pendiente de revisión |
+| P-033 | 2026-11-08 | Andres | Claude Code (`matching-agent` + `n8n-agent`) | `feature/matching/v0.2.0-pedido-formacion` | Etapa 2 del plan: recomendaciones de formación (`mode=training`) de punta a punta en el back | matching 0.2.0: modo `training` con `profile_id` + `job_id` (pedido, guardado por batch y vista `GET /recommendations/students/{id}/training/{job_id}` con el match por reglas y la formación de IA, separada de las recomendaciones de ofertas). WF-06: el resultado de `training` se guarda por `/recommendations/batch` con el `request_id` (antes iba por `save_recommendation` como `student` y pisaba la recomendación de la oferta), ítems saneados (≤ 5, sin score). Tests UT-MATCH-11; E2E con IA real | pendiente de revisión |
+| P-034 | 2026-11-08 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.7.0-formacion` | Etapa 2 del plan (front): que el estudiante pida "¿Cómo mejorar para esta oferta?" y vea la formación con el badge ámbar | `TrainingAdvice` en cada oferta de "Ofertas para vos" y en el detalle de "Todas las ofertas": muestra las faltantes por reglas, pide la formación (`mode=training`) y sigue el pedido con `useAiAnalysis`; panel "Sugerido por IA" separado del de reglas, hasta 5 ítems priorizados y disclaimer. Front 0.7.0; 50 tests Vitest (UT-FE-TRAIN-01); E2E en Chromium con IA real: 5 ítems sobre las faltantes Docker y Testing | pendiente de revisión |
+| P-035 | 2026-11-08 | Andres | Claude Code (`matching-agent`) | `fix/matching/v0.2.1-company-id-en-snapshot` | Aplicar el fix: el resumen de ofertas de matching no incluye `company_id`, así que "Ofertas para vos" no puede abrir el perfil público de la empresa | matching 0.2.1: `job_snapshot` suma `company_id` (el mismo que jobs-service ya publica en el detalle); contrato `matching.md` (ejemplo y `JobSnapshot`). Test nuevo; 107 tests; verificado en vivo con el perfil público de la empresa | pendiente de revisión |
 
 ---
 
@@ -396,7 +402,111 @@
 * **Archivos afectados:** `frontend/src/App.tsx`, `frontend/src/components/layout/SiteHeader.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-### P-030 — (plantilla)
+### P-030 — Notificaciones por mail en n8n (WF-02 a WF-05)
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`n8n-agent` + `mcp-agent` + `profile-agent`) · **Ramas:** `feature/n8n/v0.4.0-notificaciones`, `feature/mcp/v0.4.0-config-notificaciones`, `feature/profile/v0.4.0-consentimiento-contacto` · **HU:** automatización con n8n (Plan MVP)
+- **Prompt (resumido):**
+  > Armá un plan para completar lo que falta del plan original. Arrancá por el bloque 1: WF-02 a WF-05 (notificaciones y errores).
+- **Resumen de la respuesta:**
+  - **Workflows** (generados en `n8n/generate_workflows.py`):
+    - WF-02 `job.created` → candidatos por reglas (`score ≥ min_score`), se los pasa a WF-03 por `/webhook/student-offer`.
+    - WF-03 es el único que manda mails a estudiantes: resumen al quedar buscable (`profile.updated`) y oferta nueva (desde WF-02); recalcula el puntaje con `POST /matches`. Reenvía el evento a WF-04.
+    - WF-04 avisa al contacto de RR. HH. de cada empresa con el snapshot de matching, sin nombre ni contacto del candidato.
+    - WF-05 es el `errorWorkflow` de todos los demás y avisa a `notifications.admin_email`.
+    - Todos responden `202` enseguida (los servicios esperan 3 s), validan `X-Service-Token` y respetan `contact_by_email`.
+  - **Idempotencia:** primero con `staticData`; el E2E mostró mails repetidos porque las ejecuciones simultáneas se pisan (la última sobrescribe). Se pasó a una reserva atómica: un nodo Postgres inserta la clave en `bolsa.notifications_sent` con `ON CONFLICT DO NOTHING` y sólo sale el mail reservado.
+  - **mcp-tools 0.4.0:** `get_agent_settings` suma `notifications` (`NOTIFY_ENABLED`, `NOTIFY_MIN_SCORE`, `NOTIFY_MAX_PER_EVENT`, `NOTIFY_ADMIN_EMAIL`, `FRONTEND_URL`). UT-MCP-03.
+  - **profile-service 0.4.0:** la vista de servicio incluye `contact_by_email` (sólo ese consentimiento; la vista de empresa no). Tests UT-PROF-05.
+  - **Infra:** `n8n-init` crea las credenciales SMTP (Mailpit; `SMTP_USER`/`SMTP_PASSWORD`/`SMTP_SECURE` opcionales) y Postgres, y la tabla `bolsa.notifications_sent`. Compose suma `N8N_INTERNAL_WEBHOOK_URL`.
+  - **Verificación:** mcp-tools 20 tests (90 % cobertura) y profile-service 103 tests (97 %), ruff/black/mypy limpios. E2E en Docker con Mailpit, 12/12:
+    - resumen al estudiante y aviso a la empresa sin datos personales;
+    - oferta nueva;
+    - repetir el evento o editar el perfil no reenvía;
+    - 6 avisos simultáneos → 1 mail;
+    - sin consentimiento no hay mail;
+    - 401/400;
+    - WF-05 avisa cuando WF-02 falla con matching caído.
+- **Archivos afectados:** `n8n/generate_workflows.py`, `n8n/workflows/*.json`, `n8n/init/bootstrap.sh`, `mcp-tools/app/domain/settings.py`, `mcp-tools/app/infrastructure/settings_env.py`, `mcp-tools/app/tools/registry.py`, `services/profile-service/app/application/views.py`, tests, `docker-compose.yml`, `.env.example`, `contracts/notificaciones_n8n.md` (nuevo), `contracts/profiles_matching.md`, `contracts/jobs_busquedas.md`, `AGENTS.md`, `README.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 1 por n8n/mcp-tools, Integrante 3 por profile).
+
+### P-031 — Swagger UI y ReDoc de cada servicio en el panel de admin
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`devops-agent` + `auth-agent` + `frontend-agent`) · **Rama:** `feature/infra/v0.2.0-swagger-redoc` · **HU:** HU-ADM-01 (panel de admin)
+- **Prompt (resumido):**
+  > En el panel de admin armá links a Swagger UI y ReDoc de cada servicio. (Decisión: sumar `@nestjs/swagger` en auth.)
+- **Resumen de la respuesta:**
+  - **FastAPI** (profile 0.4.1, jobs 0.2.1, matching 0.1.1): `docs_url`, `redoc_url` y `openapi_url` bajo `/api/v1/<recurso>/`, así pasan por el gateway sin rutas nuevas. `/docs` y `/openapi.json` en la raíz dejan de existir. Tests UT-JOBS-04, UT-MATCH-10 y UT-PROF-10.
+  - **auth-service 0.2.0:** dependencia nueva `@nestjs/swagger` 11 (avisar en la daily, AGENTS §2.4) con el plugin del CLI (`classValidatorShim`), que arma los schemas desde los DTOs. Swagger UI en `/api/v1/auth/docs`, ReDoc (página propia, JS del CDN) en `/redoc` y OpenAPI en `/openapi.json`. `@ApiTags` y `@ApiBearerAuth` en los controllers. Test UT-AUTH-13.
+  - **Front 0.6.0:** sección "Documentación de las APIs" en el resumen del panel de admin, con Swagger UI, ReDoc y OpenAPI de auth, profile, jobs y matching (se abren en otra pestaña). mcp-tools y n8n no tienen API REST pública. Test UT-FE-ADM-06.
+  - **Verificación:** auth 44 tests, profile 104, jobs 117, matching 103, front 47; tsc, prettier, ruff y black limpios. Por el gateway, las 12 URLs responden `200`. E2E en Chromium: los 8 links del panel abren Swagger UI/ReDoc con el nombre y la versión de cada servicio. El OpenAPI de auth trae las 15 rutas, con candado en las protegidas.
+- **Archivos afectados:** `services/auth-service/` (`src/docs/`, `main.ts`, controllers, `nest-cli.json`, `package.json`, `package-lock.json`), `services/{profile,jobs,matching}-service/app/main.py`, `pyproject.toml` y `tests/test_api_docs.py`, `frontend/src/admin/apiDocs.ts`, `frontend/src/components/admin/ApiDocsLinks.tsx`, `AdminDashboard.tsx`, `frontend/package*.json`, `README.md`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 1 por auth/gateway, Integrante 4 por el front).
+
+### P-032 — Contratos: uno por servicio y los anteriores al histórico
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`devops-agent`) · **Rama:** `docs/contracts/v1.0.0-contratos-por-servicio` · **HU:** — (documentación)
+- **Prompt (resumido):**
+  > En los contratos, antes de hacer un PR, mové lo que hay a una subcarpeta y dejá en la carpeta principal sólo los contratos finales, uno por servicio. (Decisión: seis contratos: auth, profile, jobs, matching, mcp-tools y n8n; lo transversal repartido.)
+- **Resumen de la respuesta:**
+  - **Contratos finales:** cada uno tiene un encabezado con a quién va dirigido, la versión del servicio, los links a Swagger UI, ReDoc y OpenAPI vivos, y sus partes. Se armaron con un script a partir de las secciones vigentes de cada fuente, sin las que no son contrato (checklists de PR, "cambios necesarios en el front", preguntas para la daily, el prompt del agente de CV).
+    - `auth.md`: API (A), eventos de cuenta (B) y documentación (C).
+    - `profile.md`: estudiante (A), empresa (B), servicios (C), CV con n8n (D), snapshot de empresa como propuesta (E) y anexo con la estructura común.
+    - `jobs.md`: búsquedas (A), guía del front (B) y servicios (C).
+    - `matching.md`: front (A) y endpoints internos + flujo con WF-06 (B).
+    - `mcp_tools.md` y `n8n.md`: nuevos. Herramientas, perfiles y endpoints sacados de mcp-tools en ejecución; workflows, webhooks, payloads, salidas de IA y notificaciones.
+  - **Histórico:** todos los documentos anteriores (md, OpenAPI estáticos, schemas JSON, yaml y pdf) en `contracts/historico/` con `git mv`, más un README de equivalencias. El backlog del front pasa a `docs/frontend/pendientes.md`.
+  - **Referencias:** 45 archivos (código, comentarios, AGENTS, README, compose, plantilla de PR) apuntan al contrato y la parte nuevos. Las secciones de `jobs_frontend.md`, con otra numeración, se mapearon a mano. AGENTS §2.1 regla 6 explica la estructura. PROMPTS no se reescribe (es historial).
+  - **Tests:** el test de jobs que leía `jobs_service.openapi.json` ahora verifica el OpenAPI vivo. Resumen de `GET /profiles/companies/me` corregido (ya no menciona búsquedas).
+  - **Verificación:** 0 links rotos en los contratos nuevos; jobs 116, matching 103, profile 104, auth 44 y front 47 tests; ruff, black, prettier y tsc limpios; los workflows regenerados no cambian.
+- **Archivos afectados:** `contracts/*.md` (nuevos), `contracts/historico/**` (movidos), `docs/frontend/pendientes.md`, `AGENTS.md`, `README.md`, `.github/pull_request_template.md`, `docker-compose.yml`, comentarios en `frontend/src`, `services/*`, `n8n/generate_workflows.py`, `services/jobs-service/tests/test_seed_and_contract.py`, `services/profile-service/app/api/routes_companies.py`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (todo el equipo: cada dueño revisa el contrato de su servicio).
+
+### P-033 — Recomendaciones de formación (`mode=training`) en el back
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`matching-agent` + `n8n-agent`) · **Rama:** `feature/matching/v0.2.0-pedido-formacion` · **HU:** recomendaciones de IA para el estudiante (Plan MVP)
+- **Prompt (resumido):**
+  > Integrá todo localmente en `dev-tmp` y avanzá con la etapa 2 del plan (recomendaciones de formación).
+- **Resumen de la respuesta:**
+  - **Diagnóstico:** WF-06 ya tenía la rama `training`, pero:
+    - matching no la podía pedir;
+    - guardaba con `save_recommendation` sin `mode`, como `student`, y pisaba la recomendación de Jean Grey para la misma oferta;
+    - no guardaba el `request_id`.
+  - **matching-service 0.2.0:**
+    - `RecommendationMode.TRAINING` y `RecommendationRequest.job_id`;
+    - `POST /recommendations/requests` con `{mode: "training", profile_id, job_id}`: sólo el dueño, admin o servicio (empresa → `403`, ajeno → `404`, sin oferta → `422`);
+    - el disparador a n8n manda `profile_id` + `job_id` y `limit: 1`; `save_batch` acepta `training`;
+    - vista `GET /recommendations/students/{profile_id}/training/{job_id}` con el match por reglas (score y faltantes) y el bloque de IA (`status`, `items`, `model`, `disclaimer`);
+    - los repositorios ya separaban por modo, así que la formación no aparece en "Ofertas para vos".
+  - **WF-06:** el contexto de `training` lleva `request_id` y `subject_id`; el resultado se guarda por `/recommendations/batch` (`mode=training`) con ítems saneados (≤ 5, `type`/`skill`/`text`/`priority`, sin score).
+  - **Verificación:** 106 tests en matching (UT-MATCH-11 nuevo, 97,6 % de cobertura), ruff, black y mypy limpios. E2E en Docker con IA real (stu-001 / job-002): pedido `completed` en 15 s; reglas 51,67 con faltantes React, TypeScript y Node.js; la IA devolvió 5 ítems priorizados sobre esas faltantes.
+- **Archivos afectados:** `services/matching-service/app/` (`domain/recommendations.py`, `domain/ports.py`, `application/recommendation_service.py`, `application/access_policy.py`, `api/routes.py`, `infrastructure/n8n_trigger.py`, `infrastructure/repositories_memory.py`, `main.py`), `pyproject.toml`, tests, `n8n/generate_workflows.py`, `n8n/workflows/WF-06-recomendador.json`, `contracts/matching.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 3).
+
+### P-034 — "¿Cómo mejorar para esta oferta?" en el front
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`frontend-agent`) · **Rama:** `feature/frontend/v0.7.0-formacion` · **HU:** recomendaciones de IA para el estudiante (Plan MVP)
+- **Prompt (resumido):**
+  > Avanzá con la etapa 2 (formación): que el estudiante la pida desde una oferta y vea los ítems con el badge "Sugerido por IA".
+- **Resumen de la respuesta:**
+  - **Tipos y servicio:** `TrainingItem` y `TrainingView`; `matchingService.getTraining` y `requestTraining`; `RecommendationRequest.mode` suma `training`.
+  - **Componente `TrainingAdvice`:**
+    - se despliega con "¿Cómo mejorar para esta oferta?" y muestra las competencias que faltan según el motor de reglas;
+    - pide la formación y sigue el pedido con `useAiAnalysis`;
+    - lista hasta 5 ítems de prioridad alta a baja (Curso, Proyecto, Consejo para tu perfil) en un panel ámbar "Sugerido por IA" con el disclaimer, separado del panel de reglas (AGENTS §2.2).
+  - **Dónde:** en cada oferta de "Ofertas para vos" y en el detalle de "Todas las ofertas" (`JobBoard` recibe el `profileId`; `JobDetail` acepta contenido al pie). Lógica de presentación en `src/matching/training.ts`.
+  - **Verificación:** 50 tests Vitest (UT-FE-TRAIN-01 nuevo), tsc y prettier limpios. E2E en Chromium con un estudiante ficticio e IA real: el panel muestra las faltantes (Docker, Testing), el pedido devuelve 5 ítems y el detalle de "Todas las ofertas" también ofrece la formación. Nota: en `dev`, "Todas las ofertas" sólo se abre desde el footer (el menú del estudiante no la tiene desde la 0.5.0).
+- **Archivos afectados:** `frontend/src/components/matching/TrainingAdvice.tsx`, `JobRecommendations.tsx`, `frontend/src/components/jobs/JobBoard.tsx`, `JobDetail.tsx`, `frontend/src/pages/StudentArea.tsx`, `frontend/src/matching/training.ts` (+ test), `frontend/src/services/matchingService.ts`, `frontend/src/types/matching.ts`, `frontend/package*.json`, `docs/frontend/pendientes.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 4).
+
+### P-035 — `company_id` en el resumen de ofertas de matching
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`matching-agent`) · **Rama:** `fix/matching/v0.2.1-company-id-en-snapshot` · **HU:** perfil público de la empresa desde una oferta (etapa 3, ítem 2)
+- **Prompt (resumido):**
+  > Aplicá este fix y subilo como un PR individual: el resumen de ofertas de matching no incluye `company_id`, así que "Ofertas para vos" necesita sumarlo en matching o pedir el detalle a jobs.
+- **Resumen de la respuesta:**
+  - Se suma en matching (más simple que un pedido extra a jobs por oferta): `job_snapshot` incluye `company_id`. Llega en "Ofertas para vos" y en la vista de candidatos.
+  - No expone nada nuevo: jobs-service ya publica `company_id` en el detalle de cada oferta.
+  - matching-service 0.2.1; `contracts/matching.md` actualizado (ejemplo y `JobSnapshot`).
+  - **Verificación:** test nuevo (`company_id` de cada ítem = el de la oferta); 107 tests, ruff, black y mypy limpios. En vivo, `stu-001` → `job-004` trae `company_id` y con él `GET /profiles/companies/{company_id}` devuelve el perfil público de la empresa.
+  - **PR individual** sobre la rama de #34 (matching 0.2.0) para que el diff muestre sólo este cambio; cuando #34 se mergee, se cambia la base a `dev`.
+- **Archivos afectados:** `services/matching-service/app/application/serializers.py`, `app/main.py`, `pyproject.toml`, `tests/test_services.py`, `contracts/matching.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 3).
+
+### P-036 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

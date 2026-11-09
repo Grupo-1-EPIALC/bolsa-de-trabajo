@@ -188,3 +188,70 @@ def test_not_requested_status(container: Container) -> None:
     view = container.recommendations.student_view("stu-003")
     assert view["ai_recommendations"]["status"] == "not_requested"
     assert view["ai_recommendations"]["items"] == []
+
+
+# ---------------------------------------------------- UT-MATCH-11 · formación ---
+
+
+def test_ut_match_11_training_flow(container: Container, trigger: FakeTrigger) -> None:
+    def persist(request_id: str, mode: str, subject_id: str) -> None:
+        items = [
+            {"type": "course", "skill": "Docker", "text": "Curso ficticio", "priority": "alta"},
+            {
+                "type": "project",
+                "skill": "Docker",
+                "text": "Proyecto",
+                "priority": "media",
+                "score": 99,
+            },
+        ] * 4  # 8 ítems: se guardan como mucho 5
+        container.recommendations.save_batch(
+            ai_batch(mode, subject_id, [{"job_id": "job-001", "items": items}], request_id)
+        )
+
+    trigger.on_call = persist
+    request = container.recommendations.request_analysis("training", "stu-001", "job-001")
+    assert request.job_id == "job-001"
+    done = container.recommendations.run_analysis(request.id)
+    assert done.status is RequestStatus.COMPLETED
+    assert trigger.calls[0] == {
+        "request_id": request.id,
+        "mode": "training",
+        "subject_id": "stu-001",
+        "limit": 1,
+        "job_id": "job-001",
+    }
+
+    view = container.recommendations.training_view("stu-001", "job-001")
+    assert view["rule_based"]["origin"] == "RULES"
+    assert "missing_skills" in view["rule_based"]
+    ai = view["ai_recommendations"]
+    assert ai["origin"] == "AI" and ai["status"] == "ready" and ai["request_id"] == request.id
+    assert len(ai["items"]) == 5
+    assert all("score" not in item for item in ai["items"])
+    # La formación no se mezcla con las recomendaciones de ofertas (mode=student).
+    student = container.recommendations.student_view("stu-001")
+    assert student["ai_recommendations"]["items"] == []
+    # Otra oferta: todavía no se pidió.
+    other = container.recommendations.training_view("stu-001", "job-002")
+    assert other["ai_recommendations"]["status"] == "not_requested"
+    assert other["ai_recommendations"]["items"] == []
+
+
+def test_training_requires_job_and_existing_ids(container: Container) -> None:
+    with pytest.raises(InvalidInputError, match="job_id es obligatorio"):
+        container.recommendations.request_analysis("training", "stu-001")
+    with pytest.raises(NotFoundError):
+        container.recommendations.request_analysis("training", "stu-001", "job-999")
+    with pytest.raises(NotFoundError):
+        container.recommendations.request_analysis("training", "stu-999", "job-001")
+
+
+def test_job_snapshot_includes_company_id(container: Container) -> None:
+    """El front abre el perfil público de la empresa desde "Ofertas para vos"."""
+    items = container.recommendations.student_view("stu-001")["rule_based"]["items"]
+    assert items
+    for item in items:
+        job = container.matching.load_job(item["job"]["job_id"])
+        assert job.company_id
+        assert item["job"]["company_id"] == job.company_id

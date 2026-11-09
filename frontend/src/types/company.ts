@@ -1,4 +1,4 @@
-// Perfil de empresa según contracts/company_profile_frontend.md (profile-service v0.2.0).
+// Perfil de empresa según contracts/profile.md, parte B (profile-service v0.2.0).
 import type { Completion, Location, WorkModality } from './profile';
 
 export type CompanySize = '1-10' | '11-50' | '51-200' | '201-1000' | '1000+';

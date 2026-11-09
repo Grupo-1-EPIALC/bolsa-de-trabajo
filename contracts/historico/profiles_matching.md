@@ -65,6 +65,7 @@
 | **`years_experience`** | **Nuevo, calculado por reglas**: suma de `experience[].months` / 12. matching lo usa directo (campo `explicit_years` del mapper) |
 | `academic_status.career / current_year / progress_percent / student_shift` | `AcademicStatus` |
 | `target.roles` | `target_roles` |
+| **`contact_by_email`** | **Nuevo (v0.4.0).** `true` si el estudiante aceptó recibir mails. matching no lo usa; n8n (WF-02/WF-03) no le manda mails a quien tenga `false` |
 
 ### Garantías
 
@@ -78,7 +79,7 @@
 
 ### Lo que la vista de servicio **no** incluye (minimización de datos)
 
-`personal.phone`, `personal.birth_year`, `inclusion` (datos de discapacidad: nunca a IA), `consents`, `cv_files` y `cv_suggestions`. `personal.email` **sí** viaja, para las notificaciones de WF-02/WF-03.
+`personal.phone`, `personal.birth_year`, `inclusion` (datos de discapacidad: nunca a IA), `consents` (salvo el permiso `contact_by_email`, que viaja aparte), `cv_files` y `cv_suggestions`. `personal.email` **sí** viaja, para las notificaciones de WF-02/WF-03.
 
 > **mcp-tools / n8n:** `get_profile` devuelve esta vista. Antes de mandarla a un prompt, quitar `personal.name`, `personal.email` y los montos de `salary` si `visibility = "hidden"`, como ya hace WF-06 en el contexto de `match_advisor`.
 
@@ -100,7 +101,7 @@ MATCHING_USE_MOCKS=true docker compose up -d matching-service
 
 ---
 
-## 6. Evento `profile.updated` (pendiente en n8n)
+## 6. Evento `profile.updated` (lo consume WF-03)
 
 Después de cada alta o `PATCH`, profile-service hace un **POST best-effort** a n8n:
 
@@ -118,8 +119,9 @@ Después de cada alta o `PATCH`, profile-service hace un **POST best-effort** a 
 }
 ```
 
-- **Hoy no existe ese webhook en n8n**: profile-service registra un warning y sigue. Falta crear el disparador en WF-03 (Match Notifier) para recalcular o notificar cuando `searchable = true`.
-- Para idempotencia, usar `profile_id + version` como `notification_key`.
+- Lo recibe **WF-03** (responde `202` enseguida). Si `searchable = true`, le manda al estudiante un resumen de las ofertas compatibles por reglas (sólo con `contact_by_email = true`) y reenvía el evento a **WF-04**, que avisa a las empresas sin datos personales. Detalle en [`notificaciones_n8n.md`](notificaciones_n8n.md).
+- Si n8n no responde, profile-service registra un warning y sigue (best-effort).
+- Idempotencia: una clave por oferta avisada (`profile:{id}|job:{job_id}`), reservada en `bolsa.notifications_sent`. Editar el perfil no repite ofertas ya avisadas.
 
 ---
 

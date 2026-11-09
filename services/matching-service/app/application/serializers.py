@@ -166,6 +166,8 @@ def job_snapshot(job: JobOpportunity) -> JsonDict:
     return {
         "job_id": job.id,
         "title": job.title,
+        # Para abrir el perfil público de la empresa (GET /profiles/companies/{company_id}).
+        "company_id": job.company_id,
         "company_name": job.company_name,
         "seniority": job.seniority,
         "location": {

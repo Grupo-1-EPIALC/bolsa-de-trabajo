@@ -19,7 +19,7 @@ const firstPending = (p: CompanyProfile): CompanyStep | null =>
   p.completion.steps.find((s) => !s.complete)?.step ?? null;
 
 /**
- * Área de la empresa (contracts/company_profile_frontend.md §2):
+ * Área de la empresa (contracts/profile.md, parte B §2):
  * sin perfil → alta precargada · borrador → formulario en el paso pendiente ·
  * completo → panel con el perfil y las búsquedas activas.
  */

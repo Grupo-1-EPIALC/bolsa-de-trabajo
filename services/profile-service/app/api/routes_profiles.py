@@ -1,5 +1,5 @@
 """Endpoints REST del perfil (`/api/v1/profiles`). Controllers delgados: la lógica está en
-`ProfileService`. Contrato para el front: `contracts/profile_frontend.md`.
+`ProfileService`. Contrato para el front: `contracts/profile.md` (parte A).
 """
 
 from typing import Annotated, Any
