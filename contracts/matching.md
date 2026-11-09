@@ -1,7 +1,7 @@
 # Contrato · matching-service
 
 > **Para:** el frontend (recomendaciones y score), n8n (WF-06), mcp-tools y el panel de admin.
-> **Servicio:** `matching-service` 0.2.0 (FastAPI) · base `/api/v1/matches` · motor `engine_version` 1.0.0.
+> **Servicio:** `matching-service` 0.2.1 (FastAPI) · base `/api/v1/matches` · motor `engine_version` 1.0.0.
 > **Fuente de verdad viva:** [Swagger UI](/api/v1/matches/docs) · [ReDoc](/api/v1/matches/redoc) · [OpenAPI](/api/v1/matches/openapi.json) (por el gateway, en dev `http://localhost:8080`).
 > **Partes:** A. Recomendaciones y score (front) · B. Endpoints internos y flujo con n8n. Los `§` de cada parte se refieren a esa parte.
 > Los documentos de los que sale este contrato están en [`historico/`](historico/). Todos los ejemplos usan datos ficticios.
@@ -121,6 +121,7 @@ Reglas para la UI:
         "job": {
           "job_id": "job-004",
           "title": "Desarrollador/a Python Trainee (remoto)",
+          "company_id": "22222222-2222-4222-8222-000000000004",
           "company_name": "Nube Austral S.A.",
           "seniority": "trainee",
           "location": { "city": "Buenos Aires", "province": "CABA", "country": "AR" },
@@ -505,6 +506,8 @@ export interface Match {
 
 export interface JobSnapshot {
   job_id: string; title: string; company_name: string; seniority: string;
+  /** Desde matching 0.2.1: abre el perfil público con GET /api/v1/profiles/companies/{company_id}. */
+  company_id: string;
   location: { city: string; province: string; country: string };
   requirements: Record<string, unknown>;
   work_conditions: Record<string, unknown>;
