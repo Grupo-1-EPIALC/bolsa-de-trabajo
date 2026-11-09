@@ -11,8 +11,8 @@
 | 3 | ~~"Mi cuenta": cambiar clave y email~~ | ✅ Hecho en PR v0.5.0 (P-027) | Alta |
 | 4 | ~~Panel de administración de cuentas~~ ✅ hecho en front 0.4.0 (P-025) | auth ✅ | Alta (fase 2) |
 | 5 | ~~Admin: configuración de matching~~ ✅ hecho en front 0.4.0 (P-025) | matching ✅ | Media |
-| 6 | Modal "¿Por qué este puntaje?" | matching ✅ | Media |
-| 7 | Perfil público de la empresa desde una oferta | profile ✅ | Media |
+| 6 | ~~Modal "¿Por qué este puntaje?"~~ | ✅ hecho en front 0.8.0 (P-036) | Media |
+| 7 | ~~Perfil público de la empresa desde una oferta~~ | ✅ hecho en front 0.8.0 (P-037) | Media |
 | 8 | ~~Recomendaciones de formación (`mode=training`)~~ ✅ hecho en front 0.7.0 (P-034) | n8n WF-06 ✅ / matching ✅ (0.2.0) | Media |
 | 9 | Manejo de `401 ACCOUNT_DELETED` | profile/jobs ✅ | Baja |
 | 10 | Deuda técnica de `AGENTS.md` §4.7 | — | Para discutir |
