@@ -48,6 +48,7 @@
 | P-030 | 2026-11-08 | Andres | Claude Code (`n8n-agent` + `mcp-agent` + `profile-agent`) | `feature/n8n/v0.4.0-notificaciones`, `feature/mcp/v0.4.0-config-notificaciones` y `feature/profile/v0.4.0-consentimiento-contacto` | Bloque 1 del plan: hacer WF-02 a WF-05 (notificaciones por mail y errores) | WF-02 oferta nueva → candidatos por reglas; WF-03 único que manda mails a estudiantes (resumen al quedar buscable + oferta nueva); WF-04 aviso a empresas sin datos personales; WF-05 error workflow → admin. Responden 202 enseguida, respetan `contact_by_email` (nuevo en la vista de servicio de profile), parámetros en `get_agent_settings.notifications` y reserva atómica de `notification_key` en `bolsa.notifications_sent` (staticData se pisaba con ejecuciones simultáneas). n8n-init crea credenciales SMTP/Postgres y la tabla. E2E 12/12 con Mailpit | pendiente de revisión |
 | P-031 | 2026-11-08 | Andres | Claude Code (`devops-agent` + `auth-agent` + `frontend-agent`) | `feature/infra/v0.2.0-swagger-redoc` | En el panel de admin, links a Swagger UI y ReDoc de cada servicio | FastAPI (profile, jobs, matching) publican `/docs`, `/redoc` y `/openapi.json` bajo `/api/v1/<recurso>/` (pasan por el gateway sin tocar Nginx). auth-service suma `@nestjs/swagger` (plugin que lee los DTOs) y una página de ReDoc. Panel de admin: sección "Documentación de las APIs" con Swagger UI, ReDoc y OpenAPI por servicio. Tests en los 4 servicios y el front; E2E en Chromium: las 8 páginas cargan | pendiente de revisión |
 | P-032 | 2026-11-08 | Andres | Claude Code (`devops-agent`) | `docs/contracts/v1.0.0-contratos-por-servicio` | Antes del PR, mover los contratos a una subcarpeta y dejar en la carpeta principal sólo los finales, uno por servicio | Seis contratos finales en `contracts/` (`auth.md`, `profile.md`, `jobs.md`, `matching.md`, `mcp_tools.md`, `n8n.md`), armados por partes desde los documentos vigentes (sin checklists ni pasos ya hechos) y con el OpenAPI vivo como fuente de verdad. Los anteriores pasan a `contracts/historico/` (con README de equivalencias) y el backlog del front a `docs/frontend/pendientes.md`. 45 archivos con referencias actualizadas; el test de contrato de jobs verifica el OpenAPI vivo | pendiente de revisión |
+| P-033 | 2026-11-08 | Andres | Claude Code (`matching-agent` + `n8n-agent`) | `feature/matching/v0.2.0-pedido-formacion` | Etapa 2 del plan: recomendaciones de formación (`mode=training`) de punta a punta en el back | matching 0.2.0: modo `training` con `profile_id` + `job_id` (pedido, guardado por batch y vista `GET /recommendations/students/{id}/training/{job_id}` con el match por reglas y la formación de IA, separada de las recomendaciones de ofertas). WF-06: el resultado de `training` se guarda por `/recommendations/batch` con el `request_id` (antes iba por `save_recommendation` como `student` y pisaba la recomendación de la oferta), ítems saneados (≤ 5, sin score). Tests UT-MATCH-11; E2E con IA real | pendiente de revisión |
 
 ---
 
@@ -455,7 +456,27 @@
 - **Archivos afectados:** `contracts/*.md` (nuevos), `contracts/historico/**` (movidos), `docs/frontend/pendientes.md`, `AGENTS.md`, `README.md`, `.github/pull_request_template.md`, `docker-compose.yml`, comentarios en `frontend/src`, `services/*`, `n8n/generate_workflows.py`, `services/jobs-service/tests/test_seed_and_contract.py`, `services/profile-service/app/api/routes_companies.py`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (todo el equipo: cada dueño revisa el contrato de su servicio).
 
-### P-033 — (plantilla)
+### P-033 — Recomendaciones de formación (`mode=training`) en el back
+- **Fecha:** 2026-11-08 · **Autor:** Andres · **Agente:** Claude Code (`matching-agent` + `n8n-agent`) · **Rama:** `feature/matching/v0.2.0-pedido-formacion` · **HU:** recomendaciones de IA para el estudiante (Plan MVP)
+- **Prompt (resumido):**
+  > Integrá todo localmente en `dev-tmp` y avanzá con la etapa 2 del plan (recomendaciones de formación).
+- **Resumen de la respuesta:**
+  - **Diagnóstico:** WF-06 ya tenía la rama `training`, pero:
+    - matching no la podía pedir;
+    - guardaba con `save_recommendation` sin `mode`, como `student`, y pisaba la recomendación de Jean Grey para la misma oferta;
+    - no guardaba el `request_id`.
+  - **matching-service 0.2.0:**
+    - `RecommendationMode.TRAINING` y `RecommendationRequest.job_id`;
+    - `POST /recommendations/requests` con `{mode: "training", profile_id, job_id}`: sólo el dueño, admin o servicio (empresa → `403`, ajeno → `404`, sin oferta → `422`);
+    - el disparador a n8n manda `profile_id` + `job_id` y `limit: 1`; `save_batch` acepta `training`;
+    - vista `GET /recommendations/students/{profile_id}/training/{job_id}` con el match por reglas (score y faltantes) y el bloque de IA (`status`, `items`, `model`, `disclaimer`);
+    - los repositorios ya separaban por modo, así que la formación no aparece en "Ofertas para vos".
+  - **WF-06:** el contexto de `training` lleva `request_id` y `subject_id`; el resultado se guarda por `/recommendations/batch` (`mode=training`) con ítems saneados (≤ 5, `type`/`skill`/`text`/`priority`, sin score).
+  - **Verificación:** 106 tests en matching (UT-MATCH-11 nuevo, 97,6 % de cobertura), ruff, black y mypy limpios. E2E en Docker con IA real (stu-001 / job-002): pedido `completed` en 15 s; reglas 51,67 con faltantes React, TypeScript y Node.js; la IA devolvió 5 ítems priorizados sobre esas faltantes.
+- **Archivos afectados:** `services/matching-service/app/` (`domain/recommendations.py`, `domain/ports.py`, `application/recommendation_service.py`, `application/access_policy.py`, `api/routes.py`, `infrastructure/n8n_trigger.py`, `infrastructure/repositories_memory.py`, `main.py`), `pyproject.toml`, tests, `n8n/generate_workflows.py`, `n8n/workflows/WF-06-recomendador.json`, `contracts/matching.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** pendiente de revisión (Integrante 3).
+
+### P-034 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

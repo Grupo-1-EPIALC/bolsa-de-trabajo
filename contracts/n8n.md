@@ -54,7 +54,7 @@ También se acepta `X-Webhook-Token` con `N8N_WEBHOOK_TOKEN`. Sin token válido:
 
 - `mode=student` (`profile_id`): ranking con `rank_jobs_for_student` y agente `match_advisor` (`perfil=postulante`).
 - `mode=company` (`job_id`): ranking con `rank_candidates_for_job` y `match_advisor` (`perfil=empresa`).
-- `mode=training`: formación con `training_advisor` (`perfil=postulante`). Todavía no se puede pedir desde matching-service.
+- `mode=training` (`profile_id` + `job_id`): formación con `training_advisor` (`perfil=postulante`) sobre `compute_match` + `missing_skills` + `search_courses`. Lo pide el estudiante desde matching-service. Se guarda con `mode=training` en `/recommendations/batch` (hasta 5 ítems `{type, skill, text, priority}`, sin score) ([`matching.md`](matching.md), parte B §B.2).
 - El resultado se guarda con `POST /api/v1/matches/recommendations/batch`, separando `rule_based` (`origin: "RULES"`) de `ai_recommendations` (`origin: "AI"`, `model`, `generated_at`, `prompt_version`, `disclaimer`). Nunca se devuelve un score propio ([`matching.md`](matching.md), parte B).
 
 ## 5. Salidas de IA y verificación

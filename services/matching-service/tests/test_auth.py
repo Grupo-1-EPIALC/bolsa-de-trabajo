@@ -209,6 +209,44 @@ def test_analysis_request_ownership(client: TestClient) -> None:
     assert missing_subject.status_code == 422
 
 
+def test_training_request_and_view_by_role(client: TestClient) -> None:
+    student = bearer(STUDENT_001, "student")
+    body = {"mode": "training", "profile_id": "stu-001", "job_id": "job-001"}
+    created = client.post("/api/v1/matches/recommendations/requests", json=body, headers=student)
+    assert created.status_code == 202
+    assert created.json()["mode"] == "training" and created.json()["job_id"] == "job-001"
+
+    as_company = client.post(
+        "/api/v1/matches/recommendations/requests",
+        json=body,
+        headers=bearer(COMPANY_001, "company"),
+    )
+    assert as_company.status_code == 403
+    foreign = client.post(
+        "/api/v1/matches/recommendations/requests",
+        json={**body, "profile_id": "stu-002"},
+        headers=student,
+    )
+    assert foreign.status_code == 404
+    no_job = client.post(
+        "/api/v1/matches/recommendations/requests",
+        json={"mode": "training", "profile_id": "stu-001"},
+        headers=student,
+    )
+    assert no_job.status_code == 422
+
+    path = "/api/v1/matches/recommendations/students/{}/training/job-001"
+    own = client.get(path.format("stu-001"), headers=student)
+    assert own.status_code == 200
+    assert own.json()["rule_based"]["origin"] == "RULES"
+    assert own.json()["ai_recommendations"]["origin"] == "AI"
+    assert client.get(path.format("stu-002"), headers=student).status_code == 404
+    assert (
+        client.get(path.format("stu-001"), headers=bearer(COMPANY_001, "company")).status_code
+        == 403
+    )
+
+
 # ------------------------------------------------------------- JWKS real ---
 
 

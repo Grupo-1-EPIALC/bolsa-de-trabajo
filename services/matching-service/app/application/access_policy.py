@@ -54,7 +54,7 @@ class AccessPolicy:
         raise _hidden("Oferta", job_id)
 
     def subject(self, principal: Principal, mode: object, subject_id: str) -> None:
-        """Valida el acceso al sujeto de un pedido de análisis (`student` o `company`)."""
+        """Valida el acceso al sujeto de un pedido de análisis (student, training o company)."""
         if str(mode) == RecommendationMode.COMPANY.value:
             self.company_job(principal, subject_id)
         else:

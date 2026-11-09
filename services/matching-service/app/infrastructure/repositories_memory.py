@@ -41,6 +41,10 @@ class InMemoryRecommendationRepository:
     def latest_for_job(self, job_id: str) -> list[AiRecommendation]:
         return self._latest(RecommendationMode.COMPANY, "job_id", job_id, "profile_id")
 
+    def latest_training(self, profile_id: str, job_id: str) -> AiRecommendation | None:
+        by_job = self._latest(RecommendationMode.TRAINING, "profile_id", profile_id, "job_id")
+        return next((r for r in by_job if r.job_id == job_id), None)
+
     def all(self) -> list[AiRecommendation]:
         with self._lock:
             return list(self._items)
@@ -63,11 +67,14 @@ class InMemoryRecommendationRequestRepository:
         with self._lock:
             return self._items.get(request_id)
 
-    def latest_for(self, mode: str, subject_id: str) -> RecommendationRequest | None:
+    def latest_for(
+        self, mode: str, subject_id: str, job_id: str = ""
+    ) -> RecommendationRequest | None:
         with self._lock:
             for request_id in reversed(self._order):
                 req = self._items[request_id]
-                if req.mode.value == mode and req.subject_id == subject_id:
+                same_subject = req.mode.value == mode and req.subject_id == subject_id
+                if same_subject and (not job_id or req.job_id == job_id):
                     return req
         return None
 
