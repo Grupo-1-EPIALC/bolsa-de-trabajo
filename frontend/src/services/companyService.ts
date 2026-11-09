@@ -24,6 +24,14 @@ export const companyService = {
     }
   },
 
+  /**
+   * GET /profiles/companies/{company_id}
+   * Devuelve el perfil público de la empresa para ser consultado desde las ofertas de empleo.
+   */
+  getPublicProfile(companyId: string): Promise<CompanyProfile> {
+    return apiFetch<CompanyProfile>(`/profiles/companies/${encodeURIComponent(companyId)}`);
+  },
+
   /** POST /profiles/companies/me · se precarga con razón social, actividad y email. */
   create(sections: CompanySections = {}): Promise<CompanyProfile> {
     return apiFetch<CompanyProfile>('/profiles/companies/me', {

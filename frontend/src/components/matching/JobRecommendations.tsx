@@ -5,6 +5,7 @@ import { WORK_MODALITY, labelOf } from '../../profile/labels';
 import { PRIORITY_CLASS, RuleMatch } from './RuleMatch';
 import { useAiAnalysis } from './useAiAnalysis';
 import { TrainingAdvice } from './TrainingAdvice';
+import { CompanyPublicProfileModal } from '../company/CompanyPublicProfileModal';
 import type {
   StudentAIItem,
   StudentRecommendationsView,
@@ -79,6 +80,11 @@ const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem; profileId: 
   const { job } = item;
   const place = [job.location?.city, job.location?.province].filter(Boolean).join(', ');
   const modality = job.work_conditions?.work_modality ?? [];
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
+
+  // Extraemos el company_id garantizando un string válido si viene en la respuesta
+  const companyId = job.company_id || (job as any).companyId;
+
   return (
     <article className="card card-elevated">
       <div className="card-body p-4">
@@ -89,7 +95,19 @@ const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem; profileId: 
           <div>
             <h3 className="h5 fw-bold mb-1">{job.title}</h3>
             <p className="small mb-0">
-              {job.company_name && <strong className="me-2">{job.company_name}</strong>}
+              {job.company_name && companyId ? (
+                <button
+                  type="button"
+                  className="btn btn-link p-0 fw-bold me-2 text-decoration-none"
+                  onClick={() => setShowCompanyModal(true)}
+                  title="Ver perfil de la empresa"
+                >
+                  <i className="bi bi-building me-1" aria-hidden="true" />
+                  {job.company_name}
+                </button>
+              ) : (
+                job.company_name && <strong className="me-2">{job.company_name}</strong>
+              )}
               {place && (
                 <span className="me-2">
                   <i className="bi bi-geo-alt me-1" aria-hidden="true" />
@@ -107,9 +125,10 @@ const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem; profileId: 
             </p>
           </div>
         </div>
+
         <div className="row g-3">
           <div className={ai ? 'col-lg-6' : 'col-12'}>
-            <RuleMatch match={item.match} />
+            <RuleMatch match={item.match} jobTitle={job.title} companyName={job.company_name} />
           </div>
           {ai && (
             <div className="col-lg-6">
@@ -119,6 +138,15 @@ const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem; profileId: 
         </div>
         <TrainingAdvice profileId={profileId} jobId={job.job_id} />
       </div>
+
+      {/* Renderizado seguro del Modal Emergente */}
+      {showCompanyModal && companyId && (
+        <CompanyPublicProfileModal
+          companyId={companyId}
+          companyNameFallback={job.company_name}
+          onClose={() => setShowCompanyModal(false)}
+        />
+      )}
     </article>
   );
 };
