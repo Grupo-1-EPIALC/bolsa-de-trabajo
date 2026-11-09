@@ -70,6 +70,7 @@ export interface JobSnapshot {
   job_id: string;
   title: string;
   company_name?: string;
+  company_id?: string;
   seniority?: string;
   location?: Partial<Location>;
   work_conditions?: WorkConditions;

@@ -6,9 +6,9 @@
 
 | # | Qué | Backend | Prioridad |
 |---|---|---|---|
-| 1 | ~~Recuperar clave (pedir mail + pantalla del link)~~ | ✅ Hecho en PR v0.5.0 | Alta |
-| 2 | ~~Confirmar cambio de email (pantalla del link)~~ | ✅ Hecho en PR v0.5.0 | Alta |
-| 3 | ~~"Mi cuenta": cambiar clave y email~~ | ✅ Hecho en PR v0.5.0 | Alta |
+| 1 | ~~Recuperar clave (pedir mail + pantalla del link)~~ | ✅ Hecho en PR v0.5.0 (P-025) | Alta |
+| 2 | ~~Confirmar cambio de email (pantalla del link)~~ | ✅ Hecho en PR v0.5.0 (P-026) | Alta |
+| 3 | ~~"Mi cuenta": cambiar clave y email~~ | ✅ Hecho en PR v0.5.0 (P-027) | Alta |
 | 4 | ~~Panel de administración de cuentas~~ ✅ hecho en front 0.4.0 (P-025) | auth ✅ | Alta (fase 2) |
 | 5 | ~~Admin: configuración de matching~~ ✅ hecho en front 0.4.0 (P-025) | matching ✅ | Media |
 | 6 | Modal "¿Por qué este puntaje?" | matching ✅ | Media |

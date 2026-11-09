@@ -93,14 +93,20 @@ export const CompanyPublicProfileModal: React.FC<CompanyPublicProfileModalProps>
 
             {!loading && !error && company && (
               <div className="d-grid gap-4">
-                {/* Cabecera de Marca Empleadora */}
+                {/* Cabecera con Marca Empleadora */}
                 <div className="d-flex gap-3 align-items-center bg-light p-3 rounded-3">
-                  <CompanyLogo name={company.display_name || company.name || companyNameFallback || ''} url={company.logo_url} size={72} />
+                  <CompanyLogo
+                    name={company.display_name || company.name || companyNameFallback || ''}
+                    url={company.logo_url}
+                    size={72}
+                  />
                   <div>
                     <h2 className="h4 fw-bold mb-1" id="companyPublicModalTitle">
                       {company.display_name || company.name || companyNameFallback}
                     </h2>
-                    {company.tagline && <p className="mb-1 text-magenta fw-semibold">{company.tagline}</p>}
+                    {company.tagline && (
+                      <p className="mb-1 text-magenta fw-semibold">{company.tagline}</p>
+                    )}
                     <p className="small text-body-secondary mb-0">
                       {[
                         company.industry,
@@ -118,7 +124,7 @@ export const CompanyPublicProfileModal: React.FC<CompanyPublicProfileModalProps>
                 {company.description && (
                   <section>
                     <h3 className="h6 fw-bold mb-2">Sobre la empresa</h3>
-                    <p className="small text-body-secondary style-description">{company.description}</p>
+                    <p className="small text-body-secondary">{company.description}</p>
                   </section>
                 )}
 
@@ -145,7 +151,10 @@ export const CompanyPublicProfileModal: React.FC<CompanyPublicProfileModalProps>
                         <h4 className="h6 fw-bold mb-2">Beneficios</h4>
                         <div className="d-flex flex-wrap gap-1">
                           {company.benefits!.map((b) => (
-                            <span key={b} className="badge bg-soft text-magenta border border-primary-subtle">
+                            <span
+                              key={b}
+                              className="badge bg-soft text-magenta border border-primary-subtle"
+                            >
                               <i className="bi bi-star-fill me-1" aria-hidden="true" />
                               {b}
                             </span>
@@ -180,7 +189,10 @@ export const CompanyPublicProfileModal: React.FC<CompanyPublicProfileModalProps>
                           rel="noopener noreferrer"
                           className="btn btn-sm btn-light border btn-pill"
                         >
-                          <i className={`bi bi-${l.type === 'x' ? 'twitter-x' : l.type} me-1`} aria-hidden="true" />
+                          <i
+                            className={`bi bi-${l.type === 'x' ? 'twitter-x' : l.type} me-1`}
+                            aria-hidden="true"
+                          />
                           {l.type.toUpperCase()}
                         </a>
                       ))}
@@ -188,14 +200,26 @@ export const CompanyPublicProfileModal: React.FC<CompanyPublicProfileModalProps>
                   </section>
                 )}
 
-                {/* Contacto Público si está habilitado */}
+                {/* Contacto de Selección */}
                 {company.contact && company.contact.public && (
                   <section className="border-top pt-3">
                     <h3 className="h6 fw-bold mb-2">Contacto de Selección / RR. HH.</h3>
                     <div className="small text-body-secondary">
-                      {company.contact.name && <span className="d-block"><strong>Contacto:</strong> {company.contact.name}</span>}
-                      {company.contact.email && <span className="d-block"><strong>Email:</strong> {company.contact.email}</span>}
-                      {company.contact.phone && <span className="d-block"><strong>Teléfono:</strong> {company.contact.phone}</span>}
+                      {company.contact.name && (
+                        <span className="d-block">
+                          <strong>Contacto:</strong> {company.contact.name}
+                        </span>
+                      )}
+                      {company.contact.email && (
+                        <span className="d-block">
+                          <strong>Email:</strong> {company.contact.email}
+                        </span>
+                      )}
+                      {company.contact.phone && (
+                        <span className="d-block">
+                          <strong>Teléfono:</strong> {company.contact.phone}
+                        </span>
+                      )}
                     </div>
                   </section>
                 )}

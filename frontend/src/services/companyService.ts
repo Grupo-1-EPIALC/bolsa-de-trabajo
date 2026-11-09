@@ -24,7 +24,7 @@ export const companyService = {
     }
   },
 
-  /** 
+  /**
    * GET /profiles/companies/{company_id}
    * Devuelve el perfil público de la empresa para ser consultado desde las ofertas de empleo.
    */

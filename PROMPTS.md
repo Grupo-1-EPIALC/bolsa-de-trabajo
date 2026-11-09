@@ -51,6 +51,8 @@
 | P-033 | 2026-11-08 | Andres | Claude Code (`matching-agent` + `n8n-agent`) | `feature/matching/v0.2.0-pedido-formacion` | Etapa 2 del plan: recomendaciones de formación (`mode=training`) de punta a punta en el back | matching 0.2.0: modo `training` con `profile_id` + `job_id` (pedido, guardado por batch y vista `GET /recommendations/students/{id}/training/{job_id}` con el match por reglas y la formación de IA, separada de las recomendaciones de ofertas). WF-06: el resultado de `training` se guarda por `/recommendations/batch` con el `request_id` (antes iba por `save_recommendation` como `student` y pisaba la recomendación de la oferta), ítems saneados (≤ 5, sin score). Tests UT-MATCH-11; E2E con IA real | pendiente de revisión |
 | P-034 | 2026-11-08 | Andres | Claude Code (`frontend-agent`) | `feature/frontend/v0.7.0-formacion` | Etapa 2 del plan (front): que el estudiante pida "¿Cómo mejorar para esta oferta?" y vea la formación con el badge ámbar | `TrainingAdvice` en cada oferta de "Ofertas para vos" y en el detalle de "Todas las ofertas": muestra las faltantes por reglas, pide la formación (`mode=training`) y sigue el pedido con `useAiAnalysis`; panel "Sugerido por IA" separado del de reglas, hasta 5 ítems priorizados y disclaimer. Front 0.7.0; 50 tests Vitest (UT-FE-TRAIN-01); E2E en Chromium con IA real: 5 ítems sobre las faltantes Docker y Testing | pendiente de revisión |
 | P-035 | 2026-11-08 | Andres | Claude Code (`matching-agent`) | `fix/matching/v0.2.1-company-id-en-snapshot` | Aplicar el fix: el resumen de ofertas de matching no incluye `company_id`, así que "Ofertas para vos" no puede abrir el perfil público de la empresa | matching 0.2.1: `job_snapshot` suma `company_id` (el mismo que jobs-service ya publica en el detalle); contrato `matching.md` (ejemplo y `JobSnapshot`). Test nuevo; 107 tests; verificado en vivo con el perfil público de la empresa | pendiente de revisión |
+| P-036 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.0-modales-empresa-puntaje` | Diseñar e integrar modal de desglose explícito de puntuación de matching ("¿Por qué este puntaje?") | Creación del componente RuleScoreModal.tsx en Bootstrap 5 conectado al desglose por reglas (score_breakdown, missing_skills, conditions_fit y advertencia por regla excluyente) | aceptado |
+| P-037 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.0-modales-empresa-puntaje` | Implementar servicio y modal de Perfil Público de la Empresa accesible desde ofertas de trabajo | Creación del método getPublicProfile en companyService.ts y maquetado de CompanyPublicProfileModal.tsx para mostrar marca empleadora, rubro, beneficios y sedes sin exponer datos administrativos | aceptado |
 
 ---
 
@@ -506,7 +508,29 @@
 - **Archivos afectados:** `services/matching-service/app/application/serializers.py`, `app/main.py`, `pyproject.toml`, `tests/test_services.py`, `contracts/matching.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 3).
 
-### P-036 — (plantilla)
+##### P-036 — Modal de desglose de puntuación por reglas ("¿Por qué este puntaje?")
+* **Fecha:** 2026-11-09 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.8.0` · **HU:** HU-08 / HU-12 (Desglose explícito de scoring por reglas)
+* **Prompt (resumido):**
+  > Diseña e integra modal de desglose explícito de puntuación de matching ("¿Por me este puntaje?") en Bootstrap 5 que detalle la puntuación de 0 a 100 basada en los 6 criterios determinísticos, alertas de tope por reglas excluyentes, competencias faltantes y grado de compatibilidad de condiciones laborales.
+* **Resumen de la respuesta:**
+  - Creación del componente `RuleScoreModal.tsx` estructurado con la estética institucional en Bootstrap 5.
+  - Visualización del desglose ponderado por criterios (`required_skills`, `desired_skills`, `levels`, `experience`, `education`, `languages`).
+  - Renderizado de alerta de tope por regla excluyente (`excluding_cap_applied`), tarjetas de competencias faltantes categorizadas por prioridad (`high`, `medium`, `low`) y panel de ajuste de condiciones laborales (`conditions_fit`).
+* **Archivos afectados:** `frontend/src/components/matching/RuleScoreModal.tsx`, `frontend/src/components/matching/RuleMatch.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+##### P-037 — Perfil público de la empresa desde una oferta
+* **Fecha:** 2026-11-09 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.8.0` · **HU:** HU-14 / HU-15 (Consulta pública de marca empleadora)
+* **Prompt (resumido):**
+  > Implementa servicio y modal de Perfil Público de la Empresa accesible desde cualquier oferta de trabajo o listado de búsquedas.
+* **Resumen de la respuesta:**
+  - Incorporación del método `getPublicProfile(companyId)` en `companyService.ts` consumiendo el endpoint `GET /api/v1/profiles/companies/{company_id}`.
+  - Creación del componente modal `CompanyPublicProfileModal.tsx` en Bootstrap 5 para visualizar nombre comercial, rubro, tamaño, descripción, modalidades de trabajo, sedes y beneficios sin requerir permisos administrativos ni exponer datos privados de RRHH.
+  - Vinculación del modal desde las tarjetas de empleo (`JobCard` / `JobDetail`).
+* **Archivos afectados:** `frontend/src/services/companyService.ts`, `frontend/src/components/company/CompanyPublicProfileModal.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+### P-038 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
