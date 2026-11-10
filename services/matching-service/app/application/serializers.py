@@ -20,6 +20,7 @@ from app.domain.models import (
     WorkConditions,
 )
 from app.domain.recommendations import AiRecommendation
+from app.domain.skill_gaps import SkillGapsReport
 
 if TYPE_CHECKING:
     from app.application.matching_service import CandidateRanking, JobRanking
@@ -252,5 +253,33 @@ def candidate_ranking_to_dict(ranking: "CandidateRanking") -> JsonDict:
                 "match": match_to_dict(item.result, item.profile, ranking.job, VIEWER_COMPANY),
             }
             for pos, item in enumerate(ranking.items, start=1)
+        ],
+    }
+
+
+def skill_gaps_to_dict(report: SkillGapsReport) -> JsonDict:
+    """Qué competencias sumar o mejorar en general (bloque `rule_based` de la formación)."""
+    return {
+        "origin": "RULES",
+        "profile_id": report.profile_id,
+        "engine_version": report.engine_version,
+        "rules_version": report.rules_version,
+        "computed_at": report.computed_at,
+        "evaluated": report.evaluated,
+        "similar_jobs": [
+            {"job_id": j.job_id, "title": j.title, "score": j.score} for j in report.similar_jobs
+        ],
+        "skill_gaps": [
+            {
+                "skill": g.skill,
+                "status": g.status,
+                "jobs_count": g.jobs_count,
+                "share": g.share,
+                "required_in": g.required_in,
+                "current_level": g.current_level,
+                "required_level": g.required_level,
+                "priority": g.priority.value,
+            }
+            for g in report.gaps
         ],
     }

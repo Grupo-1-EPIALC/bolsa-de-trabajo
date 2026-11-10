@@ -1,18 +1,23 @@
 """Criterios de scoring por reglas (un criterio por clase, OCP — AGENTS.md §4.4).
 
-Pesos por defecto: RequiredSkills 50 · DesiredSkills 15 · Levels 15 · Experience 10 ·
-Education 5 · Languages 5 (configurables en `scoring_rules.yaml`).
+Pesos por defecto: RequiredSkills 40 · DesiredSkills 10 · Levels 10 · Experience 25 ·
+Education 5 · Languages 3 · Conditions 7 (configurables en `scoring_rules.yaml`).
 """
 
-from typing import Protocol
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Protocol
 
 from app.domain.models import (
+    CheckOutcome,
     CriterionResult,
     JobOpportunity,
     RequirementKind,
     StudentProfile,
 )
 from app.domain.scales import education_level_rank, education_status_rank, language_rank
+
+if TYPE_CHECKING:
+    from app.domain.conditions import ConditionCheck
 
 
 class ScoringCriterion(Protocol):
@@ -99,24 +104,56 @@ class LevelsCriterion:
 
 
 class ExperienceCriterion:
-    """Años de experiencia del estudiante frente al mínimo pedido."""
+    """Experiencia: años frente al mínimo pedido y si se usaron las competencias de la oferta.
+
+    - Años: `años / mínimo` (tope 1). Si la oferta no pide mínimo, se compara contra
+      `reference_years` y la falta de experiencia resta la mitad de esa parte, no toda.
+    - Relevancia (`relevance_share` del criterio): cuántas competencias de la oferta aparecen
+      en `skills_used` de la experiencia (con 3 ya es completa). Si hay experiencia sin
+      competencias cargadas, cuenta la mitad.
+    """
 
     name = "experience"
+    _RELEVANT_SKILLS_FOR_FULL_CREDIT = 3
 
-    def __init__(self, weight: float) -> None:
+    def __init__(
+        self, weight: float, reference_years: float = 1.0, relevance_share: float = 0.4
+    ) -> None:
         self._weight = weight
+        self._reference_years = reference_years
+        self._relevance_share = relevance_share
 
     def evaluate(self, profile: StudentProfile, job: JobOpportunity) -> CriterionResult:
         min_years = job.experience.min_years
-        if min_years <= 0:
-            return _ratio_result(self.name, self._weight, 1.0, min_years=0)
+        years = profile.years_experience
+        if min_years > 0:
+            years_fit = min(1.0, years / min_years)
+        else:
+            years_fit = 0.5 + 0.5 * min(1.0, years / self._reference_years)
+        relevance, relevant = self._relevance(profile, job)
+        share = self._relevance_share
         return _ratio_result(
             self.name,
             self._weight,
-            profile.years_experience / min_years,
+            (1 - share) * years_fit + share * relevance,
             min_years=min_years,
-            profile_years=profile.years_experience,
+            profile_years=years,
+            years_fit=round(years_fit, 3),
+            relevance=round(relevance, 3),
+            relevant_skills=relevant,
         )
+
+    def _relevance(self, profile: StudentProfile, job: JobOpportunity) -> tuple[float, list[str]]:
+        job_skills = {s.normalized: s.name for s in job.skills}
+        if profile.years_experience <= 0 and not profile.experience_skills:
+            return 0.0, []
+        if not job_skills:
+            return 1.0, []
+        if not profile.experience_skills:
+            return 0.5, []
+        relevant = sorted(job_skills[k] for k in job_skills if k in profile.experience_skills)
+        needed = min(len(job_skills), self._RELEVANT_SKILLS_FOR_FULL_CREDIT)
+        return min(1.0, len(relevant) / needed), relevant
 
 
 class EducationCriterion:
@@ -169,4 +206,36 @@ class LanguagesCriterion:
             credit += 1.0 if have[req.normalized] >= needed else 0.5
         return _ratio_result(
             self.name, self._weight, credit / len(job.languages), required=len(job.languages)
+        )
+
+
+_CONDITION_CREDIT = {CheckOutcome.MATCH: 1.0, CheckOutcome.PARTIAL: 0.5, CheckOutcome.MISMATCH: 0.0}
+
+
+class ConditionsCriterion:
+    """Condiciones laborales (modalidad, horario, ubicación, disponibilidad...) con poco peso.
+
+    Promedio de las condiciones con dato en los dos lados: coincide = 1, parcial = 0,5 y
+    no coincide = 0. Las `unknown` no cuentan; sin ninguna comparable, puntaje completo.
+    """
+
+    name = "conditions"
+
+    def __init__(self, weight: float, checks: Sequence["ConditionCheck"]) -> None:
+        self._weight = weight
+        self._checks = list(checks)
+
+    def evaluate(self, profile: StudentProfile, job: JobOpportunity) -> CriterionResult:
+        outcomes = [check.evaluate(profile, job).result for check in self._checks]
+        known = [o for o in outcomes if o in _CONDITION_CREDIT]
+        if not known:
+            return _ratio_result(self.name, self._weight, 1.0, compared=0)
+        return _ratio_result(
+            self.name,
+            self._weight,
+            sum(_CONDITION_CREDIT[o] for o in known) / len(known),
+            compared=len(known),
+            matched=sum(1 for o in known if o is CheckOutcome.MATCH),
+            partial=sum(1 for o in known if o is CheckOutcome.PARTIAL),
+            mismatched=sum(1 for o in known if o is CheckOutcome.MISMATCH),
         )

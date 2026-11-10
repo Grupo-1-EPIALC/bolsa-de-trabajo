@@ -12,9 +12,11 @@ from app.domain.rules import (
     DEFAULT_CONDITIONS,
     DEFAULT_WEIGHTS,
     ConditionRule,
+    ExperienceRules,
     RankingRules,
     SalaryRules,
     ScoringRules,
+    TrainingRules,
 )
 
 
@@ -37,8 +39,12 @@ def rules_from_mapping(data: Mapping[str, Any]) -> ScoringRules:
     ranking = _mapping(data.get("ranking"))
     defaults_salary = SalaryRules()
     defaults_ranking = RankingRules()
+    experience = _mapping(data.get("experience"))
+    training = _mapping(data.get("training"))
+    defaults_experience = ExperienceRules()
+    defaults_training = TrainingRules()
     return ScoringRules(
-        version=str(data.get("version", "1.0.0")),
+        version=str(data.get("version", ScoringRules.version)),
         weights=weights,
         excluding_cap=float(data.get("excluding_cap", 40)),
         conditions=conditions,
@@ -73,6 +79,18 @@ def rules_from_mapping(data: Mapping[str, Any]) -> ScoringRules:
                 ranking.get("exclude_incompatible", defaults_ranking.exclude_incompatible)
             ),
             min_score=float(ranking.get("min_score", defaults_ranking.min_score)),
+        ),
+        experience=ExperienceRules(
+            reference_years=float(
+                experience.get("reference_years", defaults_experience.reference_years)
+            ),
+            relevance_share=float(
+                experience.get("relevance_share", defaults_experience.relevance_share)
+            ),
+        ),
+        training=TrainingRules(
+            similar_jobs=int(training.get("similar_jobs", defaults_training.similar_jobs)),
+            max_gaps=int(training.get("max_gaps", defaults_training.max_gaps)),
         ),
     )
 

@@ -39,14 +39,25 @@ def _wc[T: (StudentProfile, JobOpportunity)](entity: T, **changes: Any) -> T:
 
 def test_ut_match_07_hard_mismatch_makes_match_incompatible() -> None:
     engine = build_engine(ScoringRules(), lambda: "now")
+    needs_license = _wc(job(), driver_license=frozenset({"B1"}))
+    result = engine.match(profile(), needs_license)
+
+    assert not result.conditions_fit.compatible
+    license_check = next(c for c in result.conditions_fit.checks if c.condition == "driver_license")
+    assert license_check.result is CheckOutcome.MISMATCH and license_check.hard
+
+
+def test_modality_mismatch_is_soft_and_only_lowers_the_score_a_little() -> None:
+    engine = build_engine(ScoringRules(), lambda: "now")
     onsite_only = _wc(job(), work_modality=frozenset({"onsite"}))
     result = engine.match(profile(), onsite_only)
 
-    assert not result.conditions_fit.compatible
+    # Modalidad, horario, ubicación y tipo de vínculo ya no excluyen la oferta.
+    assert result.conditions_fit.compatible
     modality = next(c for c in result.conditions_fit.checks if c.condition == "work_modality")
-    assert modality.result is CheckOutcome.MISMATCH and modality.hard
-    # Las condiciones no tocan el score
-    assert result.score == engine.match(profile(), job()).score
+    assert modality.result is CheckOutcome.MISMATCH and not modality.hard
+    full = engine.match(profile(), job()).score
+    assert 0 < full - result.score <= ScoringRules().weight("conditions")
 
 
 def test_compatible_match_reports_distance_and_salary_fit() -> None:

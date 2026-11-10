@@ -21,6 +21,7 @@ from app.application.serializers import (
     job_ranking_to_dict,
     match_to_dict,
     recommendation_to_dict,
+    skill_gaps_to_dict,
 )
 from app.application.settings_service import settings_to_dict
 from app.domain.auth import Principal, Role
@@ -45,7 +46,7 @@ class MatchRequest(BaseModel):
 
 
 class AnalysisRequest(BaseModel):
-    # training: formación (cursos, proyectos, consejos) de un estudiante para una oferta.
+    # training: qué competencias sumar o mejorar, en general (sólo `profile_id`).
     mode: Literal["student", "company", "training"]
     profile_id: str | None = None
     job_id: str | None = None
@@ -115,6 +116,14 @@ def rank_jobs(
 
 
 @router.get(
+    "/students/{profile_id}/skill-gaps",
+    summary="[interno] Competencias para sumar o mejorar según las ofertas más parecidas",
+)
+def skill_gaps(profile_id: str, container: ContainerDep, _: ServiceDep) -> dict[str, Any]:
+    return skill_gaps_to_dict(container.matching.skill_gaps(profile_id))
+
+
+@router.get(
     "/jobs/{job_id}/candidates", summary="[interno] Candidatos rankeados por reglas para una oferta"
 )
 def rank_candidates(
@@ -168,8 +177,7 @@ def request_recommendations(
     subject = (body.job_id if body.mode == "company" else body.profile_id) or ""
     if subject:
         container.access.subject(principal, body.mode, subject)
-    job_id = (body.job_id or "") if body.mode == "training" else ""
-    request = container.recommendations.request_analysis(body.mode, subject, job_id)
+    request = container.recommendations.request_analysis(body.mode, subject)
     limit = container.recommendations.analysis_limit(RecommendationMode(body.mode), body.limit)
     background.add_task(container.recommendations.run_analysis, request.id, limit)
     return {**_request_to_dict(request), "limit": limit}
@@ -196,14 +204,14 @@ def student_recommendations(
 
 
 @router.get(
-    "/recommendations/students/{profile_id}/training/{job_id}",
-    summary="Formación sugerida por IA para encajar en una oferta (+ match por reglas)",
+    "/recommendations/students/{profile_id}/training",
+    summary="Qué competencias sumar o mejorar, en general (reglas + IA en bloques separados)",
 )
 def training_recommendations(
-    profile_id: str, job_id: str, container: ContainerDep, principal: PrincipalDep
+    profile_id: str, container: ContainerDep, principal: PrincipalDep
 ) -> dict[str, Any]:
     container.access.student_profile(principal, profile_id)
-    return container.recommendations.training_view(profile_id, job_id)
+    return container.recommendations.training_view(profile_id)
 
 
 @router.get(

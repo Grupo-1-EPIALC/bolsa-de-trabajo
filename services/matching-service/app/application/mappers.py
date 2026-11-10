@@ -311,6 +311,12 @@ class ProfileMapper:
                 if explicit_years is not None
                 else years_from_experience(experience, today)
             ),
+            experience_skills=frozenset(
+                self._normalizer.normalize(_str(skill))
+                for item in experience
+                for skill in _list(_dict(item).get("skills_used"))
+                if _str(skill)
+            ),
             academic=AcademicStatus(
                 career=_str(academic.get("career") or data.get("career")),
                 current_year=_int(academic.get("current_year")),

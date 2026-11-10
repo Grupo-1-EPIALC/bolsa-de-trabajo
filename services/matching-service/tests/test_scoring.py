@@ -1,8 +1,11 @@
 """UT-MATCH-01 a UT-MATCH-06: criterios de scoring, regla excluyente y skills faltantes."""
 
+from dataclasses import replace
+
 import pytest
 
 from app.domain.criteria import (
+    ConditionsCriterion,
     DesiredSkillsCriterion,
     EducationCriterion,
     ExperienceCriterion,
@@ -34,8 +37,18 @@ def test_ut_match_01_perfect_match_scores_100() -> None:
         "experience",
         "education",
         "languages",
+        "conditions",
     }
     assert sum(c.weight for c in result.breakdown) == 100
+
+
+def test_technical_and_experience_weigh_more_than_conditions() -> None:
+    weights = ScoringRules().weights
+    technical = sum(weights[k] for k in ("required_skills", "desired_skills", "levels"))
+    assert weights["experience"] > weights["conditions"]
+    assert weights["experience"] > weights["desired_skills"]
+    assert technical + weights["experience"] >= 80
+    assert weights["conditions"] <= 10
 
 
 def test_ut_match_02_required_skills_proportional() -> None:
@@ -100,16 +113,69 @@ def test_ut_match_06_missing_skills_sorted_by_priority() -> None:
     ("years", "expected"),
     [(0.0, 0.0), (1.0, 5.0), (2.0, 10.0), (5.0, 10.0)],
 )
-def test_experience_ratio(years: float, expected: float) -> None:
-    criterion = ExperienceCriterion(10)
+def test_experience_years_against_minimum(years: float, expected: float) -> None:
+    criterion = ExperienceCriterion(10, relevance_share=0.0)
     j = job(experience=ExperienceRequirement(min_years=2))
 
     assert criterion.evaluate(profile(years_experience=years), j).earned == expected
 
 
-def test_experience_full_when_not_required() -> None:
+@pytest.mark.parametrize(("years", "expected"), [(0.0, 5.0), (0.5, 7.5), (1.0, 10.0)])
+def test_experience_without_minimum_uses_reference_years(years: float, expected: float) -> None:
+    # Sin mínimo pedido, no tener experiencia resta la mitad (no todo) de la parte de años.
+    criterion = ExperienceCriterion(10, reference_years=1.0, relevance_share=0.0)
     j = job(experience=ExperienceRequirement(min_years=0))
-    assert ExperienceCriterion(10).evaluate(profile(years_experience=0), j).earned == 10
+
+    assert criterion.evaluate(profile(years_experience=years), j).earned == expected
+
+
+def test_experience_relevance_counts_skills_used_at_work() -> None:
+    criterion = ExperienceCriterion(10, relevance_share=0.4)
+    j = job()  # pide Python, SQL y Docker y 1 año
+
+    relevant = criterion.evaluate(profile(), j)
+    assert relevant.earned == 10
+    assert relevant.details["relevant_skills"] == ["Docker", "Python", "SQL"]
+    # Mismo año de experiencia, pero en algo que la oferta no pide.
+    unrelated = criterion.evaluate(profile(experience_skills=frozenset({"excel"})), j)
+    assert unrelated.earned == 6
+    # Experiencia sin competencias cargadas: la relevancia cuenta la mitad.
+    undeclared = criterion.evaluate(profile(experience_skills=frozenset()), j)
+    assert undeclared.earned == 8
+    # Sin experiencia: no hay relevancia.
+    none = criterion.evaluate(profile(years_experience=0, experience_skills=frozenset()), j)
+    assert none.earned == 0
+
+
+def test_experience_now_moves_the_score_more_than_conditions() -> None:
+    engine = _engine()
+    with_experience = engine.match(profile(), job()).score
+    without = engine.match(profile(years_experience=0, experience_skills=frozenset()), job())
+    onsite = replace(
+        job(), work_conditions=replace(job().work_conditions, work_modality=frozenset({"onsite"}))
+    )
+    other_modality = engine.match(profile(), onsite).score
+    assert with_experience - without.score == 25  # todo el peso de experiencia
+    assert with_experience - other_modality < 2  # una condición distinta resta poco
+
+
+def test_conditions_criterion_averages_known_checks() -> None:
+    from app.domain.conditions import WorkModalityCheck, WorkScheduleCheck
+
+    criterion = ConditionsCriterion(10, [WorkModalityCheck(False), WorkScheduleCheck(False)])
+    assert criterion.evaluate(profile(), job()).earned == 10
+    onsite = replace(
+        job(), work_conditions=replace(job().work_conditions, work_modality=frozenset({"onsite"}))
+    )
+    result = criterion.evaluate(profile(), onsite)
+    assert result.earned == 5 and result.details["mismatched"] == 1
+    empty = replace(
+        profile(),
+        work_conditions=replace(
+            profile().work_conditions, work_modality=frozenset(), work_schedule=frozenset()
+        ),
+    )
+    assert criterion.evaluate(empty, job()).earned == 10  # sin datos no penaliza
 
 
 @pytest.mark.parametrize(

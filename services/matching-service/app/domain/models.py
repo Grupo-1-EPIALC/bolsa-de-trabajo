@@ -162,6 +162,8 @@ class StudentProfile:
     languages: tuple[LanguageItem, ...] = ()
     education: tuple[EducationItem, ...] = ()
     years_experience: float = 0.0
+    # Competencias usadas en la experiencia laboral (`skills_used`, normalizadas).
+    experience_skills: frozenset[str] = frozenset()
     academic: AcademicStatus = field(default_factory=AcademicStatus)
     target_roles: tuple[str, ...] = ()
 

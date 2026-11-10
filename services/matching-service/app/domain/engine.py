@@ -1,7 +1,8 @@
 """Motor de matching por reglas (`origin = "RULES"`).
 
 Suma los criterios de scoring, aplica la regla excluyente (tope de 40 si falta una skill
-`excluding`), calcula skills faltantes y evalúa las condiciones laborales por separado.
+`excluding`) y calcula skills faltantes. Las condiciones laborales se detallan aparte en
+`conditions_fit` y sólo suman al score con el peso chico del criterio `conditions`.
 """
 
 from collections.abc import Callable, Sequence
@@ -22,6 +23,7 @@ from app.domain.conditions import (
     WorkScheduleCheck,
 )
 from app.domain.criteria import (
+    ConditionsCriterion,
     DesiredSkillsCriterion,
     EducationCriterion,
     ExperienceCriterion,
@@ -43,7 +45,7 @@ from app.domain.models import (
 from app.domain.rules import ScoringRules
 from app.domain.salary import SalaryComparator
 
-ENGINE_VERSION = "1.0.0"
+ENGINE_VERSION = "2.0.0"
 
 
 class MatchingEngine:
@@ -64,6 +66,9 @@ class MatchingEngine:
     @property
     def rules(self) -> ScoringRules:
         return self._rules
+
+    def now(self) -> str:
+        return self._clock()
 
     def match(self, profile: StudentProfile, job: JobOpportunity) -> MatchResult:
         breakdown = tuple(c.evaluate(profile, job) for c in self._criteria)
@@ -106,14 +111,6 @@ class MatchingEngine:
 
 def build_engine(rules: ScoringRules, clock: Callable[[], str]) -> MatchingEngine:
     """Arma el motor con los criterios y las condiciones habilitadas en `rules`."""
-    criteria: list[ScoringCriterion] = [
-        RequiredSkillsCriterion(rules.weight("required_skills")),
-        DesiredSkillsCriterion(rules.weight("desired_skills")),
-        LevelsCriterion(rules.weight("levels")),
-        ExperienceCriterion(rules.weight("experience")),
-        EducationCriterion(rules.weight("education")),
-        LanguagesCriterion(rules.weight("languages")),
-    ]
     comparator = SalaryComparator(rules.salary)
     factories: dict[str, Callable[[bool], ConditionCheck]] = {
         "work_modality": WorkModalityCheck,
@@ -133,5 +130,18 @@ def build_engine(rules: ScoringRules, clock: Callable[[], str]) -> MatchingEngin
         factory(rules.condition(name).hard)
         for name, factory in factories.items()
         if rules.condition(name).enabled
+    ]
+    criteria: list[ScoringCriterion] = [
+        RequiredSkillsCriterion(rules.weight("required_skills")),
+        DesiredSkillsCriterion(rules.weight("desired_skills")),
+        LevelsCriterion(rules.weight("levels")),
+        ExperienceCriterion(
+            rules.weight("experience"),
+            rules.experience.reference_years,
+            rules.experience.relevance_share,
+        ),
+        EducationCriterion(rules.weight("education")),
+        LanguagesCriterion(rules.weight("languages")),
+        ConditionsCriterion(rules.weight("conditions"), checks),
     ]
     return MatchingEngine(criteria, checks, MissingSkillsAnalyzer(), rules, clock)

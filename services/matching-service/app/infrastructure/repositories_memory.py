@@ -8,6 +8,7 @@ Los datos se pierden al reiniciar el contenedor.
 import threading
 
 from app.domain.recommendations import (
+    GENERAL_TRAINING_KEY,
     AiRecommendation,
     RecommendationMode,
     RecommendationRequest,
@@ -41,9 +42,9 @@ class InMemoryRecommendationRepository:
     def latest_for_job(self, job_id: str) -> list[AiRecommendation]:
         return self._latest(RecommendationMode.COMPANY, "job_id", job_id, "profile_id")
 
-    def latest_training(self, profile_id: str, job_id: str) -> AiRecommendation | None:
+    def latest_training(self, profile_id: str) -> AiRecommendation | None:
         by_job = self._latest(RecommendationMode.TRAINING, "profile_id", profile_id, "job_id")
-        return next((r for r in by_job if r.job_id == job_id), None)
+        return next((r for r in by_job if r.job_id == GENERAL_TRAINING_KEY), None)
 
     def all(self) -> list[AiRecommendation]:
         with self._lock:

@@ -160,7 +160,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 
 ### 4.4 Agente `matching-agent` — matching-service (FastAPI)
 **Debe:**
-- Implementar `ScoringCriterion` (Protocol) y un criterio por clase: RequiredSkills (50), DesiredSkills (15), Levels (15), Experience (10), Education (5), Languages (5). Pesos en `scoring_rules.yaml`.
+- Implementar `ScoringCriterion` (Protocol) y un criterio por clase: RequiredSkills (40), DesiredSkills (10), Levels (10), Experience (25, años + relevancia de `skills_used`), Education (5), Languages (3), Conditions (7). Pesos en `scoring_rules.yaml`. Lo técnico y la experiencia pesan más; las condiciones laborales (modalidad, horario, disponibilidad) suman poco y sólo excluyen los requisitos legales (licencia, autorización para trabajar).
 - Regla excluyente: falta una skill `excluding` → score máximo 40.
 - `MissingSkillsAnalyzer` con brecha de nivel y orden por prioridad.
 - Normalización de skills (minúsculas, sin acentos, sinónimos).
@@ -170,10 +170,10 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Rankings por reglas en ambos sentidos (`GET /api/v1/matches/students/{profile_id}/jobs` y `GET /api/v1/matches/jobs/{job_id}/candidates`) con snapshots sin datos personales; pedidos de análisis a `WF-06` (`POST /api/v1/matches/recommendations/requests`), guardado del resultado (`POST /api/v1/matches/recommendations/batch`) y vistas combinadas reglas + IA (`GET /api/v1/matches/recommendations/{students|jobs}/{id}`). Contrato en [`contracts/matching.md`](contracts/matching.md) y el OpenAPI vivo (`/api/v1/matches/openapi.json`).
 - Descartar cualquier `score`/`rank` que venga en contenido de IA: el valor mostrado sale siempre del motor.
 - Autenticar usuarios con el JWT RS256 de auth-service validado localmente contra el JWKS (`iss`, `aud`, `exp`, `role`) y servicios sólo con `X-Service-Token` (nunca como Bearer). Acceso por dueño: `student` → `profile.user_id == sub`; `company` → `job.company_id == sub`; recurso ajeno → 404; endpoints internos → 403 para usuarios. Contrato para el front en `contracts/matching.md` (parte A).
-- Formación para una oferta (`mode=training`, `profile_id` + `job_id`): el estudiante la pide con `POST /recommendations/requests`, WF-06 la genera con `training_advisor` y la guarda con `mode=training` en `/recommendations/batch`; se lee en `GET /recommendations/students/{profile_id}/training/{job_id}`. Nunca se mezcla con las recomendaciones de ofertas.
+- Qué sumar o mejorar, **en general y no por oferta** (`mode=training`, sólo `profile_id`): `SkillGapAggregator` junta por reglas las competencias que faltan en las ofertas activas más parecidas al perfil (`GET /students/{profile_id}/skill-gaps`, interno); el estudiante pide la formación con `POST /recommendations/requests`, WF-06 la genera con `training_advisor` y la guarda con `mode=training` en `/recommendations/batch`; se lee en `GET /recommendations/students/{profile_id}/training`. Nunca se mezcla con las recomendaciones de ofertas.
 - Cantidad de ofertas por estudiante y de candidatos por oferta configurable por un `admin` (`GET`/`PATCH /api/v1/matches/settings`, 1–20, valores iniciales en `scoring_rules.yaml`). Rige para vistas, rankings y pedidos de IA; un `limit` explícito sólo puede achicarla.
 **No debe:** llamar a ningún LLM directamente.
-**Tests mínimos:** UT-MATCH-01 a UT-MATCH-09.
+**Tests mínimos:** UT-MATCH-01 a UT-MATCH-09 y UT-MATCH-12 (brechas generales).
 
 ### 4.5 Agente `mcp-agent` — mcp-tools (MCP local Python, exclusivo para n8n)
 **Debe:**
