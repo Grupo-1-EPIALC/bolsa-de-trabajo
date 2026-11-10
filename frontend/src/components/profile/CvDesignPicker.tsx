@@ -152,7 +152,8 @@ export const CvDesignPicker: React.FC<CvDesignPickerProps> = ({ profileVersion }
                       {active && <span className="badge text-bg-primary ms-2">Rige ahora</span>}
                     </span>
                     <span className="d-block small mt-1">{layout.best_for}</span>
-                    <span className="d-block small text-body-secondary mt-1">
+                    {/* Sobre el fondo de la tarjeta activa, el gris no llega al contraste AA. */}
+                    <span className={`d-block small mt-1 ${active ? '' : 'text-body-secondary'}`}>
                       {describeOrder(layout.section_order)}
                     </span>
                   </label>
