@@ -58,6 +58,7 @@
 | P-040 | 2026-11-10 | Andres | Claude Code (`mcp-agent`, `n8n-agent`, `profile-agent`, `frontend-agent`) | `feature/mcp/v0.5.0-skill-diseno-cv`, `feature/n8n/v0.5.0-wf07-diseno-cv`, `feature/profile/v0.5.0-diseno-cv`, `feature/frontend/v0.9.0-diseno-cv` | Buscar skills de diseño de CV legibles por IA (ATS) y armar un agente que elija el mejor diseño según el contenido | Híbrido IA + reglas: catálogo de 3 diseños de una columna en profile-service, selector por reglas, agente `cv_designer` en WF-07 con la skill `diseno-cv` y el schema `cv_design`, y pantalla para elegir | aceptado (pendiente revisión del equipo) |
 | P-041 | 2026-11-10 | Andres | Claude Code (`profile-agent`) | `feature/profile/v0.5.0-diseno-cv` | Mejorar cómo se muestran las competencias y los colores del CV, buscando plantillas IA friendly | Estilo clásico tipo Harvard / "Jake's Resume": competencias en una línea por categoría separadas por comas (nivel sólo si es avanzado o experto), texto casi negro y un acento azul marino, sin fondos | aceptado (pendiente revisión del equipo) |
 | P-042 | 2026-11-10 | Andres | Claude Code (`matching-agent`, `mcp-agent`, `n8n-agent`, `frontend-agent`) | `feature/matching/v0.3.0-ponderacion-y-formacion-general`, `feature/mcp/v0.6.0-formacion-general`, `feature/n8n/v0.6.0-formacion-general`, `feature/frontend/v0.10.0-formacion-general` | Ponderar menos las condiciones no técnicas, más la experiencia, no pedir portfolios, formación general según el perfil y las búsquedas más parecidas, y barra de progreso en el front | Pesos 2.0.0 (técnico 60, experiencia 25 con relevancia, condiciones 7 y sólo lo legal excluye), `skill_gaps` por reglas sobre las ofertas más parecidas, `training_advisor` 2.0.0 sin proyectos y barra de progreso estimada | aceptado (pendiente revisión del equipo) |
+| P-043 | 2026-11-10 | Andres | Claude Code (`matching-agent`, `mcp-agent`, `n8n-agent`, `frontend-agent`) | `feature/matching/v0.4.0-diccionario-skills`, `feature/mcp/v0.7.0-resolver-skills`, `feature/n8n/v0.7.0-diccionario-skills`, `feature/frontend/v0.11.0-skills-similares` | Diccionario de skills con nombres distintos (MySQL/MariaDB, Postgres/PostgreSQL) y lista de herramientas similares que facilitan el aprendizaje (GitHub/GitLab), para las reglas y como herramienta del agente | `skill_dictionary.json` (148 skills: alias, implies, equivalentes y similares) en matching-service, `resolver_skills` en mcp-tools, prompts que usan `via` y `similar_to`, y la UI con "SQL (por PostgreSQL)" | aceptado (pendiente revisión del equipo) |
 
 ---
 
@@ -607,7 +608,27 @@
 - **Archivos afectados:** `services/matching-service/**`, `mcp-tools/app/data/**`, `n8n/generate_workflows.py`, `n8n/prompts/*`, `n8n/agentes/*`, `n8n/workflows/WF-06-recomendador.json`, `frontend/src/**`, `contracts/matching.md`, `contracts/mcp_tools.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** aceptado (pendiente revisión del equipo).
 
-### P-043 — (plantilla)
+### P-043 — Diccionario de competencias y herramientas similares
+- **Fecha:** 2026-11-10 · **Autor:** Andres · **Agente:** Claude Code (`matching-agent`, `mcp-agent`, `n8n-agent`, `frontend-agent`) · **Ramas:** `feature/matching/v0.4.0-diccionario-skills`, `feature/mcp/v0.7.0-resolver-skills`, `feature/n8n/v0.7.0-diccionario-skills`, `feature/frontend/v0.11.0-skills-similares` · **HU:** recomendaciones de empleo
+- **Prompt (textual):**
+  > arma un diccionario de skills que oueden figurar con distinto nombre ejmplo Mysql y MariaDB o Posgres y PosgresSQL, arma la lista de terminos similares tanto para las recomnendaciones por reglas como para darle de herramienta al agente
+  >
+  > despues arma una lista de herramientas similares que pueden facilitar el aprendizaje de una solicitada en las busquedas tambien para las reglas y los agentes ejemplo github y gitlab
+- **Resumen de la respuesta:**
+  - **matching-service 0.4.0:** `app/data/skill_dictionary.json` (148 skills) reemplaza a `skill_synonyms.json`, con cuatro relaciones:
+    - alias con errores comunes (`Posgres` → PostgreSQL);
+    - `implies` transitivo (PostgreSQL ⇒ SQL);
+    - equivalentes que cuentan completas (MySQL ↔ MariaDB);
+    - herramientas similares que facilitan el aprendizaje (GitHub ~ GitLab, 27 grupos con `credit` 0,5 o 0,75), que suman una parte y quedan como brecha con `similar_to`.
+
+    El motor lo usa en todos los criterios de skills, en la excluyente, en la experiencia relevante y en las brechas generales. Nuevos `GET /skills/dictionary` y `POST /skills/resolve`.
+  - **mcp-tools 0.7.0:** herramienta `resolver_skills` (perfiles `cv`, `postulante`, `empresa` y `verificador`).
+  - **n8n:** `training_advisor` 2.1.0 y `match_advisor` 1.2.0 usan `via`, `similar_to` y `resolver_skills`.
+  - **Front 0.11.0:** "SQL (por PostgreSQL)", "GitLab (… · similar a GitHub)" y "Ya sabés GitHub: GitLab te va a resultar más fácil".
+- **Archivos afectados:** `services/matching-service/**`, `mcp-tools/**`, `n8n/**`, `frontend/src/**`, `contracts/matching.md`, `contracts/mcp_tools.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
+
+### P-044 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
