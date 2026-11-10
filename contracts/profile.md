@@ -333,9 +333,9 @@ Paso 3 (privacidad): `{ "consents": { "data_processing": true, "ai_processing": 
 
 Disponible cuando `completion.can_generate_cv = true`; si no, `409 PROFILE_INCOMPLETE` con `details.missing`. Se arma **por reglas** con lo que el estudiante confirmó (no usa IA ni inventa nada) y siempre refleja el último guardado.
 
-**Diseño:** moderno y profesional, A4, una columna, tipografía Inter y un color de acento. Lo pueden leer bien los ATS y los filtros con IA:
+**Diseño:** clásico y profesional (estilo de las plantillas Harvard y "Jake's Resume"), A4, una columna, tipografía Inter, texto casi negro y un solo acento azul marino en el encabezado y los títulos, sin fondos de color. Lo pueden leer bien los ATS y los filtros con IA:
 - todo el contenido es texto real (sin imágenes, tablas ni columnas), con títulos estándar: Perfil profesional, Competencias, Experiencia, Proyectos, Educación, Idiomas, Certificaciones, Voluntariado. El orden depende del diseño (§8.1);
-- niveles explícitos ("Python (Avanzado)", "Inglés — B2 · Intermedio alto") y fechas uniformes ("mar. 2025 – Actualidad");
+- competencias en **una línea de texto por categoría, separadas por comas** ("Técnicas: Python (avanzado), PostgreSQL, React"), sin chips ni barras; el nivel sólo se aclara si es avanzado o experto. Idiomas con nivel explícito ("Inglés — B2 · Intermedio alto") y fechas uniformes ("mar. 2025 – Actualidad");
 - metadatos del archivo con autor y palabras clave (skills, puestos buscados e idiomas); el PDF es etiquetado (PDF/UA) y el Word usa estilos nativos (Título, Encabezado 1, Viñetas).
 
 No incluye: año de nacimiento, datos de inclusión, sueldo pretendido ni consentimientos. Incluye email, teléfono, ciudad/provincia/país, links y una línea de **Disponibilidad** (modalidad, horario, tipo de empleo, inicio).
