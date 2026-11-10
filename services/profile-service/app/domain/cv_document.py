@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.domain.cv_design import DEFAULT_SECTION_ORDER, CvSection
 from app.domain.enums import (
     AvailabilityStart,
     EducationStatus,
@@ -29,7 +30,7 @@ from app.domain.enums import (
 )
 from app.domain.profile import Education, Experience, StudentProfile
 
-CV_TEMPLATE_VERSION = "1.0.0"
+CV_TEMPLATE_VERSION = "1.2.0"  # 1.1.0: orden según el diseño · 1.2.0: competencias en texto
 EN_DASH = "\u2013"  # raya de rangos de fechas
 
 _MONTHS = (
@@ -61,6 +62,8 @@ _COUNTRIES = {
 }
 
 SKILL_LEVEL_LABELS = {1: "Inicial", 2: "Básico", 3: "Intermedio", 4: "Avanzado", 5: "Experto"}
+# Desde este nivel se aclara entre paréntesis; los niveles bajos no suman en un CV.
+HIGHLIGHT_SKILL_LEVEL = 4
 LANGUAGE_LEVEL_LABELS = {
     LanguageLevel.A1: "A1 · Inicial",
     LanguageLevel.A2: "A2 · Básico",
@@ -138,11 +141,23 @@ class SkillChip:
     level: int
     level_label: str
 
+    @property
+    def display(self) -> str:
+        """`Python (avanzado)` sólo si el nivel suma (4 o 5); si no, el nombre solo."""
+        if self.level >= HIGHLIGHT_SKILL_LEVEL and self.level_label:
+            return f"{self.name} ({self.level_label.lower()})"
+        return self.name
+
 
 @dataclass(frozen=True)
 class SkillGroup:
     label: str
     skills: tuple[SkillChip, ...]
+
+    @property
+    def line(self) -> str:
+        """Una línea separada por comas: el formato que mejor leen los ATS (sin barras ni chips)."""
+        return ", ".join(skill.display for skill in self.skills)
 
 
 @dataclass(frozen=True)
@@ -176,6 +191,9 @@ class CvDocument:
     keywords: tuple[str, ...]
     generated_at: datetime
     template_version: str = CV_TEMPLATE_VERSION
+    # Diseño (app/domain/cv_design.py): id y orden en que los renderers dibujan las secciones.
+    layout: str = ""
+    sections: tuple[CvSection, ...] = DEFAULT_SECTION_ORDER
 
     @property
     def file_stem(self) -> str:
@@ -241,8 +259,17 @@ def _display_url(url: str) -> str:
 class CvDocumentBuilder:
     """Arma el `CvDocument` a partir del perfil. Reglas puras y deterministas."""
 
-    def build(self, profile: StudentProfile, generated_at: datetime) -> CvDocument:
+    def build(
+        self,
+        profile: StudentProfile,
+        generated_at: datetime,
+        *,
+        layout: str = "",
+        sections: Sequence[CvSection] = DEFAULT_SECTION_ORDER,
+    ) -> CvDocument:
         return CvDocument(
+            layout=layout,
+            sections=tuple(sections),
             full_name=profile.personal.name.strip(),
             headline=self._headline(profile),
             contact=self._contact(profile),

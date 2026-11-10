@@ -7,7 +7,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body, File, Query, Response, UploadFile, status
 
 from app.api.deps import ContainerDep, PrincipalDep
-from app.api.schemas import ProfilePatch
+from app.api.schemas import CvDesignChoice, ProfilePatch
 from app.domain.errors import InvalidCvFileError
 
 router = APIRouter(prefix="/api/v1/profiles", tags=["profiles"])
@@ -88,8 +88,50 @@ def discard_my_cv_suggestions(container: ContainerDep, principal: PrincipalDep) 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def _download(container: ContainerDep, principal: PrincipalDep, fmt: str, inline: bool) -> Response:
-    generated = container.profiles.generate_cv(principal, fmt)
+LayoutQuery = Annotated[
+    str | None,
+    Query(
+        description="Forzar un diseño del catálogo (cronologico, primer_empleo, competencias). "
+        "Sin este parámetro se usa el que rige en GET /me/cv-design."
+    ),
+]
+
+
+@router.get(
+    "/me/cv-design",
+    summary="Diseño de mi CV: el que rige, el elegido por reglas, el sugerido por IA y el catálogo",
+)
+def get_my_cv_design(container: ContainerDep, principal: PrincipalDep) -> dict[str, Any]:
+    return container.cv_designs.view(principal)
+
+
+@router.post(
+    "/me/cv-design/requests",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Pedir a la IA (WF-07) el diseño de CV más adecuado a mi contenido, en segundo plano",
+)
+def request_my_cv_design(container: ContainerDep, principal: PrincipalDep) -> dict[str, Any]:
+    return container.cv_designs.request_ai(principal)
+
+
+@router.put(
+    "/me/cv-design",
+    summary="Elegir el diseño de mi CV (layout: null vuelve a la elección automática)",
+)
+def choose_my_cv_design(
+    container: ContainerDep, principal: PrincipalDep, body: CvDesignChoice
+) -> dict[str, Any]:
+    return container.cv_designs.choose(principal, body.layout)
+
+
+def _download(
+    container: ContainerDep,
+    principal: PrincipalDep,
+    fmt: str,
+    inline: bool,
+    layout: str | None = None,
+) -> Response:
+    generated = container.profiles.generate_cv(principal, fmt, layout)
     disposition = "inline" if inline else "attachment"
     return Response(
         content=generated.file.content,
@@ -97,6 +139,7 @@ def _download(container: ContainerDep, principal: PrincipalDep, fmt: str, inline
         headers={
             "Content-Disposition": f'{disposition}; filename="{generated.filename}"',
             "Cache-Control": "no-store",
+            "X-Cv-Layout": generated.layout,
         },
     )
 
@@ -111,8 +154,9 @@ def download_cv_pdf(
     container: ContainerDep,
     principal: PrincipalDep,
     inline: Annotated[bool, Query(description="true = abrir en el navegador")] = False,
+    layout: LayoutQuery = None,
 ) -> Response:
-    return _download(container, principal, "pdf", inline)
+    return _download(container, principal, "pdf", inline, layout)
 
 
 @router.get(
@@ -127,8 +171,10 @@ def download_cv_pdf(
         }
     },
 )
-def download_cv_docx(container: ContainerDep, principal: PrincipalDep) -> Response:
-    return _download(container, principal, "docx", False)
+def download_cv_docx(
+    container: ContainerDep, principal: PrincipalDep, layout: LayoutQuery = None
+) -> Response:
+    return _download(container, principal, "docx", False, layout)
 
 
 @router.get(
@@ -137,8 +183,10 @@ def download_cv_docx(container: ContainerDep, principal: PrincipalDep) -> Respon
     summary="Vista previa en HTML del CV que se va a generar",
     responses={200: {"content": {"text/html": {}}}},
 )
-def preview_cv_html(container: ContainerDep, principal: PrincipalDep) -> Response:
-    return _download(container, principal, "html", True)
+def preview_cv_html(
+    container: ContainerDep, principal: PrincipalDep, layout: LayoutQuery = None
+) -> Response:
+    return _download(container, principal, "html", True, layout)
 
 
 @router.get("", summary="[interno] Pool de perfiles para matching / mcp-tools (service o admin)")

@@ -162,3 +162,32 @@ class InvalidLogoError(ProfileDomainError):
 class LogoNotFoundError(ProfileDomainError):
     def __init__(self) -> None:
         super().__init__("LOGO_NOT_FOUND", "La empresa no tiene logo", status_code=404)
+
+
+class AiConsentRequiredError(ProfileDomainError):
+    """El estudiante no aceptó que la IA procese su perfil (`consents.ai_processing`)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "AI_CONSENT_REQUIRED",
+            "Para pedir una sugerencia a la IA tenés que aceptar el procesamiento con IA "
+            "en el paso de privacidad.",
+            status_code=409,
+        )
+
+
+class UnknownCvLayoutError(ProfileDomainError):
+    def __init__(self, layout: str, allowed: list[str]) -> None:
+        super().__init__(
+            "UNKNOWN_CV_LAYOUT",
+            f"El diseño de CV '{layout}' no existe",
+            status_code=422,
+            details={"layout": layout, "allowed": allowed},
+        )
+
+
+class CvDesignGatewayError(ProfileDomainError):
+    """n8n (WF-07) no respondió o devolvió algo que no es un diseño válido."""
+
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+        super().__init__("CV_DESIGN_AI_FAILED", message, status_code=502, details=details)

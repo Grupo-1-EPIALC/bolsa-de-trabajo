@@ -8,8 +8,8 @@ from app.domain.cv_document import CvDocument
 from app.domain.ports import RenderedFile
 
 TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "templates"
-DEFAULT_ACCENT = "#2f5bd3"
-DEFAULT_ACCENT_SOFT = "#eef2fd"
+# Un solo acento sobrio (azul marino, contraste 11:1 sobre blanco) para títulos y líneas.
+DEFAULT_ACCENT = "#1f3a5f"
 
 
 class HtmlCvRenderer:
@@ -19,7 +19,6 @@ class HtmlCvRenderer:
         self,
         templates_dir: Path = TEMPLATES_DIR,
         accent: str = DEFAULT_ACCENT,
-        accent_soft: str = DEFAULT_ACCENT_SOFT,
     ) -> None:
         self._env = Environment(
             loader=FileSystemLoader(str(templates_dir)),
@@ -28,12 +27,11 @@ class HtmlCvRenderer:
             lstrip_blocks=True,
         )
         self._accent = accent
-        self._accent_soft = accent_soft
         self.templates_dir = templates_dir
 
     def to_html(self, document: CvDocument) -> str:
         template = self._env.get_template("cv.html")
-        return template.render(doc=document, accent=self._accent, accent_soft=self._accent_soft)
+        return template.render(doc=document, accent=self._accent)
 
     def render(self, document: CvDocument) -> RenderedFile:
         return RenderedFile(

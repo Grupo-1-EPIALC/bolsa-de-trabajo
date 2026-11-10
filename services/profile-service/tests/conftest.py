@@ -17,10 +17,12 @@ from app.main import app
 from tests import jwt_helpers
 from tests.fakes import (
     FakeAccounts,
+    FakeCvDesignGateway,
     FakeCvWebhookGateway,
     FixedClock,
     RecordingPublisher,
     SequentialIds,
+    run_now,
 )
 
 SERVICE_TOKEN = "token-de-servicio-de-prueba"  # noqa: S105 - ficticio
@@ -38,20 +40,34 @@ def webhook() -> FakeCvWebhookGateway:
 
 
 @pytest.fixture
+def design_gateway() -> FakeCvDesignGateway:
+    return FakeCvDesignGateway()
+
+
+@pytest.fixture
+def clock() -> FixedClock:
+    return FixedClock()
+
+
+@pytest.fixture
 def container(
     tmp_path: Path,
     publisher: RecordingPublisher,
     webhook: FakeCvWebhookGateway,
+    design_gateway: FakeCvDesignGateway,
+    clock: FixedClock,
 ) -> Container:
     settings = ProfileSettings(cv_storage_path=str(tmp_path / "cvs"), service_token=SERVICE_TOKEN)
     return build_container(
         settings,
         repository=InMemoryProfileRepository(),
         webhook=webhook,
+        cv_design_gateway=design_gateway,
+        cv_design_runner=run_now,
         publisher=publisher,
         accounts=FakeAccounts(),
         tokens=jwt_helpers.verifier(),
-        clock=FixedClock(),
+        clock=clock,
         ids=SequentialIds(),
         seed=False,
     )

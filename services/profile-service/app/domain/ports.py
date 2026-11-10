@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Any, Protocol
 
 from app.domain.auth import Principal
 from app.domain.company import CompanyLegal, CompanyProfile
@@ -123,3 +123,22 @@ class CvRenderer(Protocol):
     def format(self) -> str: ...
 
     def render(self, document: CvDocument) -> RenderedFile: ...
+
+
+@dataclass(frozen=True)
+class CvDesignSuggestion:
+    """Respuesta del agente `cv_designer` (WF-07). profile-service la vuelve a validar."""
+
+    layout: str
+    section_order: tuple[str, ...]
+    rationale: str
+    model: str | None
+    prompt_version: str
+    generated_at: datetime
+    disclaimer: str
+
+
+class CvDesignGateway(Protocol):
+    """Pide a n8n (`POST /webhook/cv-design`) el diseño de CV más adecuado al contenido."""
+
+    def suggest_design(self, payload: dict[str, Any]) -> CvDesignSuggestion: ...

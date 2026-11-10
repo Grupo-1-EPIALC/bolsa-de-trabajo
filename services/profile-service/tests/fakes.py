@@ -6,6 +6,7 @@ from typing import Any
 from app.domain.auth import Principal
 from app.domain.company import CompanyLegal
 from app.domain.models import CvExtractionResult, UploadedCvFile
+from app.domain.ports import CvDesignSuggestion
 from app.domain.profile import StudentProfile
 
 CV_SUGGESTIONS: dict[str, Any] = {
@@ -126,3 +127,32 @@ class SequentialIds:
     def new_company_id(self) -> str:
         self._n += 1
         return f"comp-test-{self._n:03d}"
+
+
+class FakeCvDesignGateway:
+    """Doble de WF-07: responde al instante con el diseño configurado (o falla)."""
+
+    def __init__(self) -> None:
+        self.payloads: list[dict[str, Any]] = []
+        self.layout = "primer_empleo"
+        self.section_order: tuple[str, ...] = ("summary", "education", "projects", "skills")
+        self.error: Exception | None = None
+
+    def suggest_design(self, payload: dict[str, Any]) -> CvDesignSuggestion:
+        self.payloads.append(payload)
+        if self.error is not None:
+            raise self.error
+        return CvDesignSuggestion(
+            layout=self.layout,
+            section_order=self.section_order,
+            rationale="Tus proyectos y tu formación sostienen el CV mejor que la experiencia.",
+            model="nvidia/modelo-ficticio",
+            prompt_version="1.0.0",
+            generated_at=datetime(2026, 11, 5, 12, 0, 5, tzinfo=UTC),
+            disclaimer="",
+        )
+
+
+def run_now(task: Any) -> None:
+    """Runner sincrónico para los pedidos en segundo plano (tests deterministas)."""
+    task()

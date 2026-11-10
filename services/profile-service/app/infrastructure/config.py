@@ -39,6 +39,7 @@ class ProfileSettings:
     http_timeout_seconds: int = 5
     event_timeout_seconds: int = 3
     cv_webhook_timeout_seconds: int = 300
+    cv_design_timeout_seconds: int = 120
 
     @classmethod
     def from_env(cls) -> "ProfileSettings":
@@ -67,4 +68,5 @@ class ProfileSettings:
             http_timeout_seconds=_int_env("PROFILE_HTTP_TIMEOUT", 5),
             event_timeout_seconds=_int_env("PROFILE_EVENT_TIMEOUT", 3),
             cv_webhook_timeout_seconds=_int_env("CV_WEBHOOK_TIMEOUT", 300),
+            cv_design_timeout_seconds=_int_env("CV_DESIGN_TIMEOUT", 120),
         )
