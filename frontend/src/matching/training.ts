@@ -48,13 +48,21 @@ export function trainingAction(status: string | undefined, hasItems: boolean): s
   return 'Pedir sugerencias con IA';
 }
 
-/** "Falta en 3 de 5 ofertas parecidas" / "Tenés nivel 1, piden 3". */
+/** "Obligatoria en 3 de 5 ofertas parecidas" / "Tenés nivel 1 y piden 3 en …". */
 export function describeGap(gap: SkillGap, similarJobs: number): string {
-  const where = `en ${gap.jobs_count} de ${similarJobs} ${similarJobs === 1 ? 'oferta parecida' : 'ofertas parecidas'}`;
+  const offers = similarJobs === 1 ? 'oferta parecida' : 'ofertas parecidas';
+  const where = `en ${gap.jobs_count} de ${similarJobs} ${offers}`;
+  const kind =
+    gap.required_in === 0
+      ? ' (deseable)'
+      : gap.required_in < gap.jobs_count
+        ? ` (obligatoria en ${gap.required_in})`
+        : '';
   if (gap.status === 'improve') {
-    return `Tenés nivel ${gap.current_level} y piden ${gap.required_level} ${where}`;
+    return `Tenés nivel ${gap.current_level} y piden ${gap.required_level} ${where}${kind}`;
   }
-  return gap.required_in > 0 ? `Obligatoria ${where}` : `Deseable ${where}`;
+  if (gap.required_in === gap.jobs_count) return `Obligatoria ${where}`;
+  return `Falta ${where}${kind}`;
 }
 
 /** Pasos de una oferta: sólo postularse o mostrar mejor algo que ya tiene. Los cursos y lo que

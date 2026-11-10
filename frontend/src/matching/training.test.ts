@@ -67,11 +67,12 @@ describe('[UT-FE-TRN-02] Formación general, sin proyectos ni portfolios', () =>
   });
 
   it('describe cada brecha sobre las ofertas parecidas', () => {
-    expect(describeGap(gap({}), 5)).toBe('Obligatoria en 3 de 5 ofertas parecidas');
+    expect(describeGap(gap({ required_in: 3 }), 5)).toBe('Obligatoria en 3 de 5 ofertas parecidas');
+    expect(describeGap(gap({}), 5)).toBe('Falta en 3 de 5 ofertas parecidas (obligatoria en 2)');
     expect(describeGap(gap({ required_in: 0, jobs_count: 1 }), 1)).toBe(
-      'Deseable en 1 de 1 oferta parecida',
+      'Falta en 1 de 1 oferta parecida (deseable)',
     );
-    expect(describeGap(gap({ status: 'improve', current_level: 1 }), 5)).toBe(
+    expect(describeGap(gap({ status: 'improve', current_level: 1, required_in: 3 }), 5)).toBe(
       'Tenés nivel 1 y piden 3 en 3 de 5 ofertas parecidas',
     );
   });
