@@ -3,6 +3,7 @@
 import re
 import unicodedata
 from collections.abc import Mapping
+from typing import Protocol
 
 MANUAL_PLACEHOLDER = "COMPLETAR_MANUALMENTE"
 
@@ -21,6 +22,12 @@ def is_missing(value: object) -> bool:
     if isinstance(value, str):
         return not value.strip() or value.strip() == MANUAL_PLACEHOLDER
     return False
+
+
+class SkillNameNormalizer(Protocol):
+    """Lleva un nombre de competencia a su clave canónica (`SkillDictionary` lo cumple)."""
+
+    def normalize(self, name: str) -> str: ...
 
 
 class SkillNormalizer:

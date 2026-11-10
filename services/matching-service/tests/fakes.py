@@ -17,7 +17,7 @@ class FakeTrigger:
         self.on_call: Any = None
 
     def request_analysis(
-        self, request_id: str, mode: str, subject_id: str, limit: int, job_id: str = ""
+        self, request_id: str, mode: str, subject_id: str, limit: int
     ) -> dict[str, Any]:
         self.calls.append(
             {
@@ -25,7 +25,6 @@ class FakeTrigger:
                 "mode": mode,
                 "subject_id": subject_id,
                 "limit": limit,
-                "job_id": job_id,
             }
         )
         if self.fail:

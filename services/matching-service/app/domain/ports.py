@@ -36,8 +36,8 @@ class RecommendationRepository(Protocol):
         """Última recomendación `mode=company` por candidato para la oferta."""
         ...
 
-    def latest_training(self, profile_id: str, job_id: str) -> AiRecommendation | None:
-        """Última recomendación `mode=training` del estudiante para la oferta."""
+    def latest_training(self, profile_id: str) -> AiRecommendation | None:
+        """Última formación general (`mode=training`) del estudiante."""
         ...
 
 
@@ -55,7 +55,7 @@ class AnalysisTrigger(Protocol):
     """Dispara el análisis de IA en n8n (`POST /webhook/recommendations`, WF-06)."""
 
     def request_analysis(
-        self, request_id: str, mode: str, subject_id: str, limit: int, job_id: str = ""
+        self, request_id: str, mode: str, subject_id: str, limit: int
     ) -> JsonDict: ...
 
 

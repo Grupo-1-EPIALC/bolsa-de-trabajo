@@ -47,11 +47,18 @@ def test_rank_can_include_incompatible(container: Container) -> None:
 
 
 def test_rank_candidates_for_job(container: Container) -> None:
-    ranking = container.matching.rank_candidates_for_job("job-001", limit=2)
-    # stu-002 cursa a la mañana (choque de turno) y busca sólo remoto => incompatible
-    assert [item.profile.id for item in ranking.items] == ["stu-003", "stu-001"]
+    ranking = container.matching.rank_candidates_for_job("job-001", limit=3)
+    # stu-002 cursa a la mañana (choque de turno) y busca sólo remoto: ya no lo excluye,
+    # sólo le resta un poco del peso de condiciones; queda último por lo técnico.
+    assert [item.profile.id for item in ranking.items] == ["stu-001", "stu-003", "stu-002"]
+    assert ranking.excluded_incompatible == 0
     scores = [item.result.score for item in ranking.items]
     assert scores == sorted(scores, reverse=True)
+    conditions = {
+        item.profile.id: next(b for b in item.result.breakdown if b.criterion == "conditions")
+        for item in ranking.items
+    }
+    assert conditions["stu-002"].earned < conditions["stu-001"].earned
 
 
 def test_rank_invalid_limit_and_missing_ids(container: Container) -> None:
@@ -205,26 +212,28 @@ def test_ut_match_11_training_flow(container: Container, trigger: FakeTrigger) -
                 "score": 99,
             },
         ] * 4  # 8 ítems: se guardan como mucho 5
+        # n8n puede mandar un job_id viejo: igual se guarda como formación general.
         container.recommendations.save_batch(
             ai_batch(mode, subject_id, [{"job_id": "job-001", "items": items}], request_id)
         )
 
     trigger.on_call = persist
-    request = container.recommendations.request_analysis("training", "stu-001", "job-001")
-    assert request.job_id == "job-001"
+    request = container.recommendations.request_analysis("training", "stu-001")
+    assert request.job_id == ""
     done = container.recommendations.run_analysis(request.id)
     assert done.status is RequestStatus.COMPLETED
     assert trigger.calls[0] == {
         "request_id": request.id,
         "mode": "training",
         "subject_id": "stu-001",
-        "limit": 1,
-        "job_id": "job-001",
+        "limit": 5,
     }
 
-    view = container.recommendations.training_view("stu-001", "job-001")
-    assert view["rule_based"]["origin"] == "RULES"
-    assert "missing_skills" in view["rule_based"]
+    view = container.recommendations.training_view("stu-001")
+    assert "job_id" not in view
+    rules = view["rule_based"]
+    assert rules["origin"] == "RULES" and rules["engine_version"]
+    assert rules["similar_jobs"] and "skill_gaps" in rules
     ai = view["ai_recommendations"]
     assert ai["origin"] == "AI" and ai["status"] == "ready" and ai["request_id"] == request.id
     assert len(ai["items"]) == 5
@@ -232,19 +241,17 @@ def test_ut_match_11_training_flow(container: Container, trigger: FakeTrigger) -
     # La formación no se mezcla con las recomendaciones de ofertas (mode=student).
     student = container.recommendations.student_view("stu-001")
     assert student["ai_recommendations"]["items"] == []
-    # Otra oferta: todavía no se pidió.
-    other = container.recommendations.training_view("stu-001", "job-002")
+    # Otro estudiante: todavía no se pidió.
+    other = container.recommendations.training_view("stu-002")
     assert other["ai_recommendations"]["status"] == "not_requested"
     assert other["ai_recommendations"]["items"] == []
 
 
-def test_training_requires_job_and_existing_ids(container: Container) -> None:
-    with pytest.raises(InvalidInputError, match="job_id es obligatorio"):
-        container.recommendations.request_analysis("training", "stu-001")
+def test_training_requires_existing_profile(container: Container) -> None:
+    with pytest.raises(InvalidInputError, match="profile_id es obligatorio"):
+        container.recommendations.request_analysis("training", "")
     with pytest.raises(NotFoundError):
-        container.recommendations.request_analysis("training", "stu-001", "job-999")
-    with pytest.raises(NotFoundError):
-        container.recommendations.request_analysis("training", "stu-999", "job-001")
+        container.recommendations.request_analysis("training", "stu-999")
 
 
 def test_job_snapshot_includes_company_id(container: Container) -> None:
@@ -255,3 +262,14 @@ def test_job_snapshot_includes_company_id(container: Container) -> None:
         job = container.matching.load_job(item["job"]["job_id"])
         assert job.company_id
         assert item["job"]["company_id"] == job.company_id
+
+
+def test_skill_gaps_use_case_reports_similar_jobs(container: Container) -> None:
+    report = container.matching.skill_gaps("stu-001")
+
+    assert report.profile_id == "stu-001"
+    assert report.engine_version == "2.0.0" and report.rules_version
+    assert report.similar_jobs, "usa las ofertas activas más parecidas"
+    scores = [j.score for j in report.similar_jobs]
+    assert scores == sorted(scores, reverse=True)
+    assert len(report.gaps) <= 8

@@ -175,7 +175,7 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
     );
   } else if (section === 'jobs') {
     // El listado no depende del perfil: se ve aunque todavía no lo haya cargado.
-    content = <JobBoard profileId={profile?.id} />;
+    content = <JobBoard />;
   } else if (profile === undefined) {
     content = (
       <div className="text-center py-5">

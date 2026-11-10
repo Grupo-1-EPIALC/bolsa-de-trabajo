@@ -211,10 +211,11 @@ def test_analysis_request_ownership(client: TestClient) -> None:
 
 def test_training_request_and_view_by_role(client: TestClient) -> None:
     student = bearer(STUDENT_001, "student")
-    body = {"mode": "training", "profile_id": "stu-001", "job_id": "job-001"}
+    body = {"mode": "training", "profile_id": "stu-001"}
     created = client.post("/api/v1/matches/recommendations/requests", json=body, headers=student)
     assert created.status_code == 202
-    assert created.json()["mode"] == "training" and created.json()["job_id"] == "job-001"
+    # La formación es general: no queda atada a una oferta.
+    assert created.json()["mode"] == "training" and "job_id" not in created.json()
 
     as_company = client.post(
         "/api/v1/matches/recommendations/requests",
@@ -228,23 +229,45 @@ def test_training_request_and_view_by_role(client: TestClient) -> None:
         headers=student,
     )
     assert foreign.status_code == 404
-    no_job = client.post(
-        "/api/v1/matches/recommendations/requests",
-        json={"mode": "training", "profile_id": "stu-001"},
-        headers=student,
-    )
-    assert no_job.status_code == 422
 
-    path = "/api/v1/matches/recommendations/students/{}/training/job-001"
+    path = "/api/v1/matches/recommendations/students/{}/training"
     own = client.get(path.format("stu-001"), headers=student)
     assert own.status_code == 200
     assert own.json()["rule_based"]["origin"] == "RULES"
+    assert "skill_gaps" in own.json()["rule_based"]
     assert own.json()["ai_recommendations"]["origin"] == "AI"
     assert client.get(path.format("stu-002"), headers=student).status_code == 404
     assert (
         client.get(path.format("stu-001"), headers=bearer(COMPANY_001, "company")).status_code
         == 403
     )
+
+
+def test_skill_gaps_endpoint_is_internal(client: TestClient) -> None:
+    path = "/api/v1/matches/students/stu-001/skill-gaps"
+    service = client.get(path, headers=SERVICE)
+    assert service.status_code == 200
+    body = service.json()
+    assert body["origin"] == "RULES" and "skill_gaps" in body and "similar_jobs" in body
+    assert client.get(path, headers=bearer(STUDENT_001, "student")).status_code == 403
+
+
+def test_skills_dictionary_and_resolve(client: TestClient) -> None:
+    student = bearer(STUDENT_001, "student")
+    full = client.get("/api/v1/matches/skills/dictionary", headers=student)
+    assert full.status_code == 200 and full.json()["skills"]
+    resolved = client.post(
+        "/api/v1/matches/skills/resolve",
+        json={"skills": ["Posgres", "GitLab"], "profile_skills": ["GitHub"]},
+        headers=SERVICE,
+    )
+    assert resolved.status_code == 200
+    by_key = {i["key"]: i for i in resolved.json()["items"]}
+    assert by_key["postgresql"]["name"] == "PostgreSQL"
+    assert by_key["gitlab"]["covered_by"]["via"] == "GitHub"
+    empty = client.post("/api/v1/matches/skills/resolve", json={"skills": []}, headers=SERVICE)
+    assert empty.status_code == 422
+    assert client.get("/api/v1/matches/skills/dictionary").status_code == 401
 
 
 # ------------------------------------------------------------- JWKS real ---

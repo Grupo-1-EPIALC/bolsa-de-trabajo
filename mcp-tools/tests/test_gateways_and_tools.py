@@ -298,3 +298,35 @@ def test_ut_mcp_04_cv_design_schema_and_skill() -> None:
         ' "score": 90}',
     ):
         assert verification.validate_json("cv_design", bad)["valid"] is False, bad
+
+
+def test_ut_mcp_05_general_training_schema_without_portfolios() -> None:
+    """UT-MCP-05: la formación es general y no acepta proyectos; las ofertas no llevan cursos."""
+    container = build_container({"MCP_USE_MOCKS": "true", "AGENT_SETTINGS_SOURCE": "env"})
+    tools = register_tools(FastMCP("test-mcp"), container)
+    skill = tools["leer_skill"]("orientacion-postulante")
+    assert skill["ok"] is True
+    assert "skill_gaps" in skill["content"] and "portfolio" in skill["content"].lower()
+
+    verification = container.verification
+    good = (
+        '{"summary": "Las ofertas parecidas piden React.", "items": ['
+        '{"type": "course", "skill": "React", "text": "Curso de React", "priority": "alta"},'
+        '{"type": "skill", "skill": "Docker", "text": "Practicar Docker", "priority": "media"}]}'
+    )
+    assert verification.validate_json("student_recommendations", good)["valid"] is True
+    project = (
+        '{"items": [{"type": "project", "skill": "React", "text": "Armá un portfolio",'
+        ' "priority": "alta"}]}'
+    )
+    assert verification.validate_json("student_recommendations", project)["valid"] is False
+
+    course_per_job = (
+        '{"summary": "Resumen corto", "jobs": [{"job_id": "job-1", "priority": "alta",'
+        ' "fit_reasons": [], "watch_outs": [], "next_steps": [{"type": "course",'
+        ' "skill": "React", "text": "Curso de React", "priority": "alta"}]}]}'
+    )
+    assert (
+        verification.validate_json("match_student_recommendations", course_per_job)["valid"]
+        is False
+    )

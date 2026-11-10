@@ -160,20 +160,20 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 
 ### 4.4 Agente `matching-agent` — matching-service (FastAPI)
 **Debe:**
-- Implementar `ScoringCriterion` (Protocol) y un criterio por clase: RequiredSkills (50), DesiredSkills (15), Levels (15), Experience (10), Education (5), Languages (5). Pesos en `scoring_rules.yaml`.
+- Implementar `ScoringCriterion` (Protocol) y un criterio por clase: RequiredSkills (40), DesiredSkills (10), Levels (10), Experience (25, años + relevancia de `skills_used`), Education (5), Languages (3), Conditions (7). Pesos en `scoring_rules.yaml`. Lo técnico y la experiencia pesan más; las condiciones laborales (modalidad, horario, disponibilidad) suman poco y sólo excluyen los requisitos legales (licencia, autorización para trabajar).
 - Regla excluyente: falta una skill `excluding` → score máximo 40.
 - `MissingSkillsAnalyzer` con brecha de nivel y orden por prioridad.
-- Normalización de skills (minúsculas, sin acentos, sinónimos).
+- Normalización de skills con el diccionario `app/data/skill_dictionary.json` (`SkillDictionary`): alias (mismo nombre escrito distinto), `implies` (PostgreSQL ⇒ SQL), equivalentes (MySQL ↔ MariaDB, cuentan completas) y herramientas similares que facilitan el aprendizaje (GitHub ~ GitLab, cuentan sólo su `credit` y quedan como brecha con `similar_to`). Se expone en `GET /skills/dictionary` y `POST /skills/resolve` (herramienta `resolver_skills` del agente).
 - Respuestas de reglas siempre con `origin: "RULES"` y `engine_version`.
 - Exponer endpoint interno para persistir recomendaciones generadas por `n8n` (`POST /api/v1/matches/recommendations`, con `origin: "AI"`).
 - Usar la estructura común de [`contracts/profile.md`](contracts/profile.md) (anexo): condiciones laborales en un bloque `conditions_fit` separado del score (un `ConditionCheck` por clase, `hard` configurable) y sueldo pretendido ↔ ofrecido en `salary_fit`, respetando su `visibility`.
 - Rankings por reglas en ambos sentidos (`GET /api/v1/matches/students/{profile_id}/jobs` y `GET /api/v1/matches/jobs/{job_id}/candidates`) con snapshots sin datos personales; pedidos de análisis a `WF-06` (`POST /api/v1/matches/recommendations/requests`), guardado del resultado (`POST /api/v1/matches/recommendations/batch`) y vistas combinadas reglas + IA (`GET /api/v1/matches/recommendations/{students|jobs}/{id}`). Contrato en [`contracts/matching.md`](contracts/matching.md) y el OpenAPI vivo (`/api/v1/matches/openapi.json`).
 - Descartar cualquier `score`/`rank` que venga en contenido de IA: el valor mostrado sale siempre del motor.
 - Autenticar usuarios con el JWT RS256 de auth-service validado localmente contra el JWKS (`iss`, `aud`, `exp`, `role`) y servicios sólo con `X-Service-Token` (nunca como Bearer). Acceso por dueño: `student` → `profile.user_id == sub`; `company` → `job.company_id == sub`; recurso ajeno → 404; endpoints internos → 403 para usuarios. Contrato para el front en `contracts/matching.md` (parte A).
-- Formación para una oferta (`mode=training`, `profile_id` + `job_id`): el estudiante la pide con `POST /recommendations/requests`, WF-06 la genera con `training_advisor` y la guarda con `mode=training` en `/recommendations/batch`; se lee en `GET /recommendations/students/{profile_id}/training/{job_id}`. Nunca se mezcla con las recomendaciones de ofertas.
+- Qué sumar o mejorar, **en general y no por oferta** (`mode=training`, sólo `profile_id`): `SkillGapAggregator` junta por reglas las competencias que faltan en las ofertas activas más parecidas al perfil (`GET /students/{profile_id}/skill-gaps`, interno); el estudiante pide la formación con `POST /recommendations/requests`, WF-06 la genera con `training_advisor` y la guarda con `mode=training` en `/recommendations/batch`; se lee en `GET /recommendations/students/{profile_id}/training`. Nunca se mezcla con las recomendaciones de ofertas.
 - Cantidad de ofertas por estudiante y de candidatos por oferta configurable por un `admin` (`GET`/`PATCH /api/v1/matches/settings`, 1–20, valores iniciales en `scoring_rules.yaml`). Rige para vistas, rankings y pedidos de IA; un `limit` explícito sólo puede achicarla.
 **No debe:** llamar a ningún LLM directamente.
-**Tests mínimos:** UT-MATCH-01 a UT-MATCH-09.
+**Tests mínimos:** UT-MATCH-01 a UT-MATCH-09 y UT-MATCH-12 (brechas generales) y UT-MATCH-13 (diccionario de competencias).
 
 ### 4.5 Agente `mcp-agent` — mcp-tools (MCP local Python, exclusivo para n8n)
 **Debe:**
@@ -223,9 +223,9 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 | **Orquestador (Captain)** | n8n `WF-00` + `WF-0R` (Router NVIDIA) | Sub-workflow invocado por `WF-01` y `WF-06` | `get_agent_settings`, `router_*` | Coordina especialista → `WF-0V` Verificador (con reintento si rechaza) |
 | **Verificador** | n8n `WF-0V` | Sub-workflow invocado por `WF-00` | `validate_json_schema`, `check_grounding` | `{cumple, faltantes, instruccion}` |
 | **CV Structurer** | n8n `WF-01` → `WF-00` | `POST /webhook/cv-extract` / `cv.uploaded` | `parse_cv_file` (`parse_cv_text`) | JSON estandarizado `cv_suggestions` (`origin="AI"`, sin `null`, con `"COMPLETAR_MANUALMENTE"` / `[]`) |
-| **Match Advisor (Jean Grey)** | n8n `WF-06` → `WF-00` | `POST /webhook/recommendations` (`mode=student\|company`), disparado por matching-service (`/recommendations/requests`) | `rank_jobs_for_student`, `rank_candidates_for_job`, `search_courses` (el guardado va por REST a matching-service `/recommendations/batch`) | `match_student_recommendations` / `match_company_recommendations` sin score; bloques separados `rule_based` (`origin="RULES"`) y `ai_recommendations` (`origin="AI"`). Cantidad de ofertas/candidatos: la configura un admin en matching-service |
+| **Match Advisor (Jean Grey)** | n8n `WF-06` → `WF-00` | `POST /webhook/recommendations` (`mode=student\|company`), disparado por matching-service (`/recommendations/requests`) | `rank_jobs_for_student`, `rank_candidates_for_job`, `search_courses`, `resolver_skills` (diccionario de competencias; el guardado va por REST a matching-service `/recommendations/batch`) | `match_student_recommendations` / `match_company_recommendations` sin score; bloques separados `rule_based` (`origin="RULES"`) y `ai_recommendations` (`origin="AI"`). Cantidad de ofertas/candidatos: la configura un admin en matching-service |
 | **CV Designer (Tony Stark)** | n8n `WF-07` → `WF-00` | `POST /webhook/cv-design`, disparado por profile-service (`/profiles/me/cv-design/requests`) | `leer_skill` (`diseno-cv`), `validate_json_schema` | `cv_design` (`layout` del catálogo, `section_order`, `rationale`); profile-service lo vuelve a validar y nunca cambia el contenido del CV |
-| **Training Advisor** | n8n `WF-06` → `WF-00` | `POST /webhook/recommendations` (`mode=training`) | `get_profile`, `get_job`, `list_active_jobs`, `compute_match`, `missing_skills`, `search_courses`, `save_recommendation` | `student_recommendations` (cursos, proyectos, tips) |
+| **Training Advisor** | n8n `WF-06` → `WF-00` | `POST /webhook/recommendations` (`mode=training`, sólo `profile_id`) | `rank_jobs_for_student` (snapshot del perfil), `search_courses`, `resolver_skills`; las brechas generales por REST a matching-service (`/students/{id}/skill-gaps`) | `student_recommendations` general, no por oferta (cursos, competencias para sumar o mejorar y consejos de perfil; sin portfolios ni proyectos) |
 | **Match Notifier** | n8n `WF-02` a `WF-04` | `job.created`, `profile.updated` | `get_agent_settings` (`notifications`); el resto por REST a matching, jobs y profile | Mails con resultados por reglas: oferta nueva y resumen al estudiante, candidato nuevo a la empresa (sin datos personales) |
 | **Errores** | n8n `WF-05` | Falla de cualquier workflow (`errorWorkflow`) | `get_agent_settings` (`notifications.admin_email`) | Mail al admin con workflow, nodo, error y link a la ejecución |
 
@@ -251,12 +251,13 @@ Restricciones: SOLID, capas, tests unitarios pytest/Jest/Vitest, no tocar otros 
 Entregá: archivos modificados + tests + cómo probar + entrada P-NNN en PROMPTS.md.
 ```
 
-### 6.2 Prompt de runtime — Training Advisor (`n8n/prompts/training_advisor.md`, v1.0.0)
+### 6.2 Prompt de runtime — Training Advisor (`n8n/prompts/training_advisor.md`, v2.0.0)
 ```
-Sos un orientador de carrera. Recibís el perfil de un estudiante, una oferta,
-el resultado de compatibilidad calculado por reglas y las competencias faltantes.
-NO recalcules el puntaje. Usá search_courses para proponer formación.
-Devolvé JSON: {"items":[{"type":"course|project|profile_tip","skill":str,
+Sos un orientador de carrera. Recomendás qué competencias sumar o mejorar EN GENERAL,
+no para una oferta. Recibís un resumen del perfil sin datos personales y las brechas
+calculadas por reglas sobre las ofertas más parecidas (skill_gaps). NO recalcules el
+puntaje. Usá search_courses. No pidas portfolios ni proyectos.
+Devolvé JSON: {"summary":str,"items":[{"type":"course|skill|profile_tip","skill":str,
 "text":str,"priority":"alta|media|baja"}]} con máximo 5 ítems.
 ```
 

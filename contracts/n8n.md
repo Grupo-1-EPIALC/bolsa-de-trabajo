@@ -54,9 +54,10 @@ También se acepta `X-Webhook-Token` con `N8N_WEBHOOK_TOKEN`. Sin token válido:
 { "mode": "student", "request_id": "req-…", "limit": 5, "profile_id": "prof-…" }
 ```
 
-- `mode=student` (`profile_id`): ranking con `rank_jobs_for_student` y agente `match_advisor` (`perfil=postulante`).
+- `mode=student` (`profile_id`): ranking con `rank_jobs_for_student` y agente `match_advisor` (`perfil=postulante`, prompt 1.2.0). En `next_steps` sólo `apply` o `profile_tip`: no hay cursos, proyectos ni portfolios por oferta (WF-06 descarta otros tipos).
 - `mode=company` (`job_id`): ranking con `rank_candidates_for_job` y `match_advisor` (`perfil=empresa`).
-- `mode=training` (`profile_id` + `job_id`): formación con `training_advisor` (`perfil=postulante`) sobre `compute_match` + `missing_skills` + `search_courses`. Lo pide el estudiante desde matching-service. Se guarda con `mode=training` en `/recommendations/batch` (hasta 5 ítems `{type, skill, text, priority}`, sin score) ([`matching.md`](matching.md), parte B §B.2).
+- `mode=training` (sólo `profile_id`): qué competencias sumar o mejorar **en general**, no por oferta. WF-06 pide las brechas por reglas a matching-service (`GET /api/v1/matches/students/{profile_id}/skill-gaps`, sobre las ofertas más parecidas al perfil), el snapshot del perfil sin datos personales (`rank_jobs_for_student`) y los cursos (`search_courses`). Ejecuta `training_advisor` (`perfil=postulante`, prompt 2.1.0) y guarda con `mode=training` en `/recommendations/batch` una sola entrada con hasta 5 ítems `{type: course | skill | profile_tip, skill, text, priority}`, sin score ni proyectos. Si no hay brechas, no llama a la IA (`skipped`). Detalle en [`matching.md`](matching.md), parte B §B.2.
+- Diccionario de competencias: las brechas y los matches por reglas ya vienen normalizados ([`matching.md`](matching.md) §5.1). `matched_skills[].via` dice qué skill del perfil cubre la pedida (SQL por PostgreSQL) y `missing_skills[].similar_to` / `skill_gaps[].similar_to`, qué herramienta similar ya sabe y le facilita aprenderla (GitHub para GitLab). Los agentes la usan como puente y pueden consultar `resolver_skills` (MCP) si dudan de un nombre.
 - El resultado se guarda con `POST /api/v1/matches/recommendations/batch`, separando `rule_based` (`origin: "RULES"`) de `ai_recommendations` (`origin: "AI"`, `model`, `generated_at`, `prompt_version`, `disclaimer`). Nunca se devuelve un score propio ([`matching.md`](matching.md), parte B).
 
 ## 5. Salidas de IA y verificación

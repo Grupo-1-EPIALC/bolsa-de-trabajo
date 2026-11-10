@@ -1,7 +1,8 @@
 """Motor de matching por reglas (`origin = "RULES"`).
 
 Suma los criterios de scoring, aplica la regla excluyente (tope de 40 si falta una skill
-`excluding`), calcula skills faltantes y evalúa las condiciones laborales por separado.
+`excluding`) y calcula skills faltantes. Las condiciones laborales se detallan aparte en
+`conditions_fit` y sólo suman al score con el peso chico del criterio `conditions`.
 """
 
 from collections.abc import Callable, Sequence
@@ -22,6 +23,7 @@ from app.domain.conditions import (
     WorkScheduleCheck,
 )
 from app.domain.criteria import (
+    ConditionsCriterion,
     DesiredSkillsCriterion,
     EducationCriterion,
     ExperienceCriterion,
@@ -42,8 +44,9 @@ from app.domain.models import (
 )
 from app.domain.rules import ScoringRules
 from app.domain.salary import SalaryComparator
+from app.domain.skill_dictionary import EXACT_ONLY, SkillDictionary
 
-ENGINE_VERSION = "1.0.0"
+ENGINE_VERSION = "2.0.0"
 
 
 class MatchingEngine:
@@ -54,7 +57,9 @@ class MatchingEngine:
         analyzer: MissingSkillsAnalyzer,
         rules: ScoringRules,
         clock: Callable[[], str],
+        skills: SkillDictionary = EXACT_ONLY,
     ) -> None:
+        self._skills = skills
         self._criteria = list(criteria)
         self._checks = list(checks)
         self._analyzer = analyzer
@@ -65,13 +70,21 @@ class MatchingEngine:
     def rules(self) -> ScoringRules:
         return self._rules
 
+    def now(self) -> str:
+        return self._clock()
+
+    @property
+    def skills(self) -> SkillDictionary:
+        return self._skills
+
     def match(self, profile: StudentProfile, job: JobOpportunity) -> MatchResult:
         breakdown = tuple(c.evaluate(profile, job) for c in self._criteria)
         raw_total = sum(r.earned for r in breakdown)
 
         have = profile.skill_levels()
         missing_excluding = any(
-            s.normalized not in have for s in job.skills_of(RequirementKind.EXCLUDING)
+            not ((cov := self._skills.coverage(have, s.normalized)) and cov.full)
+            for s in job.skills_of(RequirementKind.EXCLUDING)
         )
         score = min(raw_total, self._rules.excluding_cap) if missing_excluding else raw_total
 
@@ -104,16 +117,11 @@ class MatchingEngine:
         return ConditionsFit(compatible, results, distance, salary_fit)
 
 
-def build_engine(rules: ScoringRules, clock: Callable[[], str]) -> MatchingEngine:
-    """Arma el motor con los criterios y las condiciones habilitadas en `rules`."""
-    criteria: list[ScoringCriterion] = [
-        RequiredSkillsCriterion(rules.weight("required_skills")),
-        DesiredSkillsCriterion(rules.weight("desired_skills")),
-        LevelsCriterion(rules.weight("levels")),
-        ExperienceCriterion(rules.weight("experience")),
-        EducationCriterion(rules.weight("education")),
-        LanguagesCriterion(rules.weight("languages")),
-    ]
+def build_engine(
+    rules: ScoringRules, clock: Callable[[], str], skills: SkillDictionary = EXACT_ONLY
+) -> MatchingEngine:
+    """Arma el motor con los criterios, las condiciones habilitadas en `rules` y el
+    diccionario de competencias (alias, equivalentes, implicaciones y similares)."""
     comparator = SalaryComparator(rules.salary)
     factories: dict[str, Callable[[bool], ConditionCheck]] = {
         "work_modality": WorkModalityCheck,
@@ -134,4 +142,18 @@ def build_engine(rules: ScoringRules, clock: Callable[[], str]) -> MatchingEngin
         for name, factory in factories.items()
         if rules.condition(name).enabled
     ]
-    return MatchingEngine(criteria, checks, MissingSkillsAnalyzer(), rules, clock)
+    criteria: list[ScoringCriterion] = [
+        RequiredSkillsCriterion(rules.weight("required_skills"), skills),
+        DesiredSkillsCriterion(rules.weight("desired_skills"), skills),
+        LevelsCriterion(rules.weight("levels"), skills),
+        ExperienceCriterion(
+            rules.weight("experience"),
+            rules.experience.reference_years,
+            rules.experience.relevance_share,
+            skills,
+        ),
+        EducationCriterion(rules.weight("education")),
+        LanguagesCriterion(rules.weight("languages")),
+        ConditionsCriterion(rules.weight("conditions"), checks),
+    ]
+    return MatchingEngine(criteria, checks, MissingSkillsAnalyzer(skills), rules, clock, skills)

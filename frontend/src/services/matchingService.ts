@@ -40,18 +40,18 @@ export const matchingService = {
     });
   },
 
-  /** GET /matches/recommendations/students/{id}/training/{job_id} · formación para una oferta. */
-  getTraining(profileId: string, jobId: string): Promise<TrainingView> {
+  /** GET /matches/recommendations/students/{id}/training · qué sumar o mejorar, en general. */
+  getTraining(profileId: string): Promise<TrainingView> {
     return apiFetch<TrainingView>(
-      `/matches/recommendations/students/${encodeURIComponent(profileId)}/training/${encodeURIComponent(jobId)}`,
+      `/matches/recommendations/students/${encodeURIComponent(profileId)}/training`,
     );
   },
 
-  /** POST /matches/recommendations/requests · pide la formación a la IA (WF-06, mode=training). */
-  requestTraining(profileId: string, jobId: string): Promise<RecommendationRequest> {
+  /** POST /matches/recommendations/requests · pide la formación general a la IA (mode=training). */
+  requestTraining(profileId: string): Promise<RecommendationRequest> {
     return apiFetch<RecommendationRequest>('/matches/recommendations/requests', {
       method: 'POST',
-      body: JSON.stringify({ mode: 'training', profile_id: profileId, job_id: jobId }),
+      body: JSON.stringify({ mode: 'training', profile_id: profileId }),
     });
   },
 

@@ -1,146 +1,185 @@
-import React, { useCallback, useEffect, useId, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { matchingService } from '../../services/matchingService';
 import { errorMessage } from '../../services/api';
 import { labelOf } from '../../profile/labels';
 import {
   TRAINING_ICONS,
   TRAINING_TYPES,
+  describeGap,
   sortTraining,
   trainingAction,
+  trainingType,
 } from '../../matching/training';
+import { AiProgress } from './AiProgress';
+import { similarHint } from '../../matching/skills';
 import { PRIORITY_CLASS } from './RuleMatch';
 import { useAiAnalysis } from './useAiAnalysis';
 import type { TrainingView } from '../../types/matching';
 
 interface TrainingAdviceProps {
   profileId: string;
-  jobId: string;
 }
 
 /**
- * "¿Cómo mejorar para esta oferta?": cursos, proyectos y consejos sugeridos por IA a partir de
- * las competencias que faltan según el motor de reglas. Panel ámbar, separado del puntaje.
+ * "Qué sumar o mejorar": competencias que faltan en las ofertas más parecidas al perfil
+ * (panel verde, por reglas) y cursos y consejos sugeridos por IA (panel ámbar). Es general,
+ * no para una oferta.
  */
-export const TrainingAdvice: React.FC<TrainingAdviceProps> = ({ profileId, jobId }) => {
-  const [open, setOpen] = useState(false);
+export const TrainingAdvice: React.FC<TrainingAdviceProps> = ({ profileId }) => {
   const [view, setView] = useState<TrainingView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const panelId = useId();
 
   const load = useCallback(async () => {
     setLoadError(null);
     try {
-      setView(await matchingService.getTraining(profileId, jobId));
+      setView(await matchingService.getTraining(profileId));
     } catch (err) {
       setLoadError(errorMessage(err));
     }
-  }, [profileId, jobId]);
+  }, [profileId]);
 
   useEffect(() => {
-    if (open && !view) load();
-  }, [open, view, load]);
+    load();
+  }, [load]);
 
   const ai = view?.ai_recommendations;
-  const analysis = useAiAnalysis(() => matchingService.requestTraining(profileId, jobId), load, ai);
+  const analysis = useAiAnalysis(() => matchingService.requestTraining(profileId), load, ai);
   const items = sortTraining(ai?.items);
-  const missing = view?.rule_based.missing_skills ?? [];
+  const rules = view?.rule_based;
+  const gaps = rules?.skill_gaps ?? [];
+  const similar = rules?.similar_jobs.length ?? 0;
 
   return (
-    <div className="mt-3">
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-primary btn-pill"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <i className={`bi ${open ? 'bi-chevron-up' : 'bi-lightbulb'} me-1`} aria-hidden="true" />
-        ¿Cómo mejorar para esta oferta?
-      </button>
+    <section className="card card-elevated" aria-labelledby="training-title">
+      <div className="card-body p-4">
+        <h2 id="training-title" className="h5 fw-bold mb-1">
+          <i className="bi bi-lightbulb me-2" aria-hidden="true" />
+          Qué sumar o mejorar
+        </h2>
+        <p className="small text-body-secondary mb-3">
+          En general, según tu perfil y las ofertas activas más parecidas a él. No es para una
+          oferta en particular.
+        </p>
 
-      {open && (
-        <div id={panelId} className="panel-ai rounded-3 p-3 mt-2 small">
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-            <span className="badge badge-ai text-uppercase">
-              <i className="bi bi-stars me-1" aria-hidden="true" />
-              Sugerido por IA
-            </span>
-            {view && (
-              <button
-                type="button"
-                className="btn btn-sm btn-primary btn-pill"
-                onClick={analysis.request}
-                disabled={analysis.busy}
-              >
-                {analysis.busy && (
-                  <span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />
-                )}
-                {trainingAction(analysis.busy ? 'processing' : ai?.status, items.length > 0)}
-              </button>
-            )}
+        {loadError && (
+          <div className="alert alert-warning small d-flex justify-content-between align-items-center">
+            <span>{loadError}</span>
+            <button type="button" className="btn btn-sm btn-primary btn-pill" onClick={load}>
+              Reintentar
+            </button>
           </div>
+        )}
+        {!view && !loadError && (
+          <span className="spinner-border spinner-border-sm" role="status" aria-label="Cargando" />
+        )}
 
-          {loadError && <div className="alert alert-danger small mb-2">{loadError}</div>}
-          {analysis.error && <div className="alert alert-danger small mb-2">{analysis.error}</div>}
-          {!view && !loadError && (
-            <span
-              className="spinner-border spinner-border-sm"
-              role="status"
-              aria-label="Cargando"
-            />
-          )}
-
-          {view && (
-            <>
-              <p className="mb-2">
-                {missing.length > 0 ? (
-                  <>
-                    Según el motor de reglas te falta o podés reforzar:{' '}
-                    <strong>{missing.map((m) => m.skill).join(', ')}</strong>.
-                  </>
-                ) : (
-                  'Según el motor de reglas cumplís todas las competencias que pide la oferta.'
-                )}
-              </p>
-
-              {items.length > 0 ? (
-                <ul className="list-unstyled d-grid gap-2 mb-2" aria-live="polite">
-                  {items.map((item) => (
-                    <li key={`${item.type}-${item.skill}-${item.text}`} className="d-flex gap-2">
-                      <i
-                        className={`bi ${TRAINING_ICONS[item.type] ?? 'bi-dot'} mt-1`}
-                        aria-hidden="true"
-                      />
-                      <div>
-                        <div className="d-flex flex-wrap gap-1 mb-1">
-                          <span className="badge text-bg-light border">
-                            {labelOf(TRAINING_TYPES, item.type)}
-                          </span>
-                          {item.skill && (
-                            <span className="badge text-bg-light border">{item.skill}</span>
-                          )}
-                          <span className={`badge ${PRIORITY_CLASS[item.priority] ?? ''}`}>
-                            Prioridad {item.priority}
-                          </span>
-                        </div>
-                        {item.text}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                !analysis.busy && (
-                  <p className="mb-2 text-body-secondary">
-                    Pedile a la IA cursos, proyectos y consejos para cubrir lo que falta.
+        {view && rules && (
+          <div className="row g-3">
+            <div className="col-lg-6">
+              <div className="panel-rules rounded-3 p-3 h-100 small">
+                <span className="badge badge-rules text-uppercase mb-2">
+                  <i className="bi bi-calculator me-1" aria-hidden="true" />
+                  Calculado por reglas
+                </span>
+                {gaps.length === 0 ? (
+                  <p className="mb-0">
+                    {similar > 0
+                      ? 'Cumplís las competencias que piden las ofertas más parecidas a tu perfil.'
+                      : 'Todavía no hay ofertas activas parecidas a tu perfil.'}
                   </p>
-                )
-              )}
+                ) : (
+                  <ul className="list-unstyled d-grid gap-2 mb-0">
+                    {gaps.map((gap) => (
+                      <li key={gap.skill} className="d-flex flex-wrap gap-2 align-items-baseline">
+                        <strong>{gap.skill}</strong>
+                        <span className={`badge ${PRIORITY_CLASS[gap.priority] ?? ''}`}>
+                          Prioridad {gap.priority}
+                        </span>
+                        <span className="w-100">{describeGap(gap, similar)}</span>
+                        {gap.similar_to && (
+                          <span className="w-100 text-success-emphasis">
+                            <i className="bi bi-signpost-split me-1" aria-hidden="true" />
+                            {similarHint(gap.skill, gap.similar_to)}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
 
-              {ai?.disclaimer && <p className="mb-0 text-body-secondary">{ai.disclaimer}</p>}
-            </>
-          )}
-        </div>
-      )}
-    </div>
+            <div className="col-lg-6">
+              <div className="panel-ai rounded-3 p-3 h-100 small">
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                  <span className="badge badge-ai text-uppercase">
+                    <i className="bi bi-stars me-1" aria-hidden="true" />
+                    Sugerido por IA
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary btn-pill"
+                    onClick={analysis.request}
+                    disabled={analysis.busy || gaps.length === 0}
+                  >
+                    {trainingAction(analysis.busy ? 'processing' : ai?.status, items.length > 0)}
+                  </button>
+                </div>
+
+                {analysis.busy && (
+                  <AiProgress value={analysis.progress} subject="qué sumar o mejorar" />
+                )}
+                {analysis.error && (
+                  <div className="alert alert-danger small my-2">{analysis.error}</div>
+                )}
+                {!analysis.busy && ai?.status === 'failed' && !analysis.error && (
+                  <p className="text-danger-emphasis mb-2">
+                    {ai.error?.message ?? 'El último pedido falló.'}
+                  </p>
+                )}
+
+                {!analysis.busy && ai?.summary && <p className="mb-2">{ai.summary}</p>}
+                {!analysis.busy && items.length > 0 && (
+                  <ul className="list-unstyled d-grid gap-2 mb-2" aria-live="polite">
+                    {items.map((item) => {
+                      const type = trainingType(item.type);
+                      return (
+                        <li key={`${type}-${item.skill}-${item.text}`} className="d-flex gap-2">
+                          <i className={`bi ${TRAINING_ICONS[type]} mt-1`} aria-hidden="true" />
+                          <div>
+                            <div className="d-flex flex-wrap gap-1 mb-1">
+                              <span className="badge text-bg-light border">
+                                {labelOf(TRAINING_TYPES, type)}
+                              </span>
+                              {item.skill && (
+                                <span className="badge text-bg-light border">{item.skill}</span>
+                              )}
+                              <span className={`badge ${PRIORITY_CLASS[item.priority] ?? ''}`}>
+                                Prioridad {item.priority}
+                              </span>
+                            </div>
+                            {item.text}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {!analysis.busy && items.length === 0 && ai?.status !== 'failed' && (
+                  <p className="mb-2 text-body-secondary">
+                    {gaps.length > 0
+                      ? 'Pedile a la IA cursos y consejos para sumar o mejorar estas competencias.'
+                      : 'No hace falta pedir sugerencias por ahora.'}
+                  </p>
+                )}
+                {ai?.disclaimer && items.length > 0 && (
+                  <p className="mb-0 text-body-secondary">{ai.disclaimer}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 };

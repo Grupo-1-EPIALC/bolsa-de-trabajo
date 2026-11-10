@@ -12,10 +12,13 @@ from app.domain.rules import (
     DEFAULT_CONDITIONS,
     DEFAULT_WEIGHTS,
     ConditionRule,
+    ExperienceRules,
     RankingRules,
     SalaryRules,
     ScoringRules,
+    TrainingRules,
 )
+from app.domain.skill_dictionary import SkillDictionary, SkillEntry, SkillGroup, SkillRelation
 
 
 def _mapping(value: object) -> Mapping[str, Any]:
@@ -37,8 +40,12 @@ def rules_from_mapping(data: Mapping[str, Any]) -> ScoringRules:
     ranking = _mapping(data.get("ranking"))
     defaults_salary = SalaryRules()
     defaults_ranking = RankingRules()
+    experience = _mapping(data.get("experience"))
+    training = _mapping(data.get("training"))
+    defaults_experience = ExperienceRules()
+    defaults_training = TrainingRules()
     return ScoringRules(
-        version=str(data.get("version", "1.0.0")),
+        version=str(data.get("version", ScoringRules.version)),
         weights=weights,
         excluding_cap=float(data.get("excluding_cap", 40)),
         conditions=conditions,
@@ -74,6 +81,18 @@ def rules_from_mapping(data: Mapping[str, Any]) -> ScoringRules:
             ),
             min_score=float(ranking.get("min_score", defaults_ranking.min_score)),
         ),
+        experience=ExperienceRules(
+            reference_years=float(
+                experience.get("reference_years", defaults_experience.reference_years)
+            ),
+            relevance_share=float(
+                experience.get("relevance_share", defaults_experience.relevance_share)
+            ),
+        ),
+        training=TrainingRules(
+            similar_jobs=int(training.get("similar_jobs", defaults_training.similar_jobs)),
+            max_gaps=int(training.get("max_gaps", defaults_training.max_gaps)),
+        ),
     )
 
 
@@ -88,9 +107,42 @@ def load_rules(path: str | Path) -> ScoringRules:
     return rules_from_mapping(_mapping(data))
 
 
-def load_synonyms(path: str | Path) -> dict[str, str]:
+def skill_dictionary_from_mapping(data: Mapping[str, Any]) -> SkillDictionary:
+    """Arma el diccionario de competencias desde el JSON (`skill_dictionary.json`)."""
+    try:
+        entries = tuple(
+            SkillEntry(
+                key=str(raw["key"]),
+                name=str(raw.get("name") or raw["key"]),
+                category=str(raw.get("category") or ""),
+                aliases=tuple(str(a) for a in raw.get("aliases") or ()),
+            )
+            for raw in data.get("skills") or ()
+        )
+        groups = tuple(
+            SkillGroup(
+                kind=SkillRelation(str(raw["kind"])),
+                keys=frozenset(str(k) for k in raw["skills"]),
+                credit=float(raw.get("credit", 1.0)),
+                label=str(raw.get("label") or ""),
+            )
+            for raw in data.get("groups") or ()
+        )
+        implies = {
+            str(k): frozenset(str(t) for t in targets)
+            for k, targets in _mapping(data.get("implies")).items()
+        }
+    except (KeyError, TypeError, ValueError) as exc:
+        raise InvalidRulesError(f"skill_dictionary.json inválido: {exc}") from exc
+    return SkillDictionary(entries, groups, implies, str(data.get("version") or "0"))
+
+
+def load_skill_dictionary(path: str | Path) -> SkillDictionary:
     file = Path(path)
     if not file.is_file():
-        return {}
-    data = json.loads(file.read_text(encoding="utf-8"))
-    return {str(k): str(v) for k, v in _mapping(data).items()}
+        raise InvalidRulesError(f"No se encontró el diccionario de competencias: {file}")
+    try:
+        data = json.loads(file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise InvalidRulesError(f"skill_dictionary.json inválido: {exc}") from exc
+    return skill_dictionary_from_mapping(_mapping(data))

@@ -22,7 +22,7 @@ class MatchingSettings:
     n8n_webhook_base_url: str = "http://n8n:5678/webhook"
     use_mocks: bool = True
     rules_path: str = str(DATA_DIR / "scoring_rules.yaml")
-    synonyms_path: str = str(DATA_DIR / "skill_synonyms.json")
+    skills_path: str = str(DATA_DIR / "skill_dictionary.json")
     http_timeout_seconds: int = 15
     webhook_timeout_seconds: int = 300
     max_items_per_entry: int = 5
@@ -41,9 +41,7 @@ class MatchingSettings:
             # Mientras profile-service y jobs-service no exponen GET de perfiles/ofertas.
             use_mocks=_bool_env("MATCHING_USE_MOCKS", True),
             rules_path=os.getenv("MATCHING_RULES_PATH", str(DATA_DIR / "scoring_rules.yaml")),
-            synonyms_path=os.getenv(
-                "MATCHING_SYNONYMS_PATH", str(DATA_DIR / "skill_synonyms.json")
-            ),
+            skills_path=os.getenv("MATCHING_SKILLS_PATH", str(DATA_DIR / "skill_dictionary.json")),
             http_timeout_seconds=int(os.getenv("MATCHING_HTTP_TIMEOUT", "15")),
             webhook_timeout_seconds=int(os.getenv("MATCHING_WEBHOOK_TIMEOUT", "300")),
             max_items_per_entry=int(os.getenv("MATCHING_MAX_ITEMS_PER_ENTRY", "5")),

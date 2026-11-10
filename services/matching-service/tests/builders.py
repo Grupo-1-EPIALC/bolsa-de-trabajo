@@ -40,6 +40,7 @@ def profile(**overrides: object) -> StudentProfile:
         "languages": (lang("Inglés", "B2"),),
         "education": (EducationItem(level="university", status="in_progress"),),
         "years_experience": 1.0,
+        "experience_skills": frozenset({"python", "sql", "docker"}),
         "academic": AcademicStatus(
             career="Ingeniería en Sistemas",
             current_year=4,

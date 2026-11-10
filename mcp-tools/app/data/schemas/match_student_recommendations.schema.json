@@ -58,7 +58,7 @@
           },
           "next_steps": {
             "type": "array",
-            "maxItems": 5,
+            "maxItems": 3,
             "items": {
               "type": "object",
               "required": [
@@ -73,8 +73,6 @@
                   "type": "string",
                   "enum": [
                     "apply",
-                    "course",
-                    "project",
                     "profile_tip"
                   ]
                 },
@@ -95,7 +93,8 @@
                   ]
                 }
               }
-            }
+            },
+            "description": "Pasos para esta oferta (postularse o cómo mostrar algo que ya tiene). Lo que conviene aprender va en la formación general (mode=training), no acá."
           }
         }
       }

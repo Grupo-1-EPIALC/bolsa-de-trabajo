@@ -1,13 +1,15 @@
-"""Casos de uso por reglas: match puntual, skills faltantes y rankings en ambos sentidos."""
+"""Casos de uso por reglas: match puntual, skills faltantes, rankings en ambos sentidos y
+qué competencias sumar o mejorar en general (sobre las ofertas más parecidas al perfil)."""
 
 from dataclasses import dataclass, replace
 
 from app.application.mappers import JobMapper, ProfileMapper
-from app.domain.engine import MatchingEngine
+from app.domain.engine import ENGINE_VERSION, MatchingEngine
 from app.domain.errors import InvalidInputError
 from app.domain.models import JobOpportunity, MatchResult, MissingSkill, StudentProfile
 from app.domain.ports import JobSource, ProfileSource, SettingsRepository
 from app.domain.settings import RecommendationSettings
+from app.domain.skill_gaps import SimilarJob, SkillGapAggregator, SkillGapsReport
 
 
 @dataclass(frozen=True)
@@ -52,7 +54,9 @@ class MatchingService:
         profile_mapper: ProfileMapper,
         job_mapper: JobMapper,
         settings: SettingsRepository,
+        gaps: SkillGapAggregator | None = None,
     ) -> None:
+        self._gaps = gaps or SkillGapAggregator()
         self._profiles = profiles
         self._jobs = jobs
         self._engine = engine
@@ -84,12 +88,35 @@ class MatchingService:
     def rank_jobs_for_student(
         self, profile_id: str, limit: int | None = None, include_incompatible: bool | None = None
     ) -> JobRanking:
-        rules = self._engine.rules.ranking
         top = RecommendationSettings.effective(limit, self._settings.get().student_jobs_limit)
+        profile = self.load_profile(profile_id)
+        return self._rank_jobs(profile, top, include_incompatible)
+
+    def skill_gaps(self, profile_id: str) -> SkillGapsReport:
+        """Competencias para sumar o mejorar según las ofertas activas más parecidas al perfil."""
+        training = self._engine.rules.training
+        profile = self.load_profile(profile_id)
+        ranking = self._rank_jobs(profile, training.similar_jobs, None)
+        results = [item.result for item in ranking.items]
+        return SkillGapsReport(
+            profile_id=profile.id,
+            similar_jobs=tuple(
+                SimilarJob(item.job.id, item.job.title, item.result.score) for item in ranking.items
+            ),
+            gaps=tuple(self._gaps.aggregate(results, training.max_gaps)),
+            evaluated=ranking.evaluated,
+            engine_version=ENGINE_VERSION,
+            rules_version=self._engine.rules.version,
+            computed_at=self._engine.now(),
+        )
+
+    def _rank_jobs(
+        self, profile: StudentProfile, top: int, include_incompatible: bool | None
+    ) -> JobRanking:
+        rules = self._engine.rules.ranking
         keep_incompatible = (
             not rules.exclude_incompatible if include_incompatible is None else include_incompatible
         )
-        profile = self.load_profile(profile_id)
         jobs = [
             self._job_mapper.to_domain(raw) for raw in self._jobs.list_active_jobs(rules.max_pool)
         ]

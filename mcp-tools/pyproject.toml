@@ -1,6 +1,6 @@
 [project]
 name = "mcp-tools"
-version = "0.5.0"
+version = "0.7.0"
 description = "Servidor MCP local con las herramientas para los agentes de IA"
 requires-python = ">=3.12,<3.13"
 dependencies = [

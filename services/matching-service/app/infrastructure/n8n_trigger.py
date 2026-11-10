@@ -11,16 +11,12 @@ class HttpN8nAnalysisTrigger:
     def __init__(self, client: JsonHttpClient) -> None:
         self._client = client
 
-    def request_analysis(
-        self, request_id: str, mode: str, subject_id: str, limit: int, job_id: str = ""
-    ) -> JsonDict:
+    def request_analysis(self, request_id: str, mode: str, subject_id: str, limit: int) -> JsonDict:
         body: dict[str, Any] = {"mode": mode, "request_id": request_id, "limit": limit}
         if mode == "company":
             body["job_id"] = subject_id
         else:
             body["profile_id"] = subject_id
-        if mode == "training":
-            body["job_id"] = job_id
         data = self._client.request("POST", "/recommendations", body=body)
         if not isinstance(data, dict):
             raise UpstreamError("WF-06 devolvió una respuesta inválida")

@@ -11,6 +11,7 @@ REGLAS DE HERRAMIENTAS MCP — elegí la herramienta de esta tabla según tu rol
 | Listar las ofertas laborales activas | list_active_jobs | `limit` (opcional). |
 | Obtener el puntaje oficial de compatibilidad calculado por reglas (`origin="RULES"`) | compute_match | `profile_id`, `job_id`. **PROHIBIDO recalcular o modificar este puntaje.** |
 | Obtener las competencias faltantes y brechas de nivel entre un perfil y una oferta | missing_skills | `profile_id`, `job_id`. Devuelve ítems ordenados por prioridad (`alta`, `media`, `baja`). |
+| Saber si dos competencias son la misma con otro nombre (`Posgres` = PostgreSQL), si una implica otra (PostgreSQL ⇒ SQL), si son equivalentes (MySQL ↔ MariaDB) o herramientas similares que facilitan aprenderla (GitHub ~ GitLab), y si el estudiante ya la cubre | resolver_skills | `skills=[...]` (hasta 50) y, opcional, `profile_skills=[...]`. Antes de recomendar o marcar como faltante una competencia, verificá que no la tenga con otro nombre. |
 | Buscar cursos de capacitación para cubrir competencias faltantes | search_courses | `skills=[...]`, `limit=5`. |
 | Guardar una recomendación generada por IA (`origin="AI"`) | save_recommendation | `profile_id`, `job_id`, `items`, `model`, `prompt_version`. Única herramienta de escritura. |
 | Validar que tu JSON cumpla el contrato oficial antes de responder | validate_json_schema | `schema_name` (`"cv_standard"`, `"student_recommendations"`, `"company_recommendations"`, `"verifier_verdict"`), `payload_json`. |

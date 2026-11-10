@@ -1,6 +1,6 @@
 [project]
 name = "matching-service"
-version = "0.2.1"
+version = "0.4.0"
 description = "Matching por reglas (origin=RULES) y recomendaciones IA generadas por n8n"
 requires-python = ">=3.12,<3.13"
 dependencies = [

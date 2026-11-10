@@ -17,7 +17,11 @@ from app.domain.models import RequirementKind
 from app.domain.normalization import SkillNormalizer, is_missing, normalize_text
 from app.domain.rules import ScoringRules
 from app.infrastructure.config import DATA_DIR
-from app.infrastructure.rules_loader import load_rules, load_synonyms, rules_from_mapping
+from app.infrastructure.rules_loader import (
+    load_rules,
+    load_skill_dictionary,
+    rules_from_mapping,
+)
 
 NORMALIZER = SkillNormalizer({"ReactJS": "React", "postgres": "PostgreSQL"})
 
@@ -145,9 +149,16 @@ def test_default_rules_file_loads_and_weights_sum_100() -> None:
     rules = load_rules(DATA_DIR / "scoring_rules.yaml")
     assert sum(rules.weights.values()) == 100
     assert rules.excluding_cap == 40
-    assert rules.condition("work_modality").hard
+    assert rules.version == "2.0.0"
+    assert rules.weight("experience") == 25 and rules.weight("conditions") == 7
+    assert not rules.condition("work_modality").hard
+    assert not rules.condition("work_schedule").hard
+    assert rules.condition("driver_license").hard
     assert not rules.condition("salary").hard
-    assert load_synonyms(DATA_DIR / "skill_synonyms.json")["reactjs"] == "react"
+    assert rules.training.similar_jobs == 10 and rules.training.max_gaps == 8
+    assert rules.experience.reference_years == 1
+    skills = load_skill_dictionary(DATA_DIR / "skill_dictionary.json")
+    assert skills.normalize("ReactJS") == "react"
 
 
 def test_invalid_rules_are_rejected(tmp_path: Path) -> None:
@@ -156,5 +167,10 @@ def test_invalid_rules_are_rejected(tmp_path: Path) -> None:
     with pytest.raises(InvalidRulesError):
         ScoringRules(excluding_cap=150)
     with pytest.raises(InvalidRulesError):
+        rules_from_mapping({"experience": {"relevance_share": 2}})
+    with pytest.raises(InvalidRulesError):
+        rules_from_mapping({"training": {"similar_jobs": 0}})
+    with pytest.raises(InvalidRulesError):
         load_rules(tmp_path / "no-existe.yaml")
-    assert load_synonyms(tmp_path / "no-existe.json") == {}
+    with pytest.raises(InvalidRulesError):
+        load_skill_dictionary(tmp_path / "no-existe.json")

@@ -20,6 +20,8 @@ from app.domain.models import (
     WorkConditions,
 )
 from app.domain.recommendations import AiRecommendation
+from app.domain.skill_dictionary import SkillDictionary
+from app.domain.skill_gaps import SkillGapsReport
 
 if TYPE_CHECKING:
     from app.application.matching_service import CandidateRanking, JobRanking
@@ -101,6 +103,8 @@ def match_to_dict(
                 "current_level": m.current_level,
                 "gap": m.gap,
                 "priority": m.priority.value,
+                "similar_to": m.similar_to or None,
+                "credit": m.credit,
             }
             for m in result.missing_skills
         ],
@@ -110,6 +114,8 @@ def match_to_dict(
                 "kind": m.kind.value,
                 "profile_level": m.profile_level,
                 "required_level": m.required_level,
+                "via": m.via or None,
+                "relation": m.relation,
             }
             for m in result.matched_skills
         ],
@@ -253,4 +259,58 @@ def candidate_ranking_to_dict(ranking: "CandidateRanking") -> JsonDict:
             }
             for pos, item in enumerate(ranking.items, start=1)
         ],
+    }
+
+
+def skill_gaps_to_dict(report: SkillGapsReport) -> JsonDict:
+    """Qué competencias sumar o mejorar en general (bloque `rule_based` de la formación)."""
+    return {
+        "origin": "RULES",
+        "profile_id": report.profile_id,
+        "engine_version": report.engine_version,
+        "rules_version": report.rules_version,
+        "computed_at": report.computed_at,
+        "evaluated": report.evaluated,
+        "similar_jobs": [
+            {"job_id": j.job_id, "title": j.title, "score": j.score} for j in report.similar_jobs
+        ],
+        "skill_gaps": [
+            {
+                "skill": g.skill,
+                "status": g.status,
+                "jobs_count": g.jobs_count,
+                "share": g.share,
+                "required_in": g.required_in,
+                "current_level": g.current_level,
+                "required_level": g.required_level,
+                "priority": g.priority.value,
+                "similar_to": g.similar_to or None,
+            }
+            for g in report.gaps
+        ],
+    }
+
+
+def skill_dictionary_to_dict(skills: SkillDictionary) -> JsonDict:
+    """El diccionario completo, para el front, n8n y la herramienta `resolver_skills`."""
+    return {
+        "origin": "RULES",
+        "version": skills.version,
+        "skills": [
+            {"key": e.key, "name": e.name, "category": e.category, "aliases": list(e.aliases)}
+            for e in skills.entries
+        ],
+        "groups": [
+            {
+                "kind": g.kind.value,
+                "label": g.label,
+                "credit": g.credit,
+                "skills": sorted(skills.name(k) for k in g.keys),
+            }
+            for g in skills.groups
+        ],
+        "implies": {
+            skills.name(k): sorted(skills.name(t) for t in targets)
+            for k, targets in sorted(skills.implies.items())
+        },
     }

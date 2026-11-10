@@ -18,6 +18,9 @@ export interface MatchedSkill {
   kind: string;
   profile_level: number;
   required_level: number;
+  /** Skill del perfil que la cubre si no es la misma (SQL por PostgreSQL). */
+  via?: string | null;
+  relation?: 'exact' | 'implied' | 'equivalent';
 }
 
 export interface MissingSkill {
@@ -27,6 +30,9 @@ export interface MissingSkill {
   current_level: number;
   gap: number;
   priority: Priority;
+  /** Herramienta similar que ya sabe y le facilita aprenderla (GitHub para GitLab). */
+  similar_to?: string | null;
+  credit?: number;
 }
 
 export interface ConditionCheck {
@@ -194,7 +200,7 @@ export interface CompanyRecommendationsView {
 export interface RecommendationRequest {
   request_id: string;
   mode: 'student' | 'company' | 'training';
-  /** Sólo training: la oferta para la que se pidió la formación. */
+  /** En desuso: la formación ya no es por oferta. */
   job_id?: string;
   subject_id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -217,18 +223,44 @@ export type RecommendationSettingsUpdate = Partial<
   Pick<RecommendationSettings, 'student_jobs_limit' | 'company_candidates_limit'>
 >;
 
-/** Ítem de formación sugerido por IA (contracts/matching.md, parte B §B.2): sin score. */
+export type TrainingItemType = 'course' | 'skill' | 'profile_tip';
+
+/** Ítem de formación sugerido por IA (contracts/matching.md, parte B §B.2): sin score.
+ * Las recomendaciones viejas pueden traer `project`; se muestran como `skill`. */
 export interface TrainingItem {
-  type: 'course' | 'project' | 'profile_tip';
+  type: TrainingItemType | 'project';
   skill: string;
   text: string;
   priority: Priority;
 }
 
-/** GET /matches/recommendations/students/{profile_id}/training/{job_id}. */
+/** Competencia para sumar o mejorar, calculada por reglas sobre las ofertas más parecidas. */
+export interface SkillGap {
+  skill: string;
+  status: 'missing' | 'improve';
+  jobs_count: number;
+  share: number;
+  required_in: number;
+  current_level: number;
+  required_level: number;
+  priority: Priority;
+  similar_to?: string | null;
+}
+
+export interface SkillGapsBlock {
+  origin: 'RULES';
+  profile_id: string;
+  engine_version: string;
+  rules_version: string;
+  computed_at: string;
+  evaluated: number;
+  similar_jobs: { job_id: string; title: string; score: number }[];
+  skill_gaps: SkillGap[];
+}
+
+/** GET /matches/recommendations/students/{profile_id}/training · general, no por oferta. */
 export interface TrainingView {
   profile_id: string;
-  job_id: string;
-  rule_based: Match;
+  rule_based: SkillGapsBlock;
   ai_recommendations: AIBlock<TrainingItem>;
 }

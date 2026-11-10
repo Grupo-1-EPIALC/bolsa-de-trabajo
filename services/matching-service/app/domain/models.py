@@ -162,6 +162,8 @@ class StudentProfile:
     languages: tuple[LanguageItem, ...] = ()
     education: tuple[EducationItem, ...] = ()
     years_experience: float = 0.0
+    # Competencias usadas en la experiencia laboral (`skills_used`, normalizadas).
+    experience_skills: frozenset[str] = frozenset()
     academic: AcademicStatus = field(default_factory=AcademicStatus)
     target_roles: tuple[str, ...] = ()
 
@@ -212,6 +214,9 @@ class MissingSkill:
     current_level: int
     gap: int
     priority: Priority
+    # Herramienta similar que ya sabe y facilita aprenderla (ej. GitHub para GitLab).
+    similar_to: str = ""
+    credit: float = 0.0  # parte que ya suma por esa similar (0 si no hay)
 
 
 @dataclass(frozen=True)
@@ -220,6 +225,9 @@ class MatchedSkill:
     kind: RequirementKind
     profile_level: int
     required_level: int
+    # Skill del perfil que la cubre si no es la misma (ej. PostgreSQL para SQL).
+    via: str = ""
+    relation: str = "exact"  # exact | implied | equivalent
 
 
 @dataclass(frozen=True)

@@ -1,28 +1,38 @@
 # Reglas del motor de matching (origin = "RULES").
 # Ver contracts/profile.md, anexo §7.
 # Cambiar pesos o condiciones => subir `version` (MINOR) para que quede trazado en cada match.
-version: "1.0.0"
+version: "2.0.0"
 
 # Pesos de los criterios del score (deben sumar 100).
+# Lo técnico y la experiencia pesan más. Las condiciones laborales (modalidad, horario,
+# ubicación, disponibilidad...) suman poco: son negociables y no hablan de la capacidad.
 weights:
-  required_skills: 50
-  desired_skills: 15
-  levels: 15
-  experience: 10
+  required_skills: 40
+  desired_skills: 10
+  levels: 10
+  experience: 25
   education: 5
-  languages: 5
+  languages: 3
+  conditions: 7
+
+# Experiencia: años frente al mínimo pedido (o frente a `reference_years` si la oferta no
+# pide mínimo) y, en `relevance_share`, si la experiencia usó competencias de la oferta.
+experience:
+  reference_years: 1
+  relevance_share: 0.4
 
 # Si falta una skill `excluding`, el score queda topeado en este valor.
 excluding_cap: 40
 
-# Condiciones laborales (conditions_fit). No suman al score.
+# Condiciones laborales (conditions_fit). Suman al score sólo con el peso `conditions`.
 # hard: true => si no coincide, el match se marca incompatible (y se excluye del ranking).
+# Sólo los requisitos legales son duros: el resto baja un poco el score y queda como aviso.
 conditions:
-  work_modality:      { enabled: true, hard: true }
-  location:           { enabled: true, hard: true }
-  work_schedule:      { enabled: true, hard: true }
+  work_modality:      { enabled: true, hard: false }
+  location:           { enabled: true, hard: false }
+  work_schedule:      { enabled: true, hard: false }
   shifts:             { enabled: true, hard: false }
-  employment_type:    { enabled: true, hard: true }
+  employment_type:    { enabled: true, hard: false }
   contract_duration:  { enabled: true, hard: false }
   availability_start: { enabled: true, hard: false }
   salary:             { enabled: true, hard: false }
@@ -48,3 +58,9 @@ ranking:
   max_pool: 200                # máximo de perfiles/ofertas que se evalúan por ranking
   exclude_incompatible: true   # excluir matches que fallan una condición dura
   min_score: 0
+
+# Qué competencias sumar o mejorar (general, no por oferta): se calcula sobre las ofertas
+# activas más parecidas al perfil.
+training:
+  similar_jobs: 10   # ofertas más parecidas que se miran
+  max_gaps: 8        # competencias que se devuelven como máximo

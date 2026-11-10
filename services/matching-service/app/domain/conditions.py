@@ -1,7 +1,8 @@
 """Chequeos de condiciones laborales (`conditions_fit`, §7.1 del contrato).
 
-Cada condición es una clase (`ConditionCheck`, OCP). No modifican el score: indican si el
-match es compatible (filtros duros) y qué condiciones coinciden o no.
+Cada condición es una clase (`ConditionCheck`, OCP). Indican si el match es compatible
+(filtros duros: por defecto sólo los legales) y qué condiciones coinciden o no. Al score
+sólo aportan con el peso chico del criterio `conditions` (`ConditionsCriterion`).
 Si falta el dato en alguno de los dos lados, el resultado es `unknown` y no penaliza.
 """
 

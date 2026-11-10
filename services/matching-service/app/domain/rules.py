@@ -5,23 +5,27 @@ from dataclasses import dataclass, field
 
 from app.domain.errors import InvalidRulesError
 
+# Lo técnico y la experiencia pesan más; las condiciones laborales (modalidad, horario,
+# disponibilidad, etc.) suman poco porque son negociables y no hablan de la capacidad.
 DEFAULT_WEIGHTS: dict[str, float] = {
-    "required_skills": 50.0,
-    "desired_skills": 15.0,
-    "levels": 15.0,
-    "experience": 10.0,
+    "required_skills": 40.0,
+    "desired_skills": 10.0,
+    "levels": 10.0,
+    "experience": 25.0,
     "education": 5.0,
-    "languages": 5.0,
+    "languages": 3.0,
+    "conditions": 7.0,
 }
 
 # Condiciones laborales (§7.1 del contrato).
-# `hard=True` => si no coincide, el match es incompatible.
+# `hard=True` => si no coincide, el match es incompatible. Sólo los requisitos legales
+# (licencia de conducir y autorización para trabajar) son duros por defecto.
 DEFAULT_CONDITIONS: dict[str, bool] = {
-    "work_modality": True,
-    "location": True,
-    "work_schedule": True,
+    "work_modality": False,
+    "location": False,
+    "work_schedule": False,
     "shifts": False,
-    "employment_type": True,
+    "employment_type": False,
     "contract_duration": False,
     "availability_start": False,
     "salary": False,
@@ -50,6 +54,22 @@ class SalaryRules:
 
 
 @dataclass(frozen=True)
+class ExperienceRules:
+    # Sin mínimo pedido en la oferta, se compara contra estos años.
+    reference_years: float = 1.0
+    # Parte del criterio que mide si la experiencia usó las competencias de la oferta.
+    relevance_share: float = 0.4
+
+
+@dataclass(frozen=True)
+class TrainingRules:
+    # Ofertas más parecidas al perfil que se usan para calcular qué sumar o mejorar.
+    similar_jobs: int = 10
+    # Máximo de competencias que se devuelven en `skill_gaps`.
+    max_gaps: int = 8
+
+
+@dataclass(frozen=True)
 class RankingRules:
     # Valores iniciales de RecommendationSettings (un admin los puede cambiar por API)
     student_jobs_limit: int = 5
@@ -61,7 +81,7 @@ class RankingRules:
 
 @dataclass(frozen=True)
 class ScoringRules:
-    version: str = "1.0.0"
+    version: str = "2.0.0"
     weights: Mapping[str, float] = field(default_factory=lambda: dict(DEFAULT_WEIGHTS))
     excluding_cap: float = 40.0
     conditions: Mapping[str, ConditionRule] = field(
@@ -72,6 +92,8 @@ class ScoringRules:
     )
     salary: SalaryRules = field(default_factory=SalaryRules)
     ranking: RankingRules = field(default_factory=RankingRules)
+    experience: ExperienceRules = field(default_factory=ExperienceRules)
+    training: TrainingRules = field(default_factory=TrainingRules)
 
     def __post_init__(self) -> None:
         missing = set(DEFAULT_WEIGHTS) - set(self.weights)
@@ -86,6 +108,12 @@ class ScoringRules:
             raise InvalidRulesError("Los pesos de los criterios deben sumar 100", {"total": total})
         if not 0 <= self.excluding_cap <= 100:
             raise InvalidRulesError("excluding_cap debe estar entre 0 y 100")
+        if self.experience.reference_years <= 0:
+            raise InvalidRulesError("experience.reference_years debe ser mayor a 0")
+        if not 0 <= self.experience.relevance_share <= 1:
+            raise InvalidRulesError("experience.relevance_share debe estar entre 0 y 1")
+        if self.training.similar_jobs < 1 or self.training.max_gaps < 1:
+            raise InvalidRulesError("training.similar_jobs y training.max_gaps deben ser >= 1")
 
     def weight(self, criterion: str) -> float:
         return float(self.weights[criterion])

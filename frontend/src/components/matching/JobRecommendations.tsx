@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { matchingService } from '../../services/matchingService';
 import { ApiError, errorMessage } from '../../services/api';
 import { WORK_MODALITY, labelOf } from '../../profile/labels';
+import { jobSteps } from '../../matching/training';
 import { PRIORITY_CLASS, RuleMatch } from './RuleMatch';
 import { useAiAnalysis } from './useAiAnalysis';
+import { AiProgress } from './AiProgress';
 import { TrainingAdvice } from './TrainingAdvice';
 import { CompanyPublicProfileModal } from '../company/CompanyPublicProfileModal';
 import type {
@@ -21,7 +23,8 @@ interface JobRecommendationsProps {
 /** Bloque de IA de una oferta (origin AI): sin score. */
 const AiAdvice: React.FC<{ item?: StudentAIItem }> = ({ item }) => {
   if (!item) return null;
-  const { fit_reasons = [], watch_outs = [], next_steps = [], priority } = item.content;
+  const { fit_reasons = [], watch_outs = [], priority } = item.content;
+  const next_steps = jobSteps(item.content.next_steps);
   return (
     <div className="panel-ai rounded-3 p-3 h-100 small">
       <div className="d-flex justify-content-between align-items-center mb-2">
@@ -72,11 +75,7 @@ const AiAdvice: React.FC<{ item?: StudentAIItem }> = ({ item }) => {
   );
 };
 
-const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem; profileId: string }> = ({
-  item,
-  ai,
-  profileId,
-}) => {
+const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem }> = ({ item, ai }) => {
   const { job } = item;
   const place = [job.location?.city, job.location?.province].filter(Boolean).join(', ');
   const modality = job.work_conditions?.work_modality ?? [];
@@ -136,7 +135,6 @@ const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem; profileId: 
             </div>
           )}
         </div>
-        <TrainingAdvice profileId={profileId} jobId={job.job_id} />
       </div>
 
       {/* Renderizado seguro del Modal Emergente */}
@@ -179,6 +177,7 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
     busy: aiBusy,
     error: aiError,
     request: requestAi,
+    progress: aiProgress,
   } = useAiAnalysis(
     () => matchingService.requestStudentAnalysis(profileId),
     load,
@@ -263,6 +262,7 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
             <span className="d-block text-body-secondary mt-1">{ai.disclaimer}</span>
           )}
         </div>
+        {aiBusy && <AiProgress value={aiProgress} subject="recomendaciones de ofertas" />}
         <button
           type="button"
           className="btn btn-sm btn-primary btn-pill"
@@ -282,6 +282,8 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
         </button>
       </div>
 
+      <TrainingAdvice profileId={profileId} />
+
       <p className="small mb-0">
         Evaluamos {rules.evaluated} ofertas activas
         {rules.excluded_incompatible > 0 &&
@@ -297,12 +299,7 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
         </div>
       ) : (
         rules.items.map((item) => (
-          <JobCard
-            key={item.job.job_id}
-            item={item}
-            ai={aiByJob.get(item.job.job_id)}
-            profileId={profileId}
-          />
+          <JobCard key={item.job.job_id} item={item} ai={aiByJob.get(item.job.job_id)} />
         ))
       )}
     </div>

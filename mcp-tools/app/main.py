@@ -40,6 +40,7 @@ TOOL_PROFILES: dict[str, set[str]] = {
     "planificador": {"get_agent_settings", "fecha_hora"},
     "cv": {
         "get_agent_settings",
+        "resolver_skills",
         "leer_skill",
         "list_skills",
         "validate_json_schema",
@@ -48,6 +49,7 @@ TOOL_PROFILES: dict[str, set[str]] = {
     },
     "postulante": {
         "get_agent_settings",
+        "resolver_skills",
         "leer_skill",
         "list_skills",
         "get_profile",
@@ -64,6 +66,7 @@ TOOL_PROFILES: dict[str, set[str]] = {
     },
     "empresa": {
         "get_agent_settings",
+        "resolver_skills",
         "leer_skill",
         "list_skills",
         "get_job",
@@ -79,6 +82,7 @@ TOOL_PROFILES: dict[str, set[str]] = {
     },
     "verificador": {
         "get_agent_settings",
+        "resolver_skills",
         "leer_skill",
         "list_skills",
         "validate_json_schema",
@@ -130,7 +134,7 @@ async def health(_: Request) -> JSONResponse:
         {
             "status": "ok",
             "service": "mcp-tools",
-            "version": "0.5.0",
+            "version": "0.7.0",
             "tools": sorted(REGISTERED_TOOLS.keys()),
             "profiles": sorted(TOOL_PROFILES.keys()),
         }

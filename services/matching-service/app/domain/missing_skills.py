@@ -8,6 +8,7 @@ from app.domain.models import (
     RequirementKind,
     StudentProfile,
 )
+from app.domain.skill_dictionary import EXACT_ONLY, SkillDictionary, SkillRelation
 
 _PRIORITY_ORDER = {Priority.HIGH: 0, Priority.MEDIUM: 1, Priority.LOW: 2}
 _KIND_ORDER = {
@@ -19,15 +20,26 @@ _KIND_ORDER = {
 
 class MissingSkillsAnalyzer:
     """Skill ausente obligatoria/excluyente => alta · deseable ausente => media ·
-    brecha de nivel en obligatoria => media · en deseable => baja."""
+    brecha de nivel en obligatoria => media · en deseable => baja.
+
+    Con el diccionario, la cubren un alias, una equivalente o una skill que la implica (con su
+    nivel). Si sólo sabe una herramienta similar, sigue faltando pero se informa en
+    `similar_to` porque le va a facilitar aprenderla.
+    """
+
+    def __init__(self, skills: SkillDictionary = EXACT_ONLY) -> None:
+        self._skills = skills
 
     def analyze(self, profile: StudentProfile, job: JobOpportunity) -> list[MissingSkill]:
         have = profile.skill_levels()
+        names = _profile_names(profile, self._skills)
         gaps: list[MissingSkill] = []
         for req in job.skills:
-            current = have.get(req.normalized, 0)
+            cov = self._skills.coverage(have, req.normalized)
+            current = cov.level if cov is not None and cov.full else 0
             if current >= req.level:
                 continue
+            similar = cov if cov is not None and cov.relation is SkillRelation.SIMILAR else None
             gaps.append(
                 MissingSkill(
                     skill=req.name,
@@ -36,6 +48,8 @@ class MissingSkillsAnalyzer:
                     current_level=current,
                     gap=req.level - current,
                     priority=self._priority(req.kind, absent=current == 0),
+                    similar_to=names.get(similar.via, similar.via) if similar else "",
+                    credit=similar.credit if similar else 0.0,
                 )
             )
         gaps.sort(key=lambda g: (_PRIORITY_ORDER[g.priority], _KIND_ORDER[g.kind], -g.gap, g.skill))
@@ -43,19 +57,36 @@ class MissingSkillsAnalyzer:
 
     def matched(self, profile: StudentProfile, job: JobOpportunity) -> list[MatchedSkill]:
         have = profile.skill_levels()
-        return [
-            MatchedSkill(
-                skill=req.name,
-                kind=req.kind,
-                profile_level=have[req.normalized],
-                required_level=req.level,
+        names = _profile_names(profile, self._skills)
+        result: list[MatchedSkill] = []
+        for req in job.skills:
+            cov = self._skills.coverage(have, req.normalized)
+            if cov is None or not cov.full:
+                continue
+            exact = cov.relation is SkillRelation.EXACT
+            result.append(
+                MatchedSkill(
+                    skill=req.name,
+                    kind=req.kind,
+                    profile_level=cov.level,
+                    required_level=req.level,
+                    via="" if exact else names.get(cov.via, cov.via),
+                    relation=cov.relation.value,
+                )
             )
-            for req in job.skills
-            if req.normalized in have
-        ]
+        return result
 
     @staticmethod
     def _priority(kind: RequirementKind, absent: bool) -> Priority:
         if kind is RequirementKind.DESIRED:
             return Priority.MEDIUM if absent else Priority.LOW
         return Priority.HIGH if absent else Priority.MEDIUM
+
+
+def _profile_names(profile: StudentProfile, skills: SkillDictionary) -> dict[str, str]:
+    """Clave → nombre oficial del diccionario (`Posgres` → PostgreSQL); si no la conoce, el
+    nombre como lo escribió el estudiante."""
+    return {
+        s.normalized: (entry.name if (entry := skills.entry(s.normalized)) else s.name)
+        for s in profile.skills
+    }

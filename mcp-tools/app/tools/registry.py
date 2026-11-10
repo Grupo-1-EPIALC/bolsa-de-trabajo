@@ -294,6 +294,22 @@ def register_tools(mcp: FastMCP, container: ServiceContainer) -> dict[str, Calla
         )
 
     @_expose
+    async def resolver_skills(
+        skills: list[str], profile_skills: list[str] | None = None
+    ) -> JsonDict:
+        """Normaliza competencias con el diccionario del motor de reglas y explica cómo se
+        relacionan. Por cada skill devuelve `name` (nombre oficial: `Posgres` → `PostgreSQL`),
+        `implies` (saber esta supone saber esas: PostgreSQL ⇒ SQL), `equivalents` (se usan una
+        por otra: MySQL ↔ MariaDB) y `similar` (herramientas parecidas que facilitan aprenderla:
+        GitHub ~ GitLab). Si pasás `profile_skills` (las del estudiante), `covered_by` dice si ya
+        la cubre y con cuál (`relation` exact | implied | equivalent | similar; `full=false` en
+        similar). Usala para no recomendar algo que el estudiante ya sabe con otro nombre y para
+        decir "como ya usás X, Y te va a resultar más fácil". Hasta 50 skills por llamada."""
+        return await _run_async(
+            lambda: container.recruitment.resolve_skills(skills, profile_skills or [])
+        )
+
+    @_expose
     async def missing_skills(profile_id: str, job_id: str) -> JsonDict:
         """Devuelve las competencias faltantes y brechas de nivel entre un perfil y una oferta,
         ordenadas por prioridad (`alta`, `media`, `baja`)."""
