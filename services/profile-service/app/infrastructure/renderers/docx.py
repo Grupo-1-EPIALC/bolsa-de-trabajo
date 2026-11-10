@@ -17,10 +17,11 @@ from app.domain.cv_design import CvSection
 from app.domain.cv_document import CvDocument, Entry
 from app.domain.ports import RenderedFile
 
-INK = RGBColor(0x0F, 0x17, 0x2A)
-TEXT = RGBColor(0x33, 0x41, 0x55)
-MUTED = RGBColor(0x64, 0x74, 0x8B)
-ACCENT = RGBColor(0x2F, 0x5B, 0xD3)
+# Misma paleta que el PDF: texto casi negro y un solo acento azul marino.
+INK = RGBColor(0x11, 0x18, 0x27)
+TEXT = RGBColor(0x1F, 0x29, 0x37)
+MUTED = RGBColor(0x4B, 0x55, 0x63)
+ACCENT = RGBColor(0x1F, 0x3A, 0x5F)
 FONT = "Calibri"
 DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -69,7 +70,7 @@ class DocxCvRenderer:
         for group in document.skill_groups:
             p = self._paragraph(doc, "")
             self._run(p, f"{group.label}: ", bold=True, color=INK)
-            self._run(p, ", ".join(f"{s.name} ({s.level_label})" for s in group.skills))
+            self._run(p, group.line)
 
     def _entries(self, doc: Any, title: str, items: Sequence[Entry]) -> None:
         if not items:
@@ -135,7 +136,7 @@ class DocxCvRenderer:
         name.paragraph_format.space_after = Pt(0)
         if document.headline:
             p = self._paragraph(doc, "")
-            self._run(p, document.headline, bold=True, color=ACCENT, size=12)
+            self._run(p, document.headline, bold=True, color=TEXT, size=11)
         if document.contact:
             p = self._paragraph(doc, "")
             for i, item in enumerate(document.contact):

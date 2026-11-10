@@ -9,22 +9,26 @@
   <meta name="generator" content="Bolsa de Trabajo · profile-service · plantilla {{ doc.template_version }}" />
   <meta name="dcterms.created" content="{{ doc.generated_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" />
   <style>
+    /*
+      Estilo clásico de CV legible por ATS e IA (referencias: plantillas tipo Harvard y
+      "Jake's Resume"): una columna, texto casi negro, un solo acento sobrio en los títulos y
+      sin fondos, chips, barras ni íconos. Lo que importa se lee igual impreso en blanco y negro.
+    */
     @page {
       size: A4;
       margin: 15mm 17mm 16mm 17mm;
       @bottom-right {
         content: "{{ doc.full_name }} · " counter(page) " / " counter(pages);
         font: 7.5pt "Inter", "DejaVu Sans", sans-serif;
-        color: #94a3b8;
+        color: #6b7280;
       }
     }
     :root {
-      --ink: #0f172a;
-      --text: #334155;
-      --muted: #64748b;
-      --line: #e2e8f0;
+      --ink: #111827;
+      --text: #1f2937;
+      --muted: #4b5563;
+      --line: #cbd5e1;
       --accent: {{ accent }};
-      --accent-soft: {{ accent_soft }};
     }
     * { box-sizing: border-box; }
     html { font-size: 9.6pt; }
@@ -35,91 +39,68 @@
       line-height: 1.45;
     }
     header {
-      padding-bottom: 10pt;
-      margin-bottom: 4pt;
-      border-bottom: 2.2pt solid var(--accent);
+      padding-bottom: 8pt;
+      border-bottom: 1.2pt solid var(--accent);
     }
     h1 {
       margin: 0;
-      font-size: 24pt;
+      font-size: 22pt;
       line-height: 1.1;
-      font-weight: 800;
+      font-weight: 700;
       color: var(--ink);
     }
     .headline {
-      margin: 4pt 0 0;
-      font-size: 11.5pt;
+      margin: 3pt 0 0;
+      font-size: 11pt;
       font-weight: 600;
-      color: var(--accent);
+      color: var(--text);
     }
     .contact {
-      margin: 7pt 0 0;
+      margin: 6pt 0 0;
       padding: 0;
       list-style: none;
       font-size: 8.6pt;
       color: var(--muted);
     }
     .contact li { display: inline; }
-    .contact li + li::before { content: "  ·  "; color: #cbd5e1; }
+    .contact li + li::before { content: "  |  "; color: var(--line); }
     .contact a { color: var(--text); text-decoration: none; }
     .contact .k { font-weight: 600; color: var(--ink); }
-    section { margin-top: 11pt; }
+    section { margin-top: 12pt; }
     h2 {
-      margin: 0 0 6pt;
-      padding-bottom: 3pt;
+      margin: 0 0 5pt;
+      padding-bottom: 2pt;
       /* Sin letter-spacing: los extractores de texto (ATS / IA) lo leen como "P E R F I L". */
-      font-size: 9.5pt;
-      font-weight: 800;
+      font-size: 9.8pt;
+      font-weight: 700;
       text-transform: uppercase;
       color: var(--accent);
-      border-bottom: 0.7pt solid var(--line);
+      border-bottom: 0.6pt solid var(--line);
     }
     p { margin: 0; }
-    .summary { font-size: 9.8pt; color: var(--text); }
-    .availability {
-      margin-top: 6pt;
-      padding: 5pt 8pt;
-      border-left: 2.5pt solid var(--accent);
-      background: var(--accent-soft);
-      font-size: 8.8pt;
-      color: var(--ink);
-    }
-    .entry { margin-bottom: 8pt; page-break-inside: avoid; }
+    .summary { font-size: 9.8pt; }
+    .availability { margin-top: 4pt; font-size: 8.9pt; }
+    .availability b { color: var(--ink); }
+    .entry { margin-bottom: 7pt; page-break-inside: avoid; }
     .entry:last-child { margin-bottom: 0; }
     .entry-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10pt; }
     .entry-title { font-weight: 700; color: var(--ink); font-size: 10pt; }
-    .entry-org { font-weight: 500; color: var(--text); }
-    .entry-period { flex-shrink: 0; font-size: 8.6pt; color: var(--muted); white-space: nowrap; }
-    .entry-details { font-size: 8.6pt; color: var(--muted); margin-top: 1pt; }
-    ul.bullets { margin: 3pt 0 0; padding-left: 12pt; }
+    .entry-org { font-weight: 400; color: var(--text); }
+    .entry-period { flex-shrink: 0; font-size: 8.8pt; color: var(--muted); white-space: nowrap; }
+    .entry-details { font-size: 8.8pt; color: var(--muted); margin-top: 1pt; }
+    ul.bullets { margin: 2pt 0 0; padding-left: 12pt; }
     ul.bullets li { margin: 1pt 0; }
-    ul.bullets li::marker { color: var(--accent); }
-    .tags { margin-top: 3pt; font-size: 8.3pt; color: var(--muted); }
+    ul.bullets li::marker { color: var(--muted); }
+    .tags { margin-top: 2pt; font-size: 8.6pt; color: var(--muted); }
     .tags b { color: var(--text); font-weight: 600; }
-    .skill-group { margin-bottom: 5pt; }
-    .skill-group:last-child { margin-bottom: 0; }
-    .skill-label {
-      display: inline-block;
-      min-width: 92pt;
-      font-weight: 700;
-      font-size: 8.8pt;
-      color: var(--ink);
-    }
-    .chip {
-      display: inline-block;
-      margin: 0 3pt 3pt 0;
-      padding: 1.5pt 6pt;
-      border-radius: 8pt;
-      background: var(--accent-soft);
-      color: var(--ink);
-      font-size: 8.6pt;
-      font-weight: 600;
-    }
-    .chip .lvl { font-weight: 400; color: var(--muted); }
-    .line { margin-bottom: 3pt; }
+    /* Competencias: una línea de texto por categoría, separadas por comas. */
+    .skill-line { margin-bottom: 2.5pt; }
+    .skill-line:last-child { margin-bottom: 0; }
+    .skill-line b { color: var(--ink); }
+    .line { margin-bottom: 2.5pt; }
     .line b { color: var(--ink); }
     .line .muted { color: var(--muted); }
-    a { color: var(--accent); }
+    a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
@@ -164,10 +145,7 @@
   <section>
     <h2>Competencias</h2>
     {% for group in doc.skill_groups %}
-    <div class="skill-group">
-      <span class="skill-label">{{ group.label }}</span>
-      {% for s in group.skills %}<span class="chip">{{ s.name }} <span class="lvl">({{ s.level_label }})</span></span>{% endfor %}
-    </div>
+    <p class="skill-line"><b>{{ group.label }}:</b> {{ group.line }}</p>
     {% endfor %}
   </section>
   {% elif section == 'experience' and doc.experience %}

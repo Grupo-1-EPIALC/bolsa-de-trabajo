@@ -98,6 +98,9 @@ def test_ut_prof_06_html_semantico_y_con_metadatos(document: CvDocument) -> None
         assert f"<h2>{heading}</h2>" in html
     assert "<table" not in html and "<img" not in html  # sin tablas ni imágenes (ATS)
     assert "letter-spacing: 0.12em" not in html
+    # Competencias en texto plano separado por comas (sin chips ni barras de nivel).
+    assert "<b>Técnicas:</b> Python (avanzado), PostgreSQL</p>" in html
+    assert 'class="chip"' not in html and "(Intermedio)" not in html
 
 
 def test_ut_prof_06_html_escapa_contenido(document: CvDocument) -> None:
@@ -116,7 +119,7 @@ def test_ut_prof_06_docx_con_estilos_nativos(document: CvDocument) -> None:
     headings = [p.text for p in doc.paragraphs if p.style.name == "Heading 1"]
     assert headings[:3] == ["Perfil profesional", "Competencias", "Experiencia"]
     body = "\n".join(p.text for p in doc.paragraphs)
-    assert "Lucía Fernández" in body and "Python (Avanzado)" in body
+    assert "Lucía Fernández" in body and "Técnicas: Python (avanzado), PostgreSQL" in body
     assert doc.core_properties.author == "Lucía Fernández"
     assert "Python" in doc.core_properties.keywords
     assert not doc.tables
