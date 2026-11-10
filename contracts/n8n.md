@@ -2,7 +2,7 @@
 
 > **Para:** quien mantiene n8n (workflows, agentes, prompts) y los servicios que lo llaman.
 > **Servicio:** n8n con los workflows de `n8n/workflows/` (generados con `python n8n/generate_workflows.py` e importados y publicados por `n8n-init`). Toda la IA del sistema corre acá; no existe `ai-service`.
-> **Partes:** 1. Workflows · 2. Webhooks · 3. Extracción de CV (WF-01) · 4. Recomendaciones (WF-06) · 5. Salidas de IA y verificación · 6. Configuración y credenciales · 7. Notificaciones por mail (WF-02 a WF-05). Los `§` de cada parte se refieren a esa parte.
+> **Partes:** 1. Workflows · 2. Webhooks · 3. Extracción de CV (WF-01) · 4. Recomendaciones (WF-06) · 5. Salidas de IA y verificación · 6. Configuración y credenciales · 7. Notificaciones por mail (WF-02 a WF-05) · 8. Diseño del CV (WF-07). Los `§` de cada parte se refieren a esa parte.
 > Los documentos de los que sale este contrato están en [`historico/`](historico/). Todos los ejemplos usan datos ficticios.
 
 ---
@@ -17,6 +17,7 @@
 | `WF-01` Procesar CV | `POST /webhook/cv-extract`: extrae el CV con el agente CV Structurer (§3) |
 | `WF-06` Recomendador | `POST /webhook/recommendations`: análisis de IA sobre el ranking por reglas (§4) |
 | `WF-02` a `WF-05` | Notificaciones por mail y errores (§7) |
+| `WF-07` Diseño del CV | `POST /webhook/cv-design`: el agente CV Designer elige el diseño del CV del catálogo de profile-service (§8) |
 
 Todos tienen a `WF-05` como *error workflow*.
 
@@ -26,6 +27,7 @@ Todos tienen a `WF-05` como *error workflow*.
 |---|---|---|---|
 | `POST /webhook/cv-extract` | profile-service | `X-Service-Token` | Síncrona: `cv_suggestions` (§3) |
 | `POST /webhook/recommendations` | matching-service | `X-Service-Token` | Guarda el resultado en matching (`/recommendations/batch`) |
+| `POST /webhook/cv-design` | profile-service | `X-Service-Token` | Síncrona: `design` (§8) |
 | `POST /webhook/job-created` | jobs-service (`job.created`) | `X-Service-Token` | `202` enseguida (§7) |
 | `POST /webhook/profile-updated` | profile-service (`profile.updated`) | `X-Service-Token` | `202` enseguida (§7) |
 | `POST /webhook/student-offer` | WF-02 (interno) | `X-Service-Token` | `202` |
@@ -59,7 +61,7 @@ También se acepta `X-Webhook-Token` con `N8N_WEBHOOK_TOKEN`. Sin token válido:
 
 ## 5. Salidas de IA y verificación
 
-- Los agentes responden **sólo JSON** que cumpla su schema: `cv_standard`, `match_student_recommendations`, `match_company_recommendations`, `company_recommendations`, `student_recommendations` y `verifier_verdict`. Los schemas vigentes son los de `mcp-tools/app/data/schemas/` (los usa `validate_json_schema`); las copias anteriores quedaron en [`historico/`](historico/).
+- Los agentes responden **sólo JSON** que cumpla su schema: `cv_standard`, `cv_design`, `match_student_recommendations`, `match_company_recommendations`, `company_recommendations`, `student_recommendations` y `verifier_verdict`. Los schemas vigentes son los de `mcp-tools/app/data/schemas/` (los usa `validate_json_schema`); las copias anteriores quedaron en [`historico/`](historico/).
 - `WF-0V` rechaza una salida si no cumple el schema, si menciona competencias que no están en la fuente (`check_grounding`) o si el score reportado no es el del motor. El orquestador reintenta con la instrucción del verificador.
 - Catálogo de agentes en `n8n/agentes/*.json` y prompts versionados en `n8n/prompts/*.md`.
 
@@ -170,3 +172,41 @@ SELECT workflow, notification_key, created_at FROM bolsa.notifications_sent ORDE
 3. Una empresa publica una oferta compatible → el estudiante recibe "Nueva oferta para vos: …".
 4. Repetir el evento o editar el perfil no reenvía nada.
 5. Con `NOTIFY_ADMIN_EMAIL` cargado, apagar matching-service y publicar una oferta → llega "[n8n] Falló "WF-02 …"".
+
+---
+
+## 8. Diseño del CV (WF-07)
+
+`POST /webhook/cv-design` desde profile-service (`services/profile-service/app/infrastructure/n8n_cv_design.py`), cuando el estudiante pide la sugerencia (`POST /profiles/me/cv-design/requests`, [`profile.md`](profile.md) parte A §8.1). profile-service lo llama en segundo plano, con un timeout de `CV_DESIGN_TIMEOUT` segundos (120 por defecto).
+
+**Entrada** (sin datos personales: ni nombre, ni contacto, ni empresas, ni fechas exactas, ni sueldo):
+
+```json
+{
+  "request_id": "cvd-…",
+  "profile_id": "prof-…",
+  "content": { "headline": "…", "has_summary": true, "target_roles": ["Desarrolladora backend"],
+               "experience_count": 1, "experience_months": 21, "experience_roles": ["Desarrolladora Backend"],
+               "projects_count": 0, "skills_count": 4, "top_skills": ["Python", "…"], "certifications_count": 1,
+               "education_count": 1, "career": "…", "academic_progress_percent": 70,
+               "languages_count": 2, "volunteering_count": 0 },
+  "rule_based": { "origin": "RULES", "engine_version": "cv-layout-1.0.0", "layout": "cronologico", "section_order": ["…"], "reasons": ["…"] },
+  "catalog": [{ "id": "cronologico", "name": "Cronológico", "description": "…", "best_for": "…", "section_order": ["…"] }],
+  "sections": ["summary", "skills", "experience", "projects", "education", "languages", "certifications", "volunteering"]
+}
+```
+
+**Flujo:** `WF-00` ejecuta al agente `cv_designer` (Tony Stark, `perfil=cv`, skill `diseno-cv`) y `WF-0V` valida la salida contra `cv_design`. Después, WF-07 descarta un `layout` fuera del catálogo del pedido (`422 LAYOUT_OUT_OF_CATALOG`) y deja sólo `layout`, `section_order` (claves válidas, sin repetir) y `rationale` (≤ 600 caracteres).
+
+**Salida (`200`):**
+
+```json
+{
+  "status_code": 200, "request_id": "cvd-…", "profile_id": "prof-…",
+  "design": { "layout": "primer_empleo", "section_order": ["summary", "education", "projects"], "rationale": "…" },
+  "origin": "AI", "model": "…", "prompt_version": "1.0.0", "generated_at": "…", "verified": true, "disclaimer": "…"
+}
+```
+
+Si algo falla, la respuesta trae `error` (`{code, message}`) y `status_code`. profile-service marca la sugerencia como `failed` y el CV sigue con el diseño elegido por reglas.
+
