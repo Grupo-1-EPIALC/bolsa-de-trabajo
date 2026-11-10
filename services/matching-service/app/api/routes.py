@@ -21,6 +21,7 @@ from app.application.serializers import (
     job_ranking_to_dict,
     match_to_dict,
     recommendation_to_dict,
+    skill_dictionary_to_dict,
     skill_gaps_to_dict,
 )
 from app.application.settings_service import settings_to_dict
@@ -52,6 +53,13 @@ class AnalysisRequest(BaseModel):
     job_id: str | None = None
     # Sin `limit` usa el configurado por el admin; con `limit`, el menor de los dos.
     limit: int | None = Field(default=None, ge=MIN_LIMIT, le=MAX_LIMIT)
+
+
+class SkillsResolveRequest(BaseModel):
+    skills: list[str] = Field(min_length=1, max_length=50)
+    # Skills del perfil para saber si ya cubre cada una (con otro nombre, una equivalente,
+    # una que la implica o sólo una herramienta similar).
+    profile_skills: list[str] = Field(default_factory=list, max_length=200)
 
 
 class SettingsUpdate(BaseModel):
@@ -223,6 +231,32 @@ def company_recommendations(
 ) -> dict[str, Any]:
     container.access.company_job(principal, job_id)
     return container.recommendations.company_view(job_id, limit)
+
+
+# ------------------------------------------------- diccionario de skills ---
+
+
+@router.get(
+    "/skills/dictionary",
+    summary="Diccionario de competencias: alias, equivalentes, implicaciones y similares",
+)
+def skills_dictionary(container: ContainerDep, _: PrincipalDep) -> dict[str, Any]:
+    return skill_dictionary_to_dict(container.skills)
+
+
+@router.post(
+    "/skills/resolve",
+    summary="Normaliza competencias y dice si el perfil ya las cubre (herramienta del agente)",
+)
+def skills_resolve(
+    body: SkillsResolveRequest, container: ContainerDep, _: PrincipalDep
+) -> dict[str, Any]:
+    clean = [s for s in body.skills if s.strip()]
+    return {
+        "origin": "RULES",
+        "dictionary_version": container.skills.version,
+        "items": [container.skills.describe(s, body.profile_skills) for s in clean],
+    }
 
 
 # -------------------------------------------------------- configuración ---

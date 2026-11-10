@@ -70,6 +70,8 @@ Reglas para la UI:
 | Estudiante: "Qué sumar o mejorar" (pedir a la IA) | `POST /api/v1/matches/recommendations/requests` con `{ "mode": "training", "profile_id" }` | `202` + `RecommendationRequest` |
 | Estudiante: ver qué sumar o mejorar (general, no por oferta) | `GET /api/v1/matches/recommendations/students/{profile_id}/training` | `TrainingView` (parte B §B.2) |
 | Detalle de un match puntual (modal "¿Por qué este puntaje?") | `POST /api/v1/matches` con `{ "profile_id", "job_id" }` | `Match` (§4.4) |
+| Diccionario de competencias (alias, equivalentes, implicaciones y similares) | `GET /api/v1/matches/skills/dictionary` | `SkillDictionary` (§5.1) |
+| Normalizar competencias y saber si el perfil ya las cubre | `POST /api/v1/matches/skills/resolve` con `{ "skills": [...], "profile_skills": [...] }` | `{ items: SkillInfo[] }` (§5.1) |
 | Admin: ver la configuración | `GET /api/v1/matches/settings` | `RecommendationSettings` (§4.5) |
 | Admin: cambiar cuántas ofertas y candidatos se recomiendan | `PATCH /api/v1/matches/settings` | `RecommendationSettings` (§4.5) |
 
@@ -206,7 +208,7 @@ Igual que §4.1, pero:
           "priority": "alta",
           "justification": "Cubre Python y Git con nivel superior al pedido.",
           "strengths": ["Python", "Git"],
-          "gaps": ["SQL"],
+          "gaps": [],
           "conditions_alerts": ["Puede empezar en 30 días; la oferta lo necesita en 15."],
           "interview_questions": ["¿Qué consultas SQL escribiste con PostgreSQL?"]
         }
@@ -245,22 +247,23 @@ Igual que §4.1, pero:
   "computed_at": "2026-11-10T01:16:22Z",
   "profile_id": "stu-014",
   "job_id": "job-004",
-  "score": 91.09,
+  "score": 94.42,
   "excluding_cap_applied": false,
   "breakdown": [
-    { "criterion": "required_skills", "weight": 40, "earned": 40,   "details": { "required": 2, "matched": 2 } },
-    { "criterion": "desired_skills",  "weight": 10, "earned": 6.67, "details": { "desired": 3, "matched": 2 } },
-    { "criterion": "levels",          "weight": 10, "earned": 10,   "details": { "compared": 4 } },
+    { "criterion": "required_skills", "weight": 40, "earned": 40,   "details": { "required": 2, "matched": 2, "similar": 0 } },
+    { "criterion": "desired_skills",  "weight": 10, "earned": 10,   "details": { "desired": 3, "matched": 3, "similar": 0 } },
+    { "criterion": "levels",          "weight": 10, "earned": 10,   "details": { "compared": 5 } },
     { "criterion": "experience",      "weight": 25, "earned": 20,   "details": { "min_years": 0, "profile_years": 1.5, "years_fit": 1.0, "relevance": 0.5, "relevant_skills": [] } },
     { "criterion": "education",       "weight": 5,  "earned": 5,    "details": { "required": true } },
     { "criterion": "languages",       "weight": 3,  "earned": 3,    "details": { "required": 1 } },
     { "criterion": "conditions",      "weight": 7,  "earned": 6.42, "details": { "compared": 12, "matched": 10, "partial": 2, "mismatched": 0 } }
   ],
   "matched_skills": [
-    { "skill": "Python", "kind": "required", "profile_level": 3, "required_level": 2 }
+    { "skill": "Python", "kind": "required", "profile_level": 3, "required_level": 2, "via": null, "relation": "exact" },
+    { "skill": "SQL", "kind": "desired", "profile_level": 3, "required_level": 2, "via": "PostgreSQL", "relation": "implied" }
   ],
   "missing_skills": [
-    { "skill": "SQL", "kind": "desired", "required_level": 2, "current_level": 0, "gap": 2, "priority": "media" }
+    { "skill": "GitLab", "kind": "desired", "required_level": 2, "current_level": 0, "gap": 2, "priority": "media", "similar_to": "GitHub", "credit": 0.75 }
   ],
   "conditions_fit": {
     "compatible": true,
@@ -281,6 +284,8 @@ Igual que §4.1, pero:
 ```
 
 - `checks` trae **las 12 condiciones**; el ejemplo muestra una sola.
+- `matched_skills[].via`: la skill del perfil que cubre la pedida cuando no es la misma (`"SQL"` por `"PostgreSQL"`); `relation` es `exact`, `implied` o `equivalent` (§5.1).
+- `missing_skills[].similar_to`: una herramienta similar que el candidato ya sabe y le facilita aprender la que falta (`"GitLab"` → `"GitHub"`); `credit` es la parte que ya suma. El ejemplo de `GitLab` es ilustrativo.
 - `salary_fit.expected_monthly` llega en `null` cuando el estudiante ocultó su pretensión (`visibility: "hidden"`) y quien mira es la empresa. Lo mismo pasa con `offered_monthly` cuando la empresa lo ocultó y quien mira es el estudiante. Mostrá entonces sólo el resultado ("Dentro de lo esperado", "Por debajo de lo esperado").
 
 #### 4.5 `RecommendationSettings` — configuración (pantalla de administración)
@@ -315,11 +320,47 @@ Sugerencia de UI: un formulario con dos campos numéricos (`min`/`max` tomados d
 
 El score (0–100) lo calcula **sólo el motor de reglas** del matching-service, siempre de la misma forma, para cada par candidato–oferta. No interviene ningún LLM. Los pesos están en `services/matching-service/app/data/scoring_rules.yaml` (versión `rules_version`).
 
-#### 5.1 Paso 0 — Normalizar las skills
+#### 5.1 Paso 0 — Diccionario de competencias
 
-Antes de comparar, cada skill se pasa a minúsculas, sin acentos y con sinónimos (`reactjs` → `react`, `postgres` → `postgresql`, `nodejs` → `node.js`; lista en `app/data/skill_synonyms.json`).
+Antes de comparar, cada skill se pasa a minúsculas, sin acentos y a su clave del **diccionario de competencias** (`services/matching-service/app/data/skill_dictionary.json`, unas 150 skills). El diccionario tiene cuatro relaciones, de más fuerte a más débil:
 
-> ⚠️ Son skills distintas si no hay sinónimo: **PostgreSQL no cuenta como SQL**. Por eso a Carla Medina (§5.4) le figura SQL como faltante aunque sabe PostgreSQL. Si eso no es lo que se quiere, hay que agregar el sinónimo o una regla de "skill relacionada".
+| Relación | Qué significa | Ejemplos | Cuenta en el score |
+|---|---|---|---|
+| **Alias** (`exact`) | El mismo nombre escrito distinto, con errores comunes | `Postgres`, `Posgres`, `psql` → PostgreSQL · `ReactJS` → React · `Spring Boot` → Spring · `Metodologías ágiles` → agile | Completa |
+| **Implica** (`implied`) | Saber una supone saber otra más general. Es transitiva y vale con el nivel de la que implica | PostgreSQL, MySQL, SQL Server ⇒ SQL · Next.js ⇒ React ⇒ JavaScript · Django ⇒ Python · GitHub ⇒ Git · Scrum ⇒ agile | Completa |
+| **Equivalente** (`equivalent`) | Se usan una por otra | MySQL ↔ MariaDB · Docker ↔ Podman | Completa |
+| **Similar** (`similar`) | Herramientas parecidas: saber una **facilita aprender** la otra | GitHub ~ GitLab ~ Bitbucket · PostgreSQL ~ MySQL ~ SQL Server · React ~ Vue ~ Angular · AWS ~ Azure ~ GCP · Power BI ~ Tableau · Jira ~ Trello · Excel ~ Google Sheets | Sólo `credit` (0,5 o 0,75 según el grupo). Sigue como faltante, con `similar_to` |
+
+Reglas:
+- **Obligatorias y deseables** suman 1 por cada skill cubierta (alias, implicada o equivalente) y el `credit` del grupo si sólo sabe una similar. `details.similar` cuenta estas últimas.
+- **Niveles** compara sólo las cubiertas del todo, con el nivel de la skill del perfil que la cubre.
+- **Excluyente**: una similar no la cubre (se aplica el tope).
+- **Experiencia relevante**: una skill de `skills_used` también cubre las que implica o sus equivalentes.
+- `implies` no es simétrica: saber SQL no implica PostgreSQL.
+
+`GET /api/v1/matches/skills/dictionary` (cualquier usuario autenticado o servicio) devuelve el diccionario completo:
+- `skills`: `{ key, name, category, aliases }`;
+- `groups`: `{ kind: "equivalent" | "similar", label, credit, skills }`;
+- `implies`: `{ "PostgreSQL": ["SQL"], … }`.
+
+`POST /api/v1/matches/skills/resolve` normaliza hasta 50 nombres y, si se manda `profile_skills`, dice si el perfil ya cubre cada uno. Lo usa la herramienta MCP `resolver_skills` del agente.
+
+```json
+{
+  "origin": "RULES",
+  "dictionary_version": "1.0.0",
+  "items": [
+    {
+      "input": "GitLab", "key": "gitlab", "name": "GitLab", "known": true, "category": "devops",
+      "aliases": ["git lab"], "implies": ["Git"], "implied_by": [], "equivalents": [],
+      "similar": [{ "skill": "GitHub", "credit": 0.75, "group": "Plataformas de Git" }, { "skill": "Bitbucket", "credit": 0.75, "group": "Plataformas de Git" }],
+      "covered_by": { "relation": "similar", "credit": 0.75, "via": "GitHub", "full": false }
+    }
+  ]
+}
+```
+
+Una skill que no está en el diccionario se compara por su texto normalizado (`known: false`). Para sumar skills, alias o grupos se edita el JSON, se sube su `version` y se corren los tests (UT-MATCH-13 valida que no haya alias repetidos ni claves desconocidas).
 
 Cada requisito de la oferta tiene un **nivel mínimo (1–5)** y un **tipo**:
 - `required` (obligatoria)
@@ -356,19 +397,19 @@ Si al candidato le falta **una skill `excluding`**, el score queda **topeado en 
 
 En el pool de demo las experiencias no traen `skills_used`, así que la relevancia queda en 0,5 y la experiencia suma como mucho 20 de 25. Con `skills_used` cargado, quien usó en el trabajo las competencias de la oferta llega a 25.
 
-**Ejemplo A — Carla Medina (`stu-014`) → 91,09**
+**Ejemplo A — Carla Medina (`stu-014`) → 94,42**
 Python 3 · Django 3 · PostgreSQL 3 · Docker 2 · Git 3 · Linux 3 · Testing 2 · inglés B1 · universitaria en curso · 1,5 años.
 
 | Criterio | Cálculo | Puntos |
 |---|---|---|
 | Obligatorias | Python ✔ · Git ✔ → 2/2 × 40 | 40 |
-| Deseables | SQL ✘ (sabe PostgreSQL, que es otra skill) · Testing ✔ · Docker ✔ → 2/3 × 10 | 6,67 |
-| Niveles | Python 3/2→1 · Git 3/2→1 · Testing 2/1→1 · Docker 2/1→1 → promedio 1 × 10 | 10 |
+| Deseables | SQL ✔ (por PostgreSQL, que implica SQL) · Testing ✔ · Docker ✔ → 3/3 × 10 | 10 |
+| Niveles | Python 3/2→1 · Git 3/2→1 · SQL (PostgreSQL 3)/2→1 · Testing 2/1→1 · Docker 2/1→1 → promedio 1 × 10 | 10 |
 | Experiencia | sin mínimo, 1,5 años → años 1 · sin `skills_used` → relevancia 0,5 → 25 × (0,6 + 0,2) | 20 |
 | Formación | universitaria en curso = la pedida | 5 |
 | Idiomas | B1 ≥ A2 | 3 |
 | Condiciones | 10 coinciden y 2 parciales de 12 → 11/12 × 7 | 6,42 |
-| **Total** | | **91,09** |
+| **Total** | | **94,42** |
 
 **Ejemplo B — Ignacio Castro (`stu-013`) → 86,66**
 Java 4 · Spring 3 · SQL 3 · Git 3 · **Python 1** · inglés B2 · universitario en curso · 1 año.
@@ -478,8 +519,8 @@ export interface CriterionResult {
   details: Record<string, unknown>;
 }
 
-export interface MissingSkill { skill: string; kind: RequirementKind; required_level: number; current_level: number; gap: number; priority: Priority }
-export interface MatchedSkill { skill: string; kind: RequirementKind; profile_level: number; required_level: number }
+export interface MissingSkill { skill: string; kind: RequirementKind; required_level: number; current_level: number; gap: number; priority: Priority; similar_to: string | null; credit: number }
+export interface MatchedSkill { skill: string; kind: RequirementKind; profile_level: number; required_level: number; via: string | null; relation: 'exact' | 'implied' | 'equivalent' }
 
 export interface ConditionCheck {
   condition: string;
@@ -607,7 +648,7 @@ Los ítems de `ai_recommendations.items` traen además metadatos (`id`, `model`,
 | Datos | Perfiles y ofertas reales de profile-service y jobs-service (`MATCHING_USE_MOCKS=false`, default). El seed de demo suma `stu-001`…`stu-015` y `job-001`…`job-012`, con dueños ficticios | Un estudiante con perfil **completo** y buscable entra al ranking; una empresa ve los candidatos de sus búsquedas por `job_id`. Los perfiles en borrador no aparecen como candidatos de las empresas |
 | Dueño del perfil | Los perfiles tienen que traer `user_id` y las ofertas, `company_id` (ver [`historico/estructura_comun_perfil_oferta_match.md`](historico/estructura_comun_perfil_oferta_match.md) §5 y §6) | Si un perfil no trae `user_id`, sólo lo ven `admin` y los servicios |
 | Idiomas deseables | El criterio de idiomas cuenta un idioma `desired` igual que uno obligatorio | Un candidato sin un idioma deseable pierde puntos en "Idiomas" |
-| Skills relacionadas | Sólo sinónimos exactos (PostgreSQL ≠ SQL) | Puede mostrar como faltantes skills "parecidas" a las que tiene |
+| Skills relacionadas | Diccionario curado a mano (§5.1); una skill que no está se compara por texto | Puede mostrar como faltante una skill con un nombre muy distinto que no esté en el diccionario |
 
 ## B. Endpoints internos y flujo con n8n
 
@@ -618,6 +659,7 @@ Sólo con `X-Service-Token` (por la red interna; el gateway lo borra). Un usuari
 | `POST /api/v1/matches` | mcp-tools (`compute_match`), n8n WF-03 | Calcula el match por reglas de un perfil y una oferta (`origin: "RULES"`) |
 | `POST /api/v1/matches/missing-skills` | mcp-tools (`missing_skills`) | Competencias faltantes y brecha de nivel |
 | `GET /api/v1/matches/students/{profile_id}/jobs` | mcp-tools (`rank_jobs_for_student`), n8n WF-03/WF-04 | Ofertas rankeadas por reglas para un estudiante |
+| `POST /api/v1/matches/skills/resolve` | mcp-tools (`resolver_skills`) | Normaliza competencias y dice si el perfil las cubre (§5.1) |
 | `GET /api/v1/matches/students/{profile_id}/skill-gaps` | n8n WF-06 (`mode=training`) | Qué competencias sumar o mejorar según las ofertas más parecidas (`SkillGaps`, §B.2) |
 | `GET /api/v1/matches/jobs/{job_id}/candidates` | mcp-tools (`rank_candidates_for_job`), n8n WF-02 | Candidatos rankeados por reglas para una oferta (snapshots sin datos personales) |
 | `POST /api/v1/matches/recommendations` | mcp-tools (`save_recommendation`) | Guarda una recomendación de IA (`origin: "AI"`) |
@@ -657,7 +699,8 @@ La formación **no es por oferta**. Se calcula sobre el perfil y las ofertas act
     ],
     "skill_gaps": [
       { "skill": "React", "status": "missing", "jobs_count": 1, "share": 0.5, "required_in": 1, "current_level": 0, "required_level": 3, "priority": "alta" },
-      { "skill": "Docker", "status": "improve", "jobs_count": 1, "share": 0.5, "required_in": 0, "current_level": 1, "required_level": 3, "priority": "media" }
+      { "skill": "Docker", "status": "improve", "jobs_count": 1, "share": 0.5, "required_in": 0, "current_level": 1, "required_level": 3, "priority": "media", "similar_to": null },
+      { "skill": "GitLab", "status": "missing", "jobs_count": 1, "share": 0.5, "required_in": 1, "current_level": 0, "required_level": 2, "priority": "alta", "similar_to": "GitHub" }
     ]
   },
   "ai_recommendations": {
@@ -680,6 +723,7 @@ La formación **no es por oferta**. Se calcula sobre el perfil y las ofertas act
 
 - `status` (`skill_gaps`): `missing` si no la tiene; `improve` si la tiene con nivel menor al pedido.
 - `share`: parte de las ofertas parecidas en las que falta (0–1). `required_in`: en cuántas es obligatoria o excluyente.
+- `similar_to`: herramienta similar que ya sabe y le facilita aprenderla (§5.1); la IA la usa para decir "como ya usás GitHub, GitLab te va a resultar fácil". Las skills se agrupan por su clave del diccionario (`Postgres` y `PostgreSQL` cuentan como una).
 - `status` (IA): `not_requested` · `pending` · `processing` · `ready` · `failed`, igual que en las otras vistas (parte A §4.1).
 - `items`: hasta 5, ordenados por prioridad. `type` es `course` (curso del catálogo), `skill` (competencia para sumar o mejorar, con cómo practicarla) o `profile_tip` (cómo mostrar mejor algo que ya tiene). Nunca traen `score`. Las recomendaciones viejas pueden traer `type: "project"`; el front las muestra como `skill`.
 - La formación se guarda aparte (`mode=training`, una sola por estudiante): no aparece en "Ofertas para vos".

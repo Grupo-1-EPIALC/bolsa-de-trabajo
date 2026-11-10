@@ -252,6 +252,24 @@ def test_skill_gaps_endpoint_is_internal(client: TestClient) -> None:
     assert client.get(path, headers=bearer(STUDENT_001, "student")).status_code == 403
 
 
+def test_skills_dictionary_and_resolve(client: TestClient) -> None:
+    student = bearer(STUDENT_001, "student")
+    full = client.get("/api/v1/matches/skills/dictionary", headers=student)
+    assert full.status_code == 200 and full.json()["skills"]
+    resolved = client.post(
+        "/api/v1/matches/skills/resolve",
+        json={"skills": ["Posgres", "GitLab"], "profile_skills": ["GitHub"]},
+        headers=SERVICE,
+    )
+    assert resolved.status_code == 200
+    by_key = {i["key"]: i for i in resolved.json()["items"]}
+    assert by_key["postgresql"]["name"] == "PostgreSQL"
+    assert by_key["gitlab"]["covered_by"]["via"] == "GitHub"
+    empty = client.post("/api/v1/matches/skills/resolve", json={"skills": []}, headers=SERVICE)
+    assert empty.status_code == 422
+    assert client.get("/api/v1/matches/skills/dictionary").status_code == 401
+
+
 # ------------------------------------------------------------- JWKS real ---
 
 

@@ -25,7 +25,7 @@ from app.domain.models import (
     StudentProfile,
     WorkConditions,
 )
-from app.domain.normalization import SkillNormalizer, is_missing, normalize_text
+from app.domain.normalization import SkillNameNormalizer, is_missing, normalize_text
 
 _SKILL_LEVEL_WORDS = {
     "basico": 2,
@@ -164,7 +164,7 @@ def map_work_conditions(value: object) -> WorkConditions:
     )
 
 
-def map_skills(items: Iterable[Any], normalizer: SkillNormalizer) -> tuple[SkillItem, ...]:
+def map_skills(items: Iterable[Any], normalizer: SkillNameNormalizer) -> tuple[SkillItem, ...]:
     skills: list[SkillItem] = []
     for raw in items:
         data = _dict(raw) if not isinstance(raw, str) else {"name": raw}
@@ -287,7 +287,7 @@ def years_from_experience(items: Iterable[Any], today: date | None = None) -> fl
 
 
 class ProfileMapper:
-    def __init__(self, normalizer: SkillNormalizer) -> None:
+    def __init__(self, normalizer: SkillNameNormalizer) -> None:
         self._normalizer = normalizer
 
     def to_domain(self, data: Mapping[str, Any], today: date | None = None) -> StudentProfile:
@@ -328,7 +328,7 @@ class ProfileMapper:
 
 
 class JobMapper:
-    def __init__(self, normalizer: SkillNormalizer) -> None:
+    def __init__(self, normalizer: SkillNameNormalizer) -> None:
         self._normalizer = normalizer
 
     def to_domain(self, data: Mapping[str, Any]) -> JobOpportunity:

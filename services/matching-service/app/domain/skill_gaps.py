@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from app.domain.models import MatchResult, Priority, RequirementKind
-from app.domain.normalization import normalize_text
+from app.domain.skill_dictionary import EXACT_ONLY, SkillDictionary
 
 _PRIORITY_ORDER = {Priority.HIGH: 0, Priority.MEDIUM: 1, Priority.LOW: 2}
 _MUST = (RequirementKind.REQUIRED, RequirementKind.EXCLUDING)
@@ -34,6 +34,8 @@ class SkillGap:
     current_level: int
     required_level: int  # el nivel más alto que piden esas ofertas
     priority: Priority
+    # Herramienta similar que ya sabe y le facilita aprenderla (ej. GitHub para GitLab).
+    similar_to: str = ""
 
 
 @dataclass(frozen=True)
@@ -54,11 +56,16 @@ class _Acc:
     required_in: int = 0
     current: int = 0
     required_level: int = 0
+    similar_to: str = ""
 
 
 class SkillGapAggregator:
     """Prioridad: `alta` si es obligatoria en al menos la mitad de las ofertas parecidas;
-    `media` si es obligatoria en alguna o deseable en al menos la mitad; si no, `baja`."""
+    `media` si es obligatoria en alguna o deseable en al menos la mitad; si no, `baja`.
+    Las skills se agrupan por su clave del diccionario (`Postgres` y `PostgreSQL` son una)."""
+
+    def __init__(self, skills: SkillDictionary = EXACT_ONLY) -> None:
+        self._skills = skills
 
     def aggregate(self, results: Sequence[MatchResult], max_gaps: int) -> list[SkillGap]:
         total = len(results)
@@ -68,7 +75,7 @@ class SkillGapAggregator:
         for result in results:
             seen: set[str] = set()
             for miss in result.missing_skills:
-                key = normalize_text(miss.skill)
+                key = self._skills.normalize(miss.skill)
                 if key in seen:
                     continue
                 seen.add(key)
@@ -77,6 +84,7 @@ class SkillGapAggregator:
                 item.required_in += 1 if miss.kind in _MUST else 0
                 item.current = max(item.current, miss.current_level)
                 item.required_level = max(item.required_level, miss.required_level)
+                item.similar_to = item.similar_to or miss.similar_to
         gaps = [self._gap(item, total) for item in acc.values()]
         gaps.sort(
             key=lambda g: (_PRIORITY_ORDER[g.priority], -g.jobs_count, -g.required_in, g.skill)
@@ -102,4 +110,5 @@ class SkillGapAggregator:
             current_level=item.current,
             required_level=item.required_level,
             priority=priority,
+            similar_to=item.similar_to,
         )

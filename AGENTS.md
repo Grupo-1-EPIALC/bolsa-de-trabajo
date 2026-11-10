@@ -163,7 +163,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Implementar `ScoringCriterion` (Protocol) y un criterio por clase: RequiredSkills (40), DesiredSkills (10), Levels (10), Experience (25, años + relevancia de `skills_used`), Education (5), Languages (3), Conditions (7). Pesos en `scoring_rules.yaml`. Lo técnico y la experiencia pesan más; las condiciones laborales (modalidad, horario, disponibilidad) suman poco y sólo excluyen los requisitos legales (licencia, autorización para trabajar).
 - Regla excluyente: falta una skill `excluding` → score máximo 40.
 - `MissingSkillsAnalyzer` con brecha de nivel y orden por prioridad.
-- Normalización de skills (minúsculas, sin acentos, sinónimos).
+- Normalización de skills con el diccionario `app/data/skill_dictionary.json` (`SkillDictionary`): alias (mismo nombre escrito distinto), `implies` (PostgreSQL ⇒ SQL), equivalentes (MySQL ↔ MariaDB, cuentan completas) y herramientas similares que facilitan el aprendizaje (GitHub ~ GitLab, cuentan sólo su `credit` y quedan como brecha con `similar_to`). Se expone en `GET /skills/dictionary` y `POST /skills/resolve` (herramienta `resolver_skills` del agente).
 - Respuestas de reglas siempre con `origin: "RULES"` y `engine_version`.
 - Exponer endpoint interno para persistir recomendaciones generadas por `n8n` (`POST /api/v1/matches/recommendations`, con `origin: "AI"`).
 - Usar la estructura común de [`contracts/profile.md`](contracts/profile.md) (anexo): condiciones laborales en un bloque `conditions_fit` separado del score (un `ConditionCheck` por clase, `hard` configurable) y sueldo pretendido ↔ ofrecido en `salary_fit`, respetando su `visibility`.
@@ -173,7 +173,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Qué sumar o mejorar, **en general y no por oferta** (`mode=training`, sólo `profile_id`): `SkillGapAggregator` junta por reglas las competencias que faltan en las ofertas activas más parecidas al perfil (`GET /students/{profile_id}/skill-gaps`, interno); el estudiante pide la formación con `POST /recommendations/requests`, WF-06 la genera con `training_advisor` y la guarda con `mode=training` en `/recommendations/batch`; se lee en `GET /recommendations/students/{profile_id}/training`. Nunca se mezcla con las recomendaciones de ofertas.
 - Cantidad de ofertas por estudiante y de candidatos por oferta configurable por un `admin` (`GET`/`PATCH /api/v1/matches/settings`, 1–20, valores iniciales en `scoring_rules.yaml`). Rige para vistas, rankings y pedidos de IA; un `limit` explícito sólo puede achicarla.
 **No debe:** llamar a ningún LLM directamente.
-**Tests mínimos:** UT-MATCH-01 a UT-MATCH-09 y UT-MATCH-12 (brechas generales).
+**Tests mínimos:** UT-MATCH-01 a UT-MATCH-09 y UT-MATCH-12 (brechas generales) y UT-MATCH-13 (diccionario de competencias).
 
 ### 4.5 Agente `mcp-agent` — mcp-tools (MCP local Python, exclusivo para n8n)
 **Debe:**

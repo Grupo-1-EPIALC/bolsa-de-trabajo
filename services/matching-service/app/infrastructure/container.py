@@ -8,10 +8,11 @@ from app.application.matching_service import MatchingService
 from app.application.recommendation_service import RecommendationService
 from app.application.settings_service import SettingsService
 from app.domain.engine import build_engine
-from app.domain.normalization import SkillNormalizer
 from app.domain.ports import AnalysisTrigger, JobSource, ProfileSource, TokenVerifier
 from app.domain.rules import ScoringRules
 from app.domain.settings import RecommendationSettings
+from app.domain.skill_dictionary import EXACT_ONLY, SkillDictionary
+from app.domain.skill_gaps import SkillGapAggregator
 from app.infrastructure.config import MatchingSettings
 from app.infrastructure.http_client import JsonHttpClient
 from app.infrastructure.jwt_verifier import JwksKeyResolver, JwtTokenVerifier
@@ -21,7 +22,7 @@ from app.infrastructure.repositories_memory import (
     InMemoryRecommendationRequestRepository,
     InMemorySettingsRepository,
 )
-from app.infrastructure.rules_loader import load_rules, load_synonyms
+from app.infrastructure.rules_loader import load_rules, load_skill_dictionary
 from app.infrastructure.sources_http import HttpJobSource, HttpProfileSource
 from app.infrastructure.sources_mock import MockJobSource, MockProfileSource
 from app.infrastructure.system import UtcClock, UuidIdGenerator
@@ -36,6 +37,7 @@ class Container:
     access: AccessPolicy
     tokens: TokenVerifier
     settings_admin: SettingsService
+    skills: SkillDictionary = EXACT_ONLY
 
 
 def build_container(
@@ -46,7 +48,7 @@ def build_container(
     tokens: TokenVerifier | None = None,
 ) -> Container:
     rules = load_rules(settings.rules_path)
-    normalizer = SkillNormalizer(load_synonyms(settings.synonyms_path))
+    skills = load_skill_dictionary(settings.skills_path)
     clock = UtcClock()
     limits = InMemorySettingsRepository(
         RecommendationSettings(
@@ -91,10 +93,11 @@ def build_container(
     matching = MatchingService(
         profiles=profiles,
         jobs=jobs,
-        engine=build_engine(rules, clock.iso_now),
-        profile_mapper=ProfileMapper(normalizer),
-        job_mapper=JobMapper(normalizer),
+        engine=build_engine(rules, clock.iso_now, skills),
+        profile_mapper=ProfileMapper(skills),
+        job_mapper=JobMapper(skills),
         settings=limits,
+        gaps=SkillGapAggregator(skills),
     )
     recommendations = RecommendationService(
         matching=matching,
@@ -118,4 +121,5 @@ def build_container(
         AccessPolicy(matching),
         tokens,
         SettingsService(limits, clock),
+        skills,
     )

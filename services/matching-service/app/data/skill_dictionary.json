@@ -1,0 +1,1842 @@
+{
+  "version": "1.0.0",
+  "description": "Diccionario de competencias del motor de reglas (matching-service) y de la herramienta resolver_skills del agente. aliases = mismo nombre escrito distinto; implies = saber una supone la otra; groups equivalent = se usan una por otra (cuenta completa); groups similar = herramientas parecidas que facilitan el aprendizaje (cuentan `credit` y la skill sigue como brecha, con la similar como puente).",
+  "skills": [
+    {
+      "key": "python",
+      "name": "Python",
+      "category": "lenguaje",
+      "aliases": [
+        "py",
+        "python 3",
+        "python3"
+      ]
+    },
+    {
+      "key": "javascript",
+      "name": "JavaScript",
+      "category": "lenguaje",
+      "aliases": [
+        "ecmascript",
+        "es6",
+        "js",
+        "vanilla js"
+      ]
+    },
+    {
+      "key": "typescript",
+      "name": "TypeScript",
+      "category": "lenguaje",
+      "aliases": [
+        "ts"
+      ]
+    },
+    {
+      "key": "java",
+      "name": "Java",
+      "category": "lenguaje",
+      "aliases": [
+        "j2ee",
+        "jakarta ee",
+        "java ee",
+        "java se"
+      ]
+    },
+    {
+      "key": "kotlin",
+      "name": "Kotlin",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "c#",
+      "name": "C#",
+      "category": "lenguaje",
+      "aliases": [
+        "c sharp",
+        "csharp"
+      ]
+    },
+    {
+      "key": "c",
+      "name": "C",
+      "category": "lenguaje",
+      "aliases": [
+        "ansi c",
+        "lenguaje c"
+      ]
+    },
+    {
+      "key": "c++",
+      "name": "C++",
+      "category": "lenguaje",
+      "aliases": [
+        "c plus plus",
+        "cpp"
+      ]
+    },
+    {
+      "key": "go",
+      "name": "Go",
+      "category": "lenguaje",
+      "aliases": [
+        "golang"
+      ]
+    },
+    {
+      "key": "php",
+      "name": "PHP",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "ruby",
+      "name": "Ruby",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "swift",
+      "name": "Swift",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "dart",
+      "name": "Dart",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "rust",
+      "name": "Rust",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "r",
+      "name": "R",
+      "category": "lenguaje",
+      "aliases": [
+        "lenguaje r",
+        "r studio",
+        "rstudio"
+      ]
+    },
+    {
+      "key": "matlab",
+      "name": "MATLAB",
+      "category": "lenguaje",
+      "aliases": [
+        "octave"
+      ]
+    },
+    {
+      "key": "bash",
+      "name": "Bash",
+      "category": "lenguaje",
+      "aliases": [
+        "bash scripting",
+        "sh",
+        "shell",
+        "shell scripting"
+      ]
+    },
+    {
+      "key": "powershell",
+      "name": "PowerShell",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "vba",
+      "name": "VBA",
+      "category": "lenguaje",
+      "aliases": [
+        "macros",
+        "macros excel",
+        "visual basic for applications"
+      ]
+    },
+    {
+      "key": "cobol",
+      "name": "COBOL",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "abap",
+      "name": "ABAP",
+      "category": "lenguaje",
+      "aliases": []
+    },
+    {
+      "key": "sql",
+      "name": "SQL",
+      "category": "datos",
+      "aliases": [
+        "consultas sql",
+        "lenguaje sql",
+        "pl sql",
+        "pl/sql",
+        "plsql",
+        "t-sql",
+        "tsql"
+      ]
+    },
+    {
+      "key": "html",
+      "name": "HTML",
+      "category": "frontend",
+      "aliases": [
+        "html5"
+      ]
+    },
+    {
+      "key": "css",
+      "name": "CSS",
+      "category": "frontend",
+      "aliases": [
+        "css3"
+      ]
+    },
+    {
+      "key": "sass",
+      "name": "Sass",
+      "category": "frontend",
+      "aliases": [
+        "scss"
+      ]
+    },
+    {
+      "key": "tailwind",
+      "name": "Tailwind CSS",
+      "category": "frontend",
+      "aliases": [
+        "tailwind css",
+        "tailwindcss"
+      ]
+    },
+    {
+      "key": "bootstrap",
+      "name": "Bootstrap",
+      "category": "frontend",
+      "aliases": [
+        "bootstrap 5",
+        "react-bootstrap"
+      ]
+    },
+    {
+      "key": "react",
+      "name": "React",
+      "category": "frontend",
+      "aliases": [
+        "react js",
+        "react.js",
+        "reactjs"
+      ]
+    },
+    {
+      "key": "next.js",
+      "name": "Next.js",
+      "category": "frontend",
+      "aliases": [
+        "next",
+        "nextjs"
+      ]
+    },
+    {
+      "key": "vue",
+      "name": "Vue",
+      "category": "frontend",
+      "aliases": [
+        "vue 3",
+        "vue.js",
+        "vuejs"
+      ]
+    },
+    {
+      "key": "nuxt",
+      "name": "Nuxt",
+      "category": "frontend",
+      "aliases": [
+        "nuxt.js",
+        "nuxtjs"
+      ]
+    },
+    {
+      "key": "angular",
+      "name": "Angular",
+      "category": "frontend",
+      "aliases": [
+        "angular 2+",
+        "angular2"
+      ]
+    },
+    {
+      "key": "angularjs",
+      "name": "AngularJS",
+      "category": "frontend",
+      "aliases": [
+        "angular 1",
+        "angular.js"
+      ]
+    },
+    {
+      "key": "svelte",
+      "name": "Svelte",
+      "category": "frontend",
+      "aliases": [
+        "sveltekit"
+      ]
+    },
+    {
+      "key": "jquery",
+      "name": "jQuery",
+      "category": "frontend",
+      "aliases": []
+    },
+    {
+      "key": "redux",
+      "name": "Redux",
+      "category": "frontend",
+      "aliases": [
+        "redux toolkit"
+      ]
+    },
+    {
+      "key": "react native",
+      "name": "React Native",
+      "category": "mobile",
+      "aliases": [
+        "reactnative"
+      ]
+    },
+    {
+      "key": "flutter",
+      "name": "Flutter",
+      "category": "mobile",
+      "aliases": []
+    },
+    {
+      "key": "android",
+      "name": "Android",
+      "category": "mobile",
+      "aliases": [
+        "desarrollo android"
+      ]
+    },
+    {
+      "key": "ios",
+      "name": "iOS",
+      "category": "mobile",
+      "aliases": [
+        "desarrollo ios"
+      ]
+    },
+    {
+      "key": "node.js",
+      "name": "Node.js",
+      "category": "backend",
+      "aliases": [
+        "node",
+        "node js",
+        "nodejs"
+      ]
+    },
+    {
+      "key": "express",
+      "name": "Express",
+      "category": "backend",
+      "aliases": [
+        "express.js",
+        "expressjs"
+      ]
+    },
+    {
+      "key": "nestjs",
+      "name": "NestJS",
+      "category": "backend",
+      "aliases": [
+        "nest",
+        "nest.js"
+      ]
+    },
+    {
+      "key": "django",
+      "name": "Django",
+      "category": "backend",
+      "aliases": [
+        "django rest framework",
+        "drf"
+      ]
+    },
+    {
+      "key": "flask",
+      "name": "Flask",
+      "category": "backend",
+      "aliases": []
+    },
+    {
+      "key": "fastapi",
+      "name": "FastAPI",
+      "category": "backend",
+      "aliases": [
+        "fast api"
+      ]
+    },
+    {
+      "key": "spring",
+      "name": "Spring",
+      "category": "backend",
+      "aliases": [
+        "spring boot",
+        "spring framework",
+        "springboot"
+      ]
+    },
+    {
+      "key": ".net",
+      "name": ".NET",
+      "category": "backend",
+      "aliases": [
+        ".net core",
+        "asp.net",
+        "asp.net core",
+        "aspnet",
+        "dotnet",
+        "net core"
+      ]
+    },
+    {
+      "key": "laravel",
+      "name": "Laravel",
+      "category": "backend",
+      "aliases": []
+    },
+    {
+      "key": "symfony",
+      "name": "Symfony",
+      "category": "backend",
+      "aliases": []
+    },
+    {
+      "key": "ruby on rails",
+      "name": "Ruby on Rails",
+      "category": "backend",
+      "aliases": [
+        "rails",
+        "ror"
+      ]
+    },
+    {
+      "key": "rest",
+      "name": "APIs REST",
+      "category": "backend",
+      "aliases": [
+        "api rest",
+        "apis rest",
+        "rest api",
+        "rest apis",
+        "restful",
+        "servicios rest"
+      ]
+    },
+    {
+      "key": "graphql",
+      "name": "GraphQL",
+      "category": "backend",
+      "aliases": []
+    },
+    {
+      "key": "microservicios",
+      "name": "Microservicios",
+      "category": "backend",
+      "aliases": [
+        "arquitectura de microservicios",
+        "microservices"
+      ]
+    },
+    {
+      "key": "postgresql",
+      "name": "PostgreSQL",
+      "category": "base de datos",
+      "aliases": [
+        "pgsql",
+        "posgres",
+        "posgresql",
+        "posgressql",
+        "postgre",
+        "postgre sql",
+        "postgres",
+        "postgressql",
+        "psql"
+      ]
+    },
+    {
+      "key": "mysql",
+      "name": "MySQL",
+      "category": "base de datos",
+      "aliases": [
+        "my sql"
+      ]
+    },
+    {
+      "key": "mariadb",
+      "name": "MariaDB",
+      "category": "base de datos",
+      "aliases": [
+        "maria db"
+      ]
+    },
+    {
+      "key": "sql server",
+      "name": "SQL Server",
+      "category": "base de datos",
+      "aliases": [
+        "microsoft sql server",
+        "ms sql",
+        "ms sql server",
+        "mssql"
+      ]
+    },
+    {
+      "key": "oracle",
+      "name": "Oracle Database",
+      "category": "base de datos",
+      "aliases": [
+        "base de datos oracle",
+        "oracle database",
+        "oracle db"
+      ]
+    },
+    {
+      "key": "sqlite",
+      "name": "SQLite",
+      "category": "base de datos",
+      "aliases": [
+        "sqlite3"
+      ]
+    },
+    {
+      "key": "mongodb",
+      "name": "MongoDB",
+      "category": "base de datos",
+      "aliases": [
+        "mongo",
+        "mongo db"
+      ]
+    },
+    {
+      "key": "redis",
+      "name": "Redis",
+      "category": "base de datos",
+      "aliases": []
+    },
+    {
+      "key": "cassandra",
+      "name": "Cassandra",
+      "category": "base de datos",
+      "aliases": [
+        "apache cassandra"
+      ]
+    },
+    {
+      "key": "dynamodb",
+      "name": "DynamoDB",
+      "category": "base de datos",
+      "aliases": [
+        "amazon dynamodb",
+        "dynamo db"
+      ]
+    },
+    {
+      "key": "firebase",
+      "name": "Firebase",
+      "category": "base de datos",
+      "aliases": [
+        "firestore"
+      ]
+    },
+    {
+      "key": "elasticsearch",
+      "name": "Elasticsearch",
+      "category": "base de datos",
+      "aliases": [
+        "elastic",
+        "elastic search",
+        "opensearch"
+      ]
+    },
+    {
+      "key": "orm",
+      "name": "ORM",
+      "category": "base de datos",
+      "aliases": [
+        "mapeo objeto relacional"
+      ]
+    },
+    {
+      "key": "sqlalchemy",
+      "name": "SQLAlchemy",
+      "category": "base de datos",
+      "aliases": []
+    },
+    {
+      "key": "hibernate",
+      "name": "Hibernate",
+      "category": "base de datos",
+      "aliases": [
+        "jpa"
+      ]
+    },
+    {
+      "key": "entity framework",
+      "name": "Entity Framework",
+      "category": "base de datos",
+      "aliases": [
+        "ef core",
+        "entity framework core"
+      ]
+    },
+    {
+      "key": "git",
+      "name": "Git",
+      "category": "devops",
+      "aliases": [
+        "control de versiones",
+        "versionado"
+      ]
+    },
+    {
+      "key": "github",
+      "name": "GitHub",
+      "category": "devops",
+      "aliases": [
+        "git hub"
+      ]
+    },
+    {
+      "key": "gitlab",
+      "name": "GitLab",
+      "category": "devops",
+      "aliases": [
+        "git lab"
+      ]
+    },
+    {
+      "key": "bitbucket",
+      "name": "Bitbucket",
+      "category": "devops",
+      "aliases": []
+    },
+    {
+      "key": "docker",
+      "name": "Docker",
+      "category": "devops",
+      "aliases": [
+        "containers",
+        "contenedores",
+        "docker compose",
+        "docker-compose"
+      ]
+    },
+    {
+      "key": "podman",
+      "name": "Podman",
+      "category": "devops",
+      "aliases": []
+    },
+    {
+      "key": "kubernetes",
+      "name": "Kubernetes",
+      "category": "devops",
+      "aliases": [
+        "k8s",
+        "kube"
+      ]
+    },
+    {
+      "key": "openshift",
+      "name": "OpenShift",
+      "category": "devops",
+      "aliases": [
+        "red hat openshift"
+      ]
+    },
+    {
+      "key": "ci/cd",
+      "name": "CI/CD",
+      "category": "devops",
+      "aliases": [
+        "ci cd",
+        "cicd",
+        "continuous integration",
+        "despliegue continuo",
+        "integracion continua"
+      ]
+    },
+    {
+      "key": "github actions",
+      "name": "GitHub Actions",
+      "category": "devops",
+      "aliases": [
+        "gh actions"
+      ]
+    },
+    {
+      "key": "gitlab ci",
+      "name": "GitLab CI",
+      "category": "devops",
+      "aliases": [
+        "gitlab ci/cd",
+        "gitlab-ci"
+      ]
+    },
+    {
+      "key": "jenkins",
+      "name": "Jenkins",
+      "category": "devops",
+      "aliases": []
+    },
+    {
+      "key": "azure devops",
+      "name": "Azure DevOps",
+      "category": "devops",
+      "aliases": [
+        "azure pipelines",
+        "tfs",
+        "vsts"
+      ]
+    },
+    {
+      "key": "terraform",
+      "name": "Terraform",
+      "category": "devops",
+      "aliases": []
+    },
+    {
+      "key": "ansible",
+      "name": "Ansible",
+      "category": "devops",
+      "aliases": []
+    },
+    {
+      "key": "linux",
+      "name": "Linux",
+      "category": "devops",
+      "aliases": [
+        "centos",
+        "debian",
+        "gnu/linux",
+        "red hat",
+        "rhel",
+        "ubuntu"
+      ]
+    },
+    {
+      "key": "nginx",
+      "name": "Nginx",
+      "category": "devops",
+      "aliases": []
+    },
+    {
+      "key": "aws",
+      "name": "AWS",
+      "category": "nube",
+      "aliases": [
+        "amazon web services",
+        "aws cloud"
+      ]
+    },
+    {
+      "key": "azure",
+      "name": "Microsoft Azure",
+      "category": "nube",
+      "aliases": [
+        "azure cloud",
+        "ms azure"
+      ]
+    },
+    {
+      "key": "gcp",
+      "name": "Google Cloud",
+      "category": "nube",
+      "aliases": [
+        "google cloud",
+        "google cloud platform"
+      ]
+    },
+    {
+      "key": "rabbitmq",
+      "name": "RabbitMQ",
+      "category": "backend",
+      "aliases": [
+        "rabbit mq"
+      ]
+    },
+    {
+      "key": "kafka",
+      "name": "Kafka",
+      "category": "backend",
+      "aliases": [
+        "apache kafka"
+      ]
+    },
+    {
+      "key": "testing",
+      "name": "Testing",
+      "category": "testing",
+      "aliases": [
+        "pruebas",
+        "pruebas unitarias",
+        "testing automatizado",
+        "testing unitario",
+        "tests",
+        "tests unitarios",
+        "unit testing"
+      ]
+    },
+    {
+      "key": "pytest",
+      "name": "Pytest",
+      "category": "testing",
+      "aliases": [
+        "py.test"
+      ]
+    },
+    {
+      "key": "jest",
+      "name": "Jest",
+      "category": "testing",
+      "aliases": []
+    },
+    {
+      "key": "vitest",
+      "name": "Vitest",
+      "category": "testing",
+      "aliases": []
+    },
+    {
+      "key": "junit",
+      "name": "JUnit",
+      "category": "testing",
+      "aliases": [
+        "junit 5",
+        "junit5"
+      ]
+    },
+    {
+      "key": "selenium",
+      "name": "Selenium",
+      "category": "testing",
+      "aliases": [
+        "selenium webdriver"
+      ]
+    },
+    {
+      "key": "cypress",
+      "name": "Cypress",
+      "category": "testing",
+      "aliases": []
+    },
+    {
+      "key": "playwright",
+      "name": "Playwright",
+      "category": "testing",
+      "aliases": []
+    },
+    {
+      "key": "postman",
+      "name": "Postman",
+      "category": "testing",
+      "aliases": []
+    },
+    {
+      "key": "qa",
+      "name": "QA manual",
+      "category": "testing",
+      "aliases": [
+        "control de calidad de software",
+        "pruebas manuales",
+        "qa manual",
+        "testing manual"
+      ]
+    },
+    {
+      "key": "pandas",
+      "name": "pandas",
+      "category": "datos",
+      "aliases": []
+    },
+    {
+      "key": "numpy",
+      "name": "NumPy",
+      "category": "datos",
+      "aliases": []
+    },
+    {
+      "key": "scikit-learn",
+      "name": "scikit-learn",
+      "category": "datos",
+      "aliases": [
+        "scikit learn",
+        "sklearn"
+      ]
+    },
+    {
+      "key": "tensorflow",
+      "name": "TensorFlow",
+      "category": "datos",
+      "aliases": [
+        "keras"
+      ]
+    },
+    {
+      "key": "pytorch",
+      "name": "PyTorch",
+      "category": "datos",
+      "aliases": [
+        "torch"
+      ]
+    },
+    {
+      "key": "machine learning",
+      "name": "Machine Learning",
+      "category": "datos",
+      "aliases": [
+        "aprendizaje automatico",
+        "ml"
+      ]
+    },
+    {
+      "key": "spark",
+      "name": "Apache Spark",
+      "category": "datos",
+      "aliases": [
+        "apache spark",
+        "pyspark"
+      ]
+    },
+    {
+      "key": "airflow",
+      "name": "Apache Airflow",
+      "category": "datos",
+      "aliases": [
+        "apache airflow"
+      ]
+    },
+    {
+      "key": "etl",
+      "name": "ETL",
+      "category": "datos",
+      "aliases": [
+        "elt",
+        "procesos etl"
+      ]
+    },
+    {
+      "key": "power bi",
+      "name": "Power BI",
+      "category": "datos",
+      "aliases": [
+        "microsoft power bi",
+        "powerbi"
+      ]
+    },
+    {
+      "key": "tableau",
+      "name": "Tableau",
+      "category": "datos",
+      "aliases": []
+    },
+    {
+      "key": "looker studio",
+      "name": "Looker Studio",
+      "category": "datos",
+      "aliases": [
+        "data studio",
+        "google data studio",
+        "looker"
+      ]
+    },
+    {
+      "key": "estadistica",
+      "name": "Estadística",
+      "category": "datos",
+      "aliases": [
+        "estadistica aplicada",
+        "statistics"
+      ]
+    },
+    {
+      "key": "spss",
+      "name": "SPSS",
+      "category": "datos",
+      "aliases": [
+        "ibm spss"
+      ]
+    },
+    {
+      "key": "excel",
+      "name": "Excel",
+      "category": "ofimatica",
+      "aliases": [
+        "excel avanzado",
+        "hojas de calculo",
+        "microsoft excel",
+        "ms excel",
+        "planillas de calculo"
+      ]
+    },
+    {
+      "key": "google sheets",
+      "name": "Google Sheets",
+      "category": "ofimatica",
+      "aliases": [
+        "google spreadsheets",
+        "hojas de calculo de google"
+      ]
+    },
+    {
+      "key": "word",
+      "name": "Word",
+      "category": "ofimatica",
+      "aliases": [
+        "microsoft word",
+        "ms word"
+      ]
+    },
+    {
+      "key": "google docs",
+      "name": "Google Docs",
+      "category": "ofimatica",
+      "aliases": [
+        "documentos de google"
+      ]
+    },
+    {
+      "key": "powerpoint",
+      "name": "PowerPoint",
+      "category": "ofimatica",
+      "aliases": [
+        "microsoft powerpoint",
+        "ms powerpoint"
+      ]
+    },
+    {
+      "key": "google slides",
+      "name": "Google Slides",
+      "category": "ofimatica",
+      "aliases": [
+        "presentaciones de google"
+      ]
+    },
+    {
+      "key": "office",
+      "name": "Microsoft Office",
+      "category": "ofimatica",
+      "aliases": [
+        "microsoft 365",
+        "ms office",
+        "office 365"
+      ]
+    },
+    {
+      "key": "google workspace",
+      "name": "Google Workspace",
+      "category": "ofimatica",
+      "aliases": [
+        "g suite",
+        "gsuite"
+      ]
+    },
+    {
+      "key": "sap",
+      "name": "SAP",
+      "category": "gestion",
+      "aliases": [
+        "sap erp",
+        "sap s/4hana"
+      ]
+    },
+    {
+      "key": "tango gestion",
+      "name": "Tango Gestión",
+      "category": "gestion",
+      "aliases": [
+        "tango",
+        "tango software"
+      ]
+    },
+    {
+      "key": "jira",
+      "name": "Jira",
+      "category": "gestion",
+      "aliases": []
+    },
+    {
+      "key": "trello",
+      "name": "Trello",
+      "category": "gestion",
+      "aliases": []
+    },
+    {
+      "key": "notion",
+      "name": "Notion",
+      "category": "gestion",
+      "aliases": []
+    },
+    {
+      "key": "agile",
+      "name": "Metodologías ágiles",
+      "category": "metodologia",
+      "aliases": [
+        "agil",
+        "agile",
+        "agilidad",
+        "metodologias agiles"
+      ]
+    },
+    {
+      "key": "scrum",
+      "name": "Scrum",
+      "category": "metodologia",
+      "aliases": []
+    },
+    {
+      "key": "kanban",
+      "name": "Kanban",
+      "category": "metodologia",
+      "aliases": []
+    },
+    {
+      "key": "figma",
+      "name": "Figma",
+      "category": "diseno",
+      "aliases": []
+    },
+    {
+      "key": "adobe xd",
+      "name": "Adobe XD",
+      "category": "diseno",
+      "aliases": [
+        "xd"
+      ]
+    },
+    {
+      "key": "sketch",
+      "name": "Sketch",
+      "category": "diseno",
+      "aliases": []
+    },
+    {
+      "key": "ux",
+      "name": "Diseño UX",
+      "category": "diseno",
+      "aliases": [
+        "diseno ux",
+        "diseno ux/ui",
+        "experiencia de usuario",
+        "ui/ux",
+        "ux design",
+        "ux/ui"
+      ]
+    },
+    {
+      "key": "photoshop",
+      "name": "Photoshop",
+      "category": "diseno",
+      "aliases": [
+        "adobe photoshop"
+      ]
+    },
+    {
+      "key": "illustrator",
+      "name": "Illustrator",
+      "category": "diseno",
+      "aliases": [
+        "adobe illustrator"
+      ]
+    },
+    {
+      "key": "autocad",
+      "name": "AutoCAD",
+      "category": "diseno",
+      "aliases": [
+        "auto cad"
+      ]
+    },
+    {
+      "key": "trabajo en equipo",
+      "name": "Trabajo en equipo",
+      "category": "blanda",
+      "aliases": [
+        "colaboracion",
+        "teamwork",
+        "trabajo colaborativo"
+      ]
+    },
+    {
+      "key": "comunicacion",
+      "name": "Comunicación",
+      "category": "blanda",
+      "aliases": [
+        "communication",
+        "comunicacion efectiva",
+        "comunicacion oral y escrita"
+      ]
+    },
+    {
+      "key": "resolucion de problemas",
+      "name": "Resolución de problemas",
+      "category": "blanda",
+      "aliases": [
+        "problem solving",
+        "solucion de problemas"
+      ]
+    },
+    {
+      "key": "liderazgo",
+      "name": "Liderazgo",
+      "category": "blanda",
+      "aliases": [
+        "conduccion de equipos",
+        "leadership"
+      ]
+    },
+    {
+      "key": "atencion al cliente",
+      "name": "Atención al cliente",
+      "category": "blanda",
+      "aliases": [
+        "atencion al publico",
+        "customer service",
+        "servicio al cliente"
+      ]
+    },
+    {
+      "key": "organizacion",
+      "name": "Organización",
+      "category": "blanda",
+      "aliases": [
+        "gestion del tiempo",
+        "planificacion",
+        "time management"
+      ]
+    },
+    {
+      "key": "proactividad",
+      "name": "Proactividad",
+      "category": "blanda",
+      "aliases": [
+        "iniciativa"
+      ]
+    },
+    {
+      "key": "adaptabilidad",
+      "name": "Adaptabilidad",
+      "category": "blanda",
+      "aliases": [
+        "adaptacion al cambio",
+        "flexibilidad"
+      ]
+    },
+    {
+      "key": "pensamiento critico",
+      "name": "Pensamiento crítico",
+      "category": "blanda",
+      "aliases": [
+        "capacidad analitica",
+        "critical thinking",
+        "pensamiento analitico"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "kind": "equivalent",
+      "label": "MySQL y su fork MariaDB",
+      "skills": [
+        "mysql",
+        "mariadb"
+      ],
+      "credit": 1.0
+    },
+    {
+      "kind": "equivalent",
+      "label": "Contenedores compatibles",
+      "skills": [
+        "docker",
+        "podman"
+      ],
+      "credit": 1.0
+    },
+    {
+      "kind": "similar",
+      "label": "Plataformas de Git",
+      "skills": [
+        "github",
+        "gitlab",
+        "bitbucket"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Gestión de tareas y proyectos",
+      "skills": [
+        "jira",
+        "trello",
+        "notion"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Sistemas de gestión (ERP)",
+      "skills": [
+        "sap",
+        "tango gestion"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Edición gráfica de Adobe",
+      "skills": [
+        "photoshop",
+        "illustrator"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Orquestación de contenedores",
+      "skills": [
+        "kubernetes",
+        "openshift"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Bases clave-valor y documentos",
+      "skills": [
+        "redis",
+        "dynamodb"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Lenguajes de scripting de sistemas",
+      "skills": [
+        "bash",
+        "powershell"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Python y R para datos",
+      "skills": [
+        "python",
+        "r"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Herramientas estadísticas",
+      "skills": [
+        "spss",
+        "r"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Lenguajes mobile nativos",
+      "skills": [
+        "swift",
+        "kotlin"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Mobile nativo",
+      "skills": [
+        "android",
+        "ios"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Bases de datos relacionales",
+      "skills": [
+        "postgresql",
+        "mysql",
+        "mariadb",
+        "sql server",
+        "oracle",
+        "sqlite"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Bases NoSQL",
+      "skills": [
+        "mongodb",
+        "dynamodb",
+        "cassandra",
+        "firebase"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Frameworks frontend",
+      "skills": [
+        "react",
+        "vue",
+        "angular",
+        "svelte"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "JavaScript y TypeScript",
+      "skills": [
+        "javascript",
+        "typescript"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Frameworks web en Python",
+      "skills": [
+        "django",
+        "flask",
+        "fastapi"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Frameworks web en Node.js",
+      "skills": [
+        "express",
+        "nestjs"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Lenguajes de la JVM",
+      "skills": [
+        "java",
+        "kotlin"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Java y C#",
+      "skills": [
+        "java",
+        "c#"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Frameworks backend empresariales",
+      "skills": [
+        "spring",
+        ".net"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Frameworks PHP",
+      "skills": [
+        "laravel",
+        "symfony"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Nubes públicas",
+      "skills": [
+        "aws",
+        "azure",
+        "gcp"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Herramientas de CI/CD",
+      "skills": [
+        "github actions",
+        "gitlab ci",
+        "jenkins",
+        "azure devops"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Infraestructura como código",
+      "skills": [
+        "terraform",
+        "ansible"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Mensajería",
+      "skills": [
+        "rabbitmq",
+        "kafka"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Testing unitario",
+      "skills": [
+        "pytest",
+        "jest",
+        "vitest",
+        "junit"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Testing end-to-end",
+      "skills": [
+        "selenium",
+        "cypress",
+        "playwright"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Herramientas de BI",
+      "skills": [
+        "power bi",
+        "tableau",
+        "looker studio"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Planillas de cálculo",
+      "skills": [
+        "excel",
+        "google sheets"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Procesadores de texto",
+      "skills": [
+        "word",
+        "google docs"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Presentaciones",
+      "skills": [
+        "powerpoint",
+        "google slides"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Suites de oficina",
+      "skills": [
+        "office",
+        "google workspace"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Herramientas de diseño de interfaces",
+      "skills": [
+        "figma",
+        "adobe xd",
+        "sketch"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "Frameworks de Deep Learning",
+      "skills": [
+        "tensorflow",
+        "pytorch"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Desarrollo mobile multiplataforma",
+      "skills": [
+        "react native",
+        "flutter"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Metodologías ágiles",
+      "skills": [
+        "scrum",
+        "kanban"
+      ],
+      "credit": 0.5
+    },
+    {
+      "kind": "similar",
+      "label": "Frameworks CSS",
+      "skills": [
+        "tailwind",
+        "bootstrap"
+      ],
+      "credit": 0.75
+    },
+    {
+      "kind": "similar",
+      "label": "ORMs",
+      "skills": [
+        "sqlalchemy",
+        "hibernate",
+        "entity framework"
+      ],
+      "credit": 0.5
+    }
+  ],
+  "implies": {
+    "postgresql": [
+      "sql"
+    ],
+    "mysql": [
+      "sql"
+    ],
+    "mariadb": [
+      "sql"
+    ],
+    "sql server": [
+      "sql"
+    ],
+    "oracle": [
+      "sql"
+    ],
+    "sqlite": [
+      "sql"
+    ],
+    "typescript": [
+      "javascript"
+    ],
+    "react": [
+      "javascript"
+    ],
+    "vue": [
+      "javascript"
+    ],
+    "angular": [
+      "typescript"
+    ],
+    "angularjs": [
+      "javascript"
+    ],
+    "svelte": [
+      "javascript"
+    ],
+    "jquery": [
+      "javascript"
+    ],
+    "redux": [
+      "react"
+    ],
+    "next.js": [
+      "react"
+    ],
+    "nuxt": [
+      "vue"
+    ],
+    "react native": [
+      "react"
+    ],
+    "node.js": [
+      "javascript"
+    ],
+    "express": [
+      "node.js"
+    ],
+    "nestjs": [
+      "node.js",
+      "typescript"
+    ],
+    "django": [
+      "python"
+    ],
+    "flask": [
+      "python"
+    ],
+    "fastapi": [
+      "python"
+    ],
+    "pandas": [
+      "python"
+    ],
+    "numpy": [
+      "python"
+    ],
+    "scikit-learn": [
+      "python",
+      "machine learning"
+    ],
+    "tensorflow": [
+      "python",
+      "machine learning"
+    ],
+    "pytorch": [
+      "python",
+      "machine learning"
+    ],
+    "pytest": [
+      "python",
+      "testing"
+    ],
+    "sqlalchemy": [
+      "python",
+      "orm"
+    ],
+    "airflow": [
+      "python",
+      "etl"
+    ],
+    "spring": [
+      "java"
+    ],
+    "hibernate": [
+      "java",
+      "orm"
+    ],
+    "junit": [
+      "java",
+      "testing"
+    ],
+    ".net": [
+      "c#"
+    ],
+    "entity framework": [
+      ".net",
+      "orm"
+    ],
+    "laravel": [
+      "php"
+    ],
+    "symfony": [
+      "php"
+    ],
+    "ruby on rails": [
+      "ruby"
+    ],
+    "flutter": [
+      "dart"
+    ],
+    "sass": [
+      "css"
+    ],
+    "tailwind": [
+      "css"
+    ],
+    "bootstrap": [
+      "css"
+    ],
+    "jest": [
+      "javascript",
+      "testing"
+    ],
+    "vitest": [
+      "javascript",
+      "testing"
+    ],
+    "selenium": [
+      "testing"
+    ],
+    "cypress": [
+      "testing",
+      "javascript"
+    ],
+    "playwright": [
+      "testing"
+    ],
+    "qa": [
+      "testing"
+    ],
+    "github": [
+      "git"
+    ],
+    "gitlab": [
+      "git"
+    ],
+    "bitbucket": [
+      "git"
+    ],
+    "github actions": [
+      "ci/cd"
+    ],
+    "gitlab ci": [
+      "ci/cd"
+    ],
+    "jenkins": [
+      "ci/cd"
+    ],
+    "azure devops": [
+      "ci/cd"
+    ],
+    "kubernetes": [
+      "docker"
+    ],
+    "openshift": [
+      "kubernetes"
+    ],
+    "scrum": [
+      "agile"
+    ],
+    "kanban": [
+      "agile"
+    ],
+    "spark": [
+      "etl"
+    ],
+    "power bi": [
+      "excel"
+    ],
+    "c++": [
+      "c"
+    ]
+  }
+}

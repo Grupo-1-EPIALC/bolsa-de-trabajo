@@ -17,7 +17,11 @@ from app.domain.models import RequirementKind
 from app.domain.normalization import SkillNormalizer, is_missing, normalize_text
 from app.domain.rules import ScoringRules
 from app.infrastructure.config import DATA_DIR
-from app.infrastructure.rules_loader import load_rules, load_synonyms, rules_from_mapping
+from app.infrastructure.rules_loader import (
+    load_rules,
+    load_skill_dictionary,
+    rules_from_mapping,
+)
 
 NORMALIZER = SkillNormalizer({"ReactJS": "React", "postgres": "PostgreSQL"})
 
@@ -153,7 +157,8 @@ def test_default_rules_file_loads_and_weights_sum_100() -> None:
     assert not rules.condition("salary").hard
     assert rules.training.similar_jobs == 10 and rules.training.max_gaps == 8
     assert rules.experience.reference_years == 1
-    assert load_synonyms(DATA_DIR / "skill_synonyms.json")["reactjs"] == "react"
+    skills = load_skill_dictionary(DATA_DIR / "skill_dictionary.json")
+    assert skills.normalize("ReactJS") == "react"
 
 
 def test_invalid_rules_are_rejected(tmp_path: Path) -> None:
@@ -167,4 +172,5 @@ def test_invalid_rules_are_rejected(tmp_path: Path) -> None:
         rules_from_mapping({"training": {"similar_jobs": 0}})
     with pytest.raises(InvalidRulesError):
         load_rules(tmp_path / "no-existe.yaml")
-    assert load_synonyms(tmp_path / "no-existe.json") == {}
+    with pytest.raises(InvalidRulesError):
+        load_skill_dictionary(tmp_path / "no-existe.json")

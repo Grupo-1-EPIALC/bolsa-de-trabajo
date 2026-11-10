@@ -15,6 +15,7 @@ from app.domain.models import (
     StudentProfile,
 )
 from app.domain.scales import education_level_rank, education_status_rank, language_rank
+from app.domain.skill_dictionary import EXACT_ONLY, SkillDictionary
 
 if TYPE_CHECKING:
     from app.domain.conditions import ConditionCheck
@@ -33,69 +34,97 @@ def _ratio_result(name: str, weight: float, ratio: float, **details: object) -> 
     )
 
 
+def _skill_credit(
+    skills: SkillDictionary, have: dict[str, int], wanted: list[str]
+) -> tuple[float, int, int]:
+    """Suma de crédito (1 si la tiene, el `credit` del grupo si sabe una similar), cuántas
+    cubre del todo y cuántas sólo con una similar."""
+    total, full, similar = 0.0, 0, 0
+    for key in wanted:
+        cov = skills.coverage(have, key)
+        if cov is None:
+            continue
+        total += cov.credit
+        if cov.full:
+            full += 1
+        else:
+            similar += 1
+    return total, full, similar
+
+
 class RequiredSkillsCriterion:
-    """Proporción de skills obligatorias (`required` y `excluding`) que el estudiante tiene."""
+    """Proporción de skills obligatorias (`required` y `excluding`) que el estudiante tiene.
+
+    Con el diccionario: un alias, una equivalente o una skill que la implica cuentan entera;
+    una herramienta similar cuenta su `credit` (ej. GitHub para GitLab, 0,75).
+    """
 
     name = "required_skills"
 
-    def __init__(self, weight: float) -> None:
+    def __init__(self, weight: float, skills: SkillDictionary = EXACT_ONLY) -> None:
         self._weight = weight
+        self._skills = skills
 
     def evaluate(self, profile: StudentProfile, job: JobOpportunity) -> CriterionResult:
         required = job.skills_of(RequirementKind.REQUIRED, RequirementKind.EXCLUDING)
         if not required:
             return _ratio_result(self.name, self._weight, 1.0, required=0, matched=0)
-        have = profile.skill_levels()
-        matched = [s.normalized for s in required if s.normalized in have]
+        keys = [s.normalized for s in required]
+        credit, full, similar = _skill_credit(self._skills, profile.skill_levels(), keys)
         return _ratio_result(
             self.name,
             self._weight,
-            len(matched) / len(required),
+            credit / len(required),
             required=len(required),
-            matched=len(matched),
+            matched=full,
+            similar=similar,
         )
 
 
 class DesiredSkillsCriterion:
-    """Proporción de skills deseables cubiertas. Sin deseables, puntaje completo."""
+    """Proporción de skills deseables cubiertas (mismo criterio). Sin deseables, completo."""
 
     name = "desired_skills"
 
-    def __init__(self, weight: float) -> None:
+    def __init__(self, weight: float, skills: SkillDictionary = EXACT_ONLY) -> None:
         self._weight = weight
+        self._skills = skills
 
     def evaluate(self, profile: StudentProfile, job: JobOpportunity) -> CriterionResult:
         desired = job.skills_of(RequirementKind.DESIRED)
         if not desired:
             return _ratio_result(self.name, self._weight, 1.0, desired=0, matched=0)
-        have = profile.skill_levels()
-        matched = [s.normalized for s in desired if s.normalized in have]
+        keys = [s.normalized for s in desired]
+        credit, full, similar = _skill_credit(self._skills, profile.skill_levels(), keys)
         return _ratio_result(
             self.name,
             self._weight,
-            len(matched) / len(desired),
+            credit / len(desired),
             desired=len(desired),
-            matched=len(matched),
+            matched=full,
+            similar=similar,
         )
 
 
 class LevelsCriterion:
-    """Promedio de `min(1, nivel_estudiante / nivel_pedido)` sobre las skills que coinciden."""
+    """Promedio de `min(1, nivel_estudiante / nivel_pedido)` sobre las skills que cubre del
+    todo (la misma, un alias, una equivalente o una que la implica, con el nivel de esa)."""
 
     name = "levels"
 
-    def __init__(self, weight: float) -> None:
+    def __init__(self, weight: float, skills: SkillDictionary = EXACT_ONLY) -> None:
         self._weight = weight
+        self._skills = skills
 
     def evaluate(self, profile: StudentProfile, job: JobOpportunity) -> CriterionResult:
         if not job.skills:
             return _ratio_result(self.name, self._weight, 1.0, compared=0)
         have = profile.skill_levels()
-        ratios = [
-            min(1.0, have[s.normalized] / max(1, s.level))
-            for s in job.skills
-            if s.normalized in have
-        ]
+        ratios = []
+        for s in job.skills:
+            cov = self._skills.coverage(have, s.normalized)
+            if cov is not None and cov.full:
+                ratios.append(min(1.0, cov.level / max(1, s.level)))
         if not ratios:
             return _ratio_result(self.name, self._weight, 0.0, compared=0)
         return _ratio_result(
@@ -117,11 +146,16 @@ class ExperienceCriterion:
     _RELEVANT_SKILLS_FOR_FULL_CREDIT = 3
 
     def __init__(
-        self, weight: float, reference_years: float = 1.0, relevance_share: float = 0.4
+        self,
+        weight: float,
+        reference_years: float = 1.0,
+        relevance_share: float = 0.4,
+        skills: SkillDictionary = EXACT_ONLY,
     ) -> None:
         self._weight = weight
         self._reference_years = reference_years
         self._relevance_share = relevance_share
+        self._skills = skills
 
     def evaluate(self, profile: StudentProfile, job: JobOpportunity) -> CriterionResult:
         min_years = job.experience.min_years
@@ -151,7 +185,12 @@ class ExperienceCriterion:
             return 1.0, []
         if not profile.experience_skills:
             return 0.5, []
-        relevant = sorted(job_skills[k] for k in job_skills if k in profile.experience_skills)
+        used = {k: 1 for k in profile.experience_skills}
+        relevant = sorted(
+            name
+            for k, name in job_skills.items()
+            if (cov := self._skills.coverage(used, k)) is not None and cov.full
+        )
         needed = min(len(job_skills), self._RELEVANT_SKILLS_FOR_FULL_CREDIT)
         return min(1.0, len(relevant) / needed), relevant
 
