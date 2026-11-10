@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Match } from '../../types/matching';
 import { RuleScoreModal } from './RuleScoreModal';
+import { matchedLabel, matchedReason, missingLabel } from '../../matching/skills';
 
 export const CRITERIA: Record<string, string> = {
   required_skills: 'Competencias obligatorias',
@@ -62,9 +63,9 @@ export const RuleMatch: React.FC<RuleMatchProps> = ({
         {match.matched_skills.length > 0 && (
           <div className="d-flex flex-wrap gap-1 mb-2">
             {match.matched_skills.map((s) => (
-              <span key={s.skill} className="badge text-bg-success">
+              <span key={s.skill} className="badge text-bg-success" title={matchedReason(s)}>
                 <i className="bi bi-check me-1" aria-hidden="true" />
-                {s.skill}
+                {matchedLabel(s)}
               </span>
             ))}
           </div>
@@ -75,7 +76,7 @@ export const RuleMatch: React.FC<RuleMatchProps> = ({
             {match.missing_skills.map((s) => (
               <span key={s.skill} className="badge text-bg-light border">
                 <i className="bi bi-x text-danger me-1" aria-hidden="true" />
-                {s.skill} (nivel {s.current_level} → {s.required_level})
+                {missingLabel(s)}
               </span>
             ))}
           </div>

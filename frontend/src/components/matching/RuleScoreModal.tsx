@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Match } from '../../types/matching';
 import { CRITERIA, PRIORITY_CLASS } from './RuleMatch';
+import { matchedLabel, matchedReason, missingLabel } from '../../matching/skills';
 
 interface RuleScoreModalProps {
   match: Match;
@@ -128,8 +129,12 @@ export const RuleScoreModal: React.FC<RuleScoreModalProps> = ({
                   ) : (
                     <div className="d-flex flex-wrap gap-1">
                       {match.matched_skills.map((s) => (
-                        <span key={s.skill} className="badge text-bg-success small">
-                          {s.skill} (Nivel {s.profile_level})
+                        <span
+                          key={s.skill}
+                          className="badge text-bg-success small"
+                          title={matchedReason(s)}
+                        >
+                          {matchedLabel(s)} (Nivel {s.profile_level})
                         </span>
                       ))}
                     </div>
@@ -154,7 +159,7 @@ export const RuleScoreModal: React.FC<RuleScoreModalProps> = ({
                           key={s.skill}
                           className={`badge ${PRIORITY_CLASS[s.priority] || 'text-bg-light border'} small`}
                         >
-                          {s.skill} (Req: {s.required_level} / Actual: {s.current_level})
+                          {missingLabel(s)}
                         </span>
                       ))}
                     </div>
@@ -169,7 +174,7 @@ export const RuleScoreModal: React.FC<RuleScoreModalProps> = ({
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <h3 className="h6 fw-bold mb-0">Compatibilidad de Condiciones Laborales</h3>
                   <span className="badge text-bg-light border text-body-secondary">
-                    Informativo (no modifica el score)
+                    Pesa poco en el score (7 de 100)
                   </span>
                 </div>
                 <div className="p-3 rounded-3 bg-light">

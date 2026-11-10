@@ -18,6 +18,9 @@ export interface MatchedSkill {
   kind: string;
   profile_level: number;
   required_level: number;
+  /** Skill del perfil que la cubre si no es la misma (SQL por PostgreSQL). */
+  via?: string | null;
+  relation?: 'exact' | 'implied' | 'equivalent';
 }
 
 export interface MissingSkill {
@@ -27,6 +30,9 @@ export interface MissingSkill {
   current_level: number;
   gap: number;
   priority: Priority;
+  /** Herramienta similar que ya sabe y le facilita aprenderla (GitHub para GitLab). */
+  similar_to?: string | null;
+  credit?: number;
 }
 
 export interface ConditionCheck {
@@ -238,6 +244,7 @@ export interface SkillGap {
   current_level: number;
   required_level: number;
   priority: Priority;
+  similar_to?: string | null;
 }
 
 export interface SkillGapsBlock {

@@ -11,6 +11,7 @@ import {
   trainingType,
 } from '../../matching/training';
 import { AiProgress } from './AiProgress';
+import { similarHint } from '../../matching/skills';
 import { PRIORITY_CLASS } from './RuleMatch';
 import { useAiAnalysis } from './useAiAnalysis';
 import type { TrainingView } from '../../types/matching';
@@ -95,6 +96,12 @@ export const TrainingAdvice: React.FC<TrainingAdviceProps> = ({ profileId }) => 
                           Prioridad {gap.priority}
                         </span>
                         <span className="w-100">{describeGap(gap, similar)}</span>
+                        {gap.similar_to && (
+                          <span className="w-100 text-success-emphasis">
+                            <i className="bi bi-signpost-split me-1" aria-hidden="true" />
+                            {similarHint(gap.skill, gap.similar_to)}
+                          </span>
+                        )}
                       </li>
                     ))}
                   </ul>
