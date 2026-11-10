@@ -1,5 +1,6 @@
 // Cliente HTTP único hacia el API Gateway (same-origin /api/v1).
 // - Agrega el JWT de auth-service y renueva el access token una vez ante un 401.
+// - Intercepta bajas de cuenta (ACCOUNT_DELETED) ejecutando logout automático.
 // - Convierte el formato común {"error": {code, message, details}} en ApiError.
 import { session } from './session';
 
@@ -84,18 +85,53 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}): P
   let response: Response;
   try {
     response = await send();
+
+    // 💡 Intercepción de token vencido y renovación de credenciales
     if (response.status === 401 && session.refreshToken()) {
+      // Leemos el cuerpo para verificar si es una baja administrativa explícita
+      const clonedResponse = response.clone();
+      try {
+        const body = await clonedResponse.json();
+        if (body?.error?.code === 'ACCOUNT_DELETED') {
+          session.clear();
+          throw new ApiError(
+            401,
+            'ACCOUNT_DELETED',
+            'Tu cuenta ha sido dada de baja por el administrador.',
+            body?.error?.details ?? {},
+          );
+        }
+      } catch (e) {
+        if (e instanceof ApiError) throw e;
+        // Si no se pudo parsear el JSON, continúa el flujo normal de refresh
+      }
+
+      // Si no fue borrado de cuenta, intentamos refrescar el access token
       if (await refreshAccessToken()) {
         response = await send();
       }
     }
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
     throw new ApiError(0, 'NETWORK_ERROR', 'No se pudo conectar con el servidor.');
   }
 
   if (!response.ok) {
-    if (response.status === 401) session.clear();
-    throw await toApiError(response);
+    const apiErr = await toApiError(response);
+
+    // Si la respuesta final sigue siendo 401 (o traía el código ACCOUNT_DELETED)
+    if (response.status === 401 || apiErr.code === 'ACCOUNT_DELETED') {
+      session.clear();
+      if (apiErr.code === 'ACCOUNT_DELETED') {
+        throw new ApiError(
+          401,
+          'ACCOUNT_DELETED',
+          'Tu cuenta ha sido dada de baja por el administrador.',
+          apiErr.details,
+        );
+      }
+    }
+    throw apiErr;
   }
   return response;
 }

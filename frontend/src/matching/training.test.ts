@@ -11,7 +11,7 @@ const item = (over: Partial<TrainingItem>): TrainingItem => ({
   ...over,
 });
 
-describe('UT-FE-TRAIN-01 formación sugerida por IA', () => {
+describe('[UT-FE-03] Matching, Scoring y Recomendaciones de Formación', () => {
   it('ordena de prioridad alta a baja, respeta el orden original y corta en 5', () => {
     const items = [
       item({ text: 'b1', priority: 'baja' }),
