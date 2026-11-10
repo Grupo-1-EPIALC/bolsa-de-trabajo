@@ -2061,7 +2061,7 @@ if (mode === 'student') {
       source_text: sourceText,
       expected_score: topScore,
       reported_score: topScore,
-      prompt_version: '1.1.0',
+      prompt_version: '1.2.0',
       user_prompt: `mode=student. Recomendá al estudiante ${profileId} las ofertas del ranking por reglas, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","jobs":[...]}. En next_steps usá sólo type apply o profile_tip: no propongas cursos, proyectos ni portfolios (la formación es general y va aparte):\n\n${sourceText}`,
     },
   }];
@@ -2106,7 +2106,7 @@ if (mode === 'company') {
       source_text: sourceText,
       expected_score: topScore,
       reported_score: topScore,
-      prompt_version: '1.1.0',
+      prompt_version: '1.2.0',
       user_prompt: `mode=company. Recomendá los candidatos del ranking por reglas para la oferta ${jobId}, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","candidates":[...]}:\n\n${sourceText}`,
     },
   }];
@@ -2172,7 +2172,7 @@ if (mode === 'training') {
       source_text: sourceText,
       expected_score: null,
       reported_score: null,
-      prompt_version: '2.0.0',
+      prompt_version: '2.1.0',
       user_prompt: `Recomendá al estudiante ${profileId}, en general y no para una oferta, hasta ${maxItems} competencias para sumar o mejorar, a partir de las brechas calculadas por reglas sobre las ofertas más parecidas a su perfil. type: course | skill | profile_tip. No pidas portfolios, proyectos personales ni nada similar. Respondé en JSON {"summary":"...","items":[...]}:\n\n${sourceText}`,
     },
   }];

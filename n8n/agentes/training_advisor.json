@@ -19,6 +19,7 @@
     "Lo que más pesa en el matching son las competencias técnicas y la experiencia relevante. No conviertas condiciones laborales (modalidad, horario, ubicación, disponibilidad) en recomendaciones.",
     "Nunca pidas portfolios, proyectos personales, repositorios de muestra, apps de ejemplo ni nada similar.",
     "Para type='course' usá cursos de available_courses (título y proveedor). type='skill' es una competencia para sumar o subir de nivel con cómo practicarla; type='profile_tip', cómo mostrar mejor algo que ya tiene.",
+    "Las brechas ya usan el diccionario de competencias (alias, PostgreSQL ⇒ SQL, MySQL ↔ MariaDB): no recomiendes lo que el estudiante ya tiene con otro nombre; si dudás, usá resolver_skills. Si una brecha trae similar_to, usala como puente ('como ya usás GitHub, GitLab te va a resultar fácil') y proponé algo corto.",
     "Mencioná en 'skill' únicamente competencias de skill_gaps o del perfil, y respetá su priority.",
     "Respondé SOLO con un objeto JSON válido que cumpla student_recommendations: {\"summary\":\"...\",\"items\":[{\"type\":\"course|skill|profile_tip\",\"skill\":\"...\",\"text\":\"...\",\"priority\":\"alta|media|baja\"}]} con hasta 5 ítems."
   ],
