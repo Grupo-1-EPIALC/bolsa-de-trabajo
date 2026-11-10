@@ -50,14 +50,21 @@ La descripción de cada herramienta es lo que lee el LLM (docstring en `mcp-tool
 | `missing_skills` | `profile_id`, `job_id` | Devuelve las competencias faltantes y brechas de nivel entre un perfil y una oferta, ordenadas por prioridad (`alta`, `media`, `baja`). |
 | `search_courses` | `skills`, `limit` | Busca cursos de formación para cubrir las competencias indicadas en `skills`. |
 | `save_recommendation` | `profile_id`, `job_id`, `items`, `model`, `prompt_version`, `disclaimer` | Guarda una recomendación generada por IA sellando `origin="AI"`, modelo, versión de prompt y fecha. Única herramienta MCP de escritura. |
-| `validate_json_schema` | `schema_name`, `payload_json` | Valida determinísticamente un JSON contra un schema registrado (`cv_standard`, `student_recommendations`, `company_recommendations`). |
+| `validate_json_schema` | `schema_name`, `payload_json` | Valida determinísticamente un JSON contra un schema registrado (`cv_standard`, `cv_design`, `student_recommendations`, `company_recommendations`). |
 | `check_grounding` | `terms`, `source_text`, `expected_score`, `reported_score` | Verifica que cada competencia/término en `terms` exista en `source_text` (no inventar) y que `reported_score` coincida con `expected_score` (reglas vs. IA). |
 | `router_reserve` | `role`, `tried` | Reserva de forma atómica el primer modelo NVIDIA disponible para el rol (`default`, `cv`, `verifier`) respetando el límite RPM y los cooldowns. |
 | `router_report_failure` | `model`, `error` | Registra el fallo de un modelo NVIDIA y le aplica cooldown exponencial según el error. |
 | `router_report_success` | `model` | Limpia los strikes de fallo de un modelo NVIDIA tras una respuesta exitosa. |
 | `router_status` | — | Devuelve el estado actual de usos por minuto/día y cooldowns del router NVIDIA. |
 
-`validate_json_schema` valida contra los schemas registrados en `mcp-tools/app/data/schemas/`: `company_recommendations`, `cv_standard`, `match_company_recommendations`, `match_student_recommendations`, `student_recommendations`, `verifier_verdict`.
+`validate_json_schema` valida contra los schemas registrados en `mcp-tools/app/data/schemas/`: `company_recommendations`, `cv_design`, `cv_standard`, `match_company_recommendations`, `match_student_recommendations`, `student_recommendations`, `verifier_verdict`.
+
+### `cv_design` y la skill `diseno-cv` (desde 0.5.0)
+
+- **Para qué:** el agente `cv_designer` de n8n (WF-07) elige el diseño del CV que genera profile-service. Lee la skill `diseno-cv` con `leer_skill` (perfil `cv`) y valida su salida contra `cv_design`.
+- **Forma:** `{"layout": "cronologico" | "primer_empleo" | "competencias", "section_order": [<secciones sin repetir>], "rationale": "<10 a 600 caracteres>"}`. Sin campos extra.
+- **Secciones válidas:** `summary`, `skills`, `experience`, `projects`, `education`, `languages`, `certifications`, `volunteering`.
+- **Fuente de verdad:** el catálogo vive en profile-service (`app/domain/cv_design.py`). Las enumeraciones del schema y la tabla de la skill se actualizan en el mismo PR si cambia, y profile-service vuelve a validar la respuesta contra su catálogo.
 
 ## 4. Endpoints HTTP
 

@@ -267,3 +267,34 @@ def test_skill_repository_loop_protection_and_mask_filter() -> None:
     flt = MaskKeyLogFilter()
     assert flt.filter(rec) is True
     assert "key=***" in str(rec.args)
+
+
+def test_ut_mcp_04_cv_design_schema_and_skill() -> None:
+    """UT-MCP-04: la skill `diseno-cv` se lista y lee, y `cv_design` acepta sólo el catálogo."""
+    container = build_container({"MCP_USE_MOCKS": "true", "AGENT_SETTINGS_SOURCE": "env"})
+    tools = register_tools(FastMCP("test-mcp"), container)
+
+    skill_ids = [s["id"] for s in tools["list_skills"]()["skills"]]
+    assert "diseno-cv" in skill_ids
+    skill = tools["leer_skill"]("diseno-cv")
+    assert skill["ok"] is True
+    assert "cv_design" in skill["content"]
+    assert "primer_empleo" in skill["content"]
+
+    verification = container.verification
+    good = (
+        '{"layout": "primer_empleo", "section_order": ["summary", "education", "projects"],'
+        ' "rationale": "Sin experiencia laboral, pero con proyectos alineados al puesto."}'
+    )
+    assert verification.validate_json("cv_design", good)["valid"] is True
+
+    for bad in (
+        '{"layout": "dos_columnas", "section_order": ["summary"], "rationale": "Más visual."}',
+        '{"layout": "cronologico", "section_order": ["summary", "summary"],'
+        ' "rationale": "Repite una sección del CV."}',
+        '{"layout": "cronologico", "section_order": ["summary", "fotos"],'
+        ' "rationale": "Sección fuera del catálogo."}',
+        '{"layout": "cronologico", "section_order": ["summary"], "rationale": "ok",'
+        ' "score": 90}',
+    ):
+        assert verification.validate_json("cv_design", bad)["valid"] is False, bad
