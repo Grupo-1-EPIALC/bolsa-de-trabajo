@@ -21,10 +21,10 @@
 | Perfil | Herramientas |
 |---|---|
 | `planificador` | `get_agent_settings`, `fecha_hora` |
-| `cv` | `get_agent_settings`, `leer_skill`, `list_skills`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
-| `postulante` | `get_agent_settings`, `leer_skill`, `list_skills`, `get_profile`, `get_job`, `list_active_jobs`, `compute_match`, `missing_skills`, `rank_jobs_for_student`, `search_courses`, `save_recommendation`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
-| `empresa` | `get_agent_settings`, `leer_skill`, `list_skills`, `get_job`, `get_profile`, `list_candidate_profiles`, `compute_match`, `missing_skills`, `rank_candidates_for_job`, `save_recommendation`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
-| `verificador` | `get_agent_settings`, `leer_skill`, `list_skills`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
+| `cv` | `get_agent_settings`, `resolver_skills`, `leer_skill`, `list_skills`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
+| `postulante` | `get_agent_settings`, `resolver_skills`, `leer_skill`, `list_skills`, `get_profile`, `get_job`, `list_active_jobs`, `compute_match`, `missing_skills`, `rank_jobs_for_student`, `search_courses`, `save_recommendation`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
+| `empresa` | `get_agent_settings`, `resolver_skills`, `leer_skill`, `list_skills`, `get_job`, `get_profile`, `list_candidate_profiles`, `compute_match`, `missing_skills`, `rank_candidates_for_job`, `save_recommendation`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
+| `verificador` | `get_agent_settings`, `resolver_skills`, `leer_skill`, `list_skills`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
 | `adjuntos` | `parse_cv_file`, `parse_cv_text`, `leer_archivo` |
 
 ## 3. Herramientas
@@ -48,6 +48,7 @@ La descripción de cada herramienta es lo que lee el LLM (docstring en `mcp-tool
 | `rank_jobs_for_student` | `profile_id`, `limit` | Ranking por reglas (`origin="RULES"`) de las ofertas compatibles para un estudiante, ya ordenado y filtrado por condiciones laborales. Cada ítem trae `rank`, el snapshot de la oferta (`job`) y el `match` (score… |
 | `rank_candidates_for_job` | `job_id`, `limit` | Ranking por reglas (`origin="RULES"`) de los candidatos compatibles para una oferta, sin datos personales. Cada ítem trae `rank`, el snapshot del candidato (`candidate`) y el `match`. `limit=0` usa la cantidad… |
 | `missing_skills` | `profile_id`, `job_id` | Devuelve las competencias faltantes y brechas de nivel entre un perfil y una oferta, ordenadas por prioridad (`alta`, `media`, `baja`). |
+| `resolver_skills` | `skills` (hasta 50), `profile_skills` (opcional) | Normaliza competencias con el diccionario de matching-service (`POST /api/v1/matches/skills/resolve`, [`matching.md`](matching.md) §5.1). Por cada una: nombre oficial, `implies` (PostgreSQL ⇒ SQL), `equivalents` (MySQL ↔ MariaDB), `similar` (herramientas parecidas que facilitan aprenderla, GitHub ~ GitLab) y, con `profile_skills`, `covered_by` (si el estudiante ya la cubre y con cuál). Sólo lectura. Desde 0.7.0. |
 | `search_courses` | `skills`, `limit` | Busca cursos de formación para cubrir las competencias indicadas en `skills`. |
 | `save_recommendation` | `profile_id`, `job_id`, `items`, `model`, `prompt_version`, `disclaimer` | Guarda una recomendación generada por IA sellando `origin="AI"`, modelo, versión de prompt y fecha. Única herramienta MCP de escritura. |
 | `validate_json_schema` | `schema_name`, `payload_json` | Valida determinísticamente un JSON contra un schema registrado (`cv_standard`, `cv_design`, `student_recommendations`, `company_recommendations`). |

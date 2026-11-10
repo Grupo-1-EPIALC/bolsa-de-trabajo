@@ -40,6 +40,11 @@ class MatchingGateway(Protocol):
         """Ofertas rankeadas por reglas. `limit=None` => cantidad configurada por el admin."""
         ...
 
+    async def resolve_skills(self, skills: list[str], profile_skills: list[str]) -> JsonDict:
+        """Diccionario de competencias de matching-service (alias, equivalentes, implica y
+        herramientas similares) y si `profile_skills` ya cubre cada una."""
+        ...
+
     async def rank_candidates_for_job(self, job_id: str, limit: int | None) -> JsonDict:
         """Candidatos rankeados por reglas. `limit=None` => cantidad configurada por el admin."""
         ...

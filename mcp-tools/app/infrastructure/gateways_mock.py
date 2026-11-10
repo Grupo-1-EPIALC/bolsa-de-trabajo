@@ -168,6 +168,48 @@ class MockJobsGateway:
         return active[:limit]
 
 
+# Diccionario chico para el modo mock (el real vive en matching-service).
+_MOCK_ALIASES = {
+    "postgres": "postgresql",
+    "psql": "postgresql",
+    "reactjs": "react",
+    "js": "javascript",
+}
+_MOCK_IMPLIES = {
+    "postgresql": {"sql"},
+    "mysql": {"sql"},
+    "mariadb": {"sql"},
+    "react": {"javascript"},
+}
+_MOCK_EQUIVALENT = [{"mysql", "mariadb"}]
+_MOCK_SIMILAR = [
+    ({"github", "gitlab", "bitbucket"}, 0.75),
+    ({"postgresql", "mysql", "mariadb"}, 0.5),
+]
+
+
+def _mock_key(name: str) -> str:
+    key = normalize(name)
+    return _MOCK_ALIASES.get(key, key)
+
+
+def _mock_coverage(have: set[str], key: str) -> JsonDict | None:
+    if key in have:
+        return {"relation": "exact", "credit": 1.0, "via": key, "full": True}
+    for h in sorted(have):
+        if key in _MOCK_IMPLIES.get(h, set()):
+            return {"relation": "implied", "credit": 1.0, "via": h, "full": True}
+    for group in _MOCK_EQUIVALENT:
+        if key in group and have & (group - {key}):
+            via = sorted(have & (group - {key}))[0]
+            return {"relation": "equivalent", "credit": 1.0, "via": via, "full": True}
+    for group, credit in _MOCK_SIMILAR:
+        if key in group and have & (group - {key}):
+            via = sorted(have & (group - {key}))[0]
+            return {"relation": "similar", "credit": credit, "via": via, "full": False}
+    return None
+
+
 class MockMatchingGateway:
     """Calcula compatibilidad determinística con pesos 50/15/15/10/5/5 y regla excluyente."""
 
@@ -353,6 +395,29 @@ class MockMatchingGateway:
                 for pos, (p, match) in enumerate(top, start=1)
             ],
         }
+
+    async def resolve_skills(self, skills: list[str], profile_skills: list[str]) -> JsonDict:
+        have = {_mock_key(s) for s in profile_skills}
+        items: list[JsonDict] = []
+        for name in skills:
+            key = _mock_key(name)
+            item: JsonDict = {
+                "input": name,
+                "key": key,
+                "name": name.strip(),
+                "implies": sorted(_MOCK_IMPLIES.get(key, set())),
+                "equivalents": sorted(k for g in _MOCK_EQUIVALENT if key in g for k in g - {key}),
+                "similar": [
+                    {"skill": k, "credit": credit}
+                    for g, credit in _MOCK_SIMILAR
+                    if key in g
+                    for k in sorted(g - {key})
+                ],
+            }
+            if profile_skills:
+                item["covered_by"] = _mock_coverage(have, key)
+            items.append(item)
+        return {"origin": "RULES", "dictionary_version": "mock", "items": items}
 
 
 class MockRecommendationStore:

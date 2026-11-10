@@ -108,6 +108,14 @@ class HttpMatchingGateway(_BaseHttpGateway):
         )
         return dict(data)
 
+    async def resolve_skills(self, skills: list[str], profile_skills: list[str]) -> JsonDict:
+        data = await self._request(
+            "POST",
+            "/api/v1/matches/skills/resolve",
+            json_body={"skills": skills, "profile_skills": profile_skills},
+        )
+        return dict(data)
+
 
 class HttpRecommendationStore(_BaseHttpGateway):
     async def save(self, recommendation: JsonDict) -> JsonDict:

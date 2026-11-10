@@ -97,6 +97,19 @@ class RecruitmentToolsService:
             raise InvalidInputError("profile_id y job_id son obligatorios")
         return await self._matching.missing_skills(profile_id.strip(), job_id.strip())
 
+    async def resolve_skills(
+        self, skills: list[str], profile_skills: list[str] | None = None
+    ) -> JsonDict:
+        clean = [s.strip() for s in skills if s and s.strip()]
+        if not clean:
+            raise InvalidInputError("skills es obligatorio (al menos una competencia)")
+        if len(clean) > 50:
+            raise InvalidInputError("skills admite hasta 50 competencias por llamada")
+        have = [s.strip() for s in (profile_skills or []) if s and s.strip()]
+        result = await self._matching.resolve_skills(clean, have[:200])
+        result.setdefault("origin", "RULES")
+        return result
+
     async def rank_jobs_for_student(self, profile_id: str, limit: int | None = None) -> JsonDict:
         clean_id = profile_id.strip()
         if not clean_id:
