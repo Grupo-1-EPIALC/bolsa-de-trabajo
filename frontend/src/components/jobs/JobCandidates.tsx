@@ -3,6 +3,7 @@ import { matchingService } from '../../services/matchingService';
 import { ApiError, errorMessage } from '../../services/api';
 import { PRIORITY_CLASS, RuleMatch } from '../matching/RuleMatch';
 import { useAiAnalysis } from '../matching/useAiAnalysis';
+import { AiProgress } from '../matching/AiProgress';
 import { placeLabel } from '../../jobs/format';
 import { AVAILABILITY_START, WORK_MODALITY, labelOf } from '../../profile/labels';
 import type {
@@ -205,6 +206,7 @@ export const JobCandidates: React.FC<JobCandidatesProps> = ({ job, onBack }) => 
             <span className="d-block text-body-secondary mt-1">{aiBlock.disclaimer}</span>
           )}
         </div>
+        {ai.busy && <AiProgress value={ai.progress} subject="recomendaciones de candidatos" />}
         <button
           type="button"
           className="btn btn-sm btn-primary btn-pill"

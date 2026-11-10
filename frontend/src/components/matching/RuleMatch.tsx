@@ -9,6 +9,7 @@ export const CRITERIA: Record<string, string> = {
   experience: 'Experiencia',
   education: 'Formación',
   languages: 'Idiomas',
+  conditions: 'Condiciones laborales',
 };
 
 export const PRIORITY_CLASS: Record<string, string> = {

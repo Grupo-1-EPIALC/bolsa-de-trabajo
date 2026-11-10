@@ -2,18 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { JobSummary } from './JobSummary';
 import { JobDetail } from './JobDetail';
 import { Pagination } from './Pagination';
-import { TrainingAdvice } from '../matching/TrainingAdvice';
 import { jobsService } from '../../services/jobsService';
 import { ApiError, errorMessage } from '../../services/api';
 import type { JobList, JobOpportunity } from '../../types/jobs';
 
-interface JobBoardProps {
-  /** Perfil del estudiante: habilita "¿Cómo mejorar para esta oferta?" en el detalle. */
-  profileId?: string;
-}
-
 /** "Todas las ofertas" (GET /jobs, sólo activas): listado paginado y detalle. */
-export const JobBoard: React.FC<JobBoardProps> = ({ profileId }) => {
+export const JobBoard: React.FC = () => {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<JobList | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,9 +43,7 @@ export const JobBoard: React.FC<JobBoardProps> = ({ profileId }) => {
 
   if (selected) {
     return (
-      <JobDetail job={selected} onBack={() => setSelected(null)} backLabel="Volver a las ofertas">
-        {profileId && <TrainingAdvice profileId={profileId} jobId={selected.id} />}
-      </JobDetail>
+      <JobDetail job={selected} onBack={() => setSelected(null)} backLabel="Volver a las ofertas" />
     );
   }
 
