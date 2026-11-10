@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from app.domain.cv_design_state import CvDesignState
 from app.domain.enums import (
     AvailabilityStart,
     ContractDuration,
@@ -251,6 +252,8 @@ class StudentProfile:
     cv_files: tuple[CvFile, ...] = ()
     # Última extracción de WF-01 (origin="AI"). Es una sugerencia: nunca pisa lo confirmado.
     cv_suggestions: dict[str, Any] | None = None
+    # Diseño del CV elegido por el estudiante o sugerido por la IA (WF-07). Ver cv_design.py.
+    cv_design: CvDesignState | None = None
 
     def owned_by(self, user_id: str) -> bool:
         return self.user_id == user_id

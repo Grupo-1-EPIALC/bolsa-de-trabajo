@@ -43,6 +43,7 @@ def owner_view(profile: StudentProfile, completion: Completion) -> dict[str, Any
     body["completion"] = completion_to_dict(completion)
     body["has_cv_suggestions"] = profile.cv_suggestions is not None
     body.pop("cv_suggestions", None)  # se piden aparte: GET /profiles/me/cv-suggestions
+    body.pop("cv_design", None)  # se pide aparte: GET /profiles/me/cv-design
     return body
 
 
@@ -54,7 +55,7 @@ def admin_view(profile: StudentProfile, completion: Completion) -> dict[str, Any
 
 def service_view(profile: StudentProfile) -> dict[str, Any]:
     body: dict[str, Any] = drop_none(to_plain(profile))
-    for key in ("inclusion", "cv_files", "cv_suggestions", "consents"):
+    for key in ("inclusion", "cv_files", "cv_suggestions", "cv_design", "consents"):
         body.pop(key, None)
     personal = body.get("personal", {})
     personal.pop("phone", None)

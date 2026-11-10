@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.domain.cv_design import DEFAULT_SECTION_ORDER, CvSection
 from app.domain.enums import (
     AvailabilityStart,
     EducationStatus,
@@ -29,7 +30,7 @@ from app.domain.enums import (
 )
 from app.domain.profile import Education, Experience, StudentProfile
 
-CV_TEMPLATE_VERSION = "1.0.0"
+CV_TEMPLATE_VERSION = "1.1.0"  # 1.1.0: orden de secciones según el diseño
 EN_DASH = "\u2013"  # raya de rangos de fechas
 
 _MONTHS = (
@@ -176,6 +177,9 @@ class CvDocument:
     keywords: tuple[str, ...]
     generated_at: datetime
     template_version: str = CV_TEMPLATE_VERSION
+    # Diseño (app/domain/cv_design.py): id y orden en que los renderers dibujan las secciones.
+    layout: str = ""
+    sections: tuple[CvSection, ...] = DEFAULT_SECTION_ORDER
 
     @property
     def file_stem(self) -> str:
@@ -241,8 +245,17 @@ def _display_url(url: str) -> str:
 class CvDocumentBuilder:
     """Arma el `CvDocument` a partir del perfil. Reglas puras y deterministas."""
 
-    def build(self, profile: StudentProfile, generated_at: datetime) -> CvDocument:
+    def build(
+        self,
+        profile: StudentProfile,
+        generated_at: datetime,
+        *,
+        layout: str = "",
+        sections: Sequence[CvSection] = DEFAULT_SECTION_ORDER,
+    ) -> CvDocument:
         return CvDocument(
+            layout=layout,
+            sections=tuple(sections),
             full_name=profile.personal.name.strip(),
             headline=self._headline(profile),
             contact=self._contact(profile),

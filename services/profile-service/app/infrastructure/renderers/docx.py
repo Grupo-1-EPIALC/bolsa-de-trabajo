@@ -5,6 +5,7 @@ Viñetas) en lugar de tablas o cuadros de texto: así lo leen bien los ATS y se 
 """
 
 import io
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from docx import Document
@@ -12,6 +13,7 @@ from docx.enum.text import WD_TAB_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.shared import Mm, Pt, RGBColor
 
+from app.domain.cv_design import CvSection
 from app.domain.cv_document import CvDocument, Entry
 from app.domain.ports import RenderedFile
 
@@ -30,50 +32,71 @@ class DocxCvRenderer:
         doc = Document()
         self._setup(doc, document)
         self._header(doc, document)
-        if document.summary:
-            self._heading(doc, "Perfil profesional")
-            self._paragraph(doc, document.summary)
-            if document.availability:
-                p = self._paragraph(doc, "")
-                self._run(p, "Disponibilidad: ", bold=True, color=INK)
-                self._run(p, document.availability)
-        if document.skill_groups:
-            self._heading(doc, "Competencias")
-            for group in document.skill_groups:
-                p = self._paragraph(doc, "")
-                self._run(p, f"{group.label}: ", bold=True, color=INK)
-                self._run(p, ", ".join(f"{s.name} ({s.level_label})" for s in group.skills))
-        for title, items in (
-            ("Experiencia", document.experience),
-            ("Proyectos", document.projects),
-            ("Educación", document.education),
-        ):
-            if items:
-                self._heading(doc, title)
-                for entry in items:
-                    self._entry(doc, entry)
-        if document.languages:
-            self._heading(doc, "Idiomas")
-            for lang in document.languages:
-                p = self._paragraph(doc, "")
-                self._run(p, lang.name, bold=True, color=INK)
-                extra = f" ({lang.certification})" if lang.certification else ""
-                self._run(p, f" — {lang.level_label}{extra}")
-        if document.certifications:
-            self._heading(doc, "Certificaciones")
-            for cert in document.certifications:
-                p = self._paragraph(doc, "")
-                self._run(p, cert.name, bold=True, color=INK)
-                if cert.detail:
-                    self._run(p, f" · {cert.detail}", color=MUTED)
-        if document.volunteering:
-            self._heading(doc, "Voluntariado")
-            for entry in document.volunteering:
-                self._entry(doc, entry)
+        sections: dict[CvSection, Callable[[Any, CvDocument], None]] = {
+            CvSection.SUMMARY: self._summary,
+            CvSection.SKILLS: self._skills,
+            CvSection.EXPERIENCE: lambda d, c: self._entries(d, "Experiencia", c.experience),
+            CvSection.PROJECTS: lambda d, c: self._entries(d, "Proyectos", c.projects),
+            CvSection.EDUCATION: lambda d, c: self._entries(d, "Educación", c.education),
+            CvSection.LANGUAGES: self._languages,
+            CvSection.CERTIFICATIONS: self._certifications,
+            CvSection.VOLUNTEERING: lambda d, c: self._entries(d, "Voluntariado", c.volunteering),
+        }
+        # Una sola columna, en el orden que decidió el diseño (app/domain/cv_design.py).
+        for section in document.sections:
+            sections[section](doc, document)
 
         buffer = io.BytesIO()
         doc.save(buffer)
         return RenderedFile(buffer.getvalue(), DOCX_MEDIA_TYPE, "docx")
+
+    # ------------------------------------------------------------------ secciones ---
+
+    def _summary(self, doc: Any, document: CvDocument) -> None:
+        if not document.summary:
+            return
+        self._heading(doc, "Perfil profesional")
+        self._paragraph(doc, document.summary)
+        if document.availability:
+            p = self._paragraph(doc, "")
+            self._run(p, "Disponibilidad: ", bold=True, color=INK)
+            self._run(p, document.availability)
+
+    def _skills(self, doc: Any, document: CvDocument) -> None:
+        if not document.skill_groups:
+            return
+        self._heading(doc, "Competencias")
+        for group in document.skill_groups:
+            p = self._paragraph(doc, "")
+            self._run(p, f"{group.label}: ", bold=True, color=INK)
+            self._run(p, ", ".join(f"{s.name} ({s.level_label})" for s in group.skills))
+
+    def _entries(self, doc: Any, title: str, items: Sequence[Entry]) -> None:
+        if not items:
+            return
+        self._heading(doc, title)
+        for entry in items:
+            self._entry(doc, entry)
+
+    def _languages(self, doc: Any, document: CvDocument) -> None:
+        if not document.languages:
+            return
+        self._heading(doc, "Idiomas")
+        for lang in document.languages:
+            p = self._paragraph(doc, "")
+            self._run(p, lang.name, bold=True, color=INK)
+            extra = f" ({lang.certification})" if lang.certification else ""
+            self._run(p, f" — {lang.level_label}{extra}")
+
+    def _certifications(self, doc: Any, document: CvDocument) -> None:
+        if not document.certifications:
+            return
+        self._heading(doc, "Certificaciones")
+        for cert in document.certifications:
+            p = self._paragraph(doc, "")
+            self._run(p, cert.name, bold=True, color=INK)
+            if cert.detail:
+                self._run(p, f" · {cert.detail}", color=MUTED)
 
     # ------------------------------------------------------------------ bloques ---
 

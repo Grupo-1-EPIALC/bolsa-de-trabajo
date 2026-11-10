@@ -249,3 +249,11 @@ class LegacyCvExtractRequest(BaseModel):
     filename: str = "cv.pdf"
     mime_type: str = ""
     content_base64: str
+
+
+class CvDesignChoice(BaseModel):
+    """Diseño de CV elegido por el estudiante; `null` vuelve a la elección automática."""
+
+    layout: str | None = Field(
+        default=None, description="cronologico | primer_empleo | competencias | null"
+    )

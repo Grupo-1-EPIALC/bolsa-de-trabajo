@@ -67,9 +67,12 @@ Sólo el rol `student` tiene perfil. Con `company` o `admin`, `/me` responde `40
 | `GET /profiles/me/cv/jobs/{job_id}` | Progreso y resultado de la extracción | `200` `CvJob` |
 | `GET /profiles/me/cv-suggestions` | Última extracción de IA guardada | `200` `CvResult` |
 | `DELETE /profiles/me/cv-suggestions` | Descartar la extracción | `204` |
-| `GET /profiles/me/cv.pdf` | CV nuevo en PDF (`?inline=true` para abrir en el navegador) | `200` `application/pdf` |
-| `GET /profiles/me/cv.docx` | CV nuevo en Word | `200` `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
-| `GET /profiles/me/cv.html` | Vista previa del CV (mismo diseño que el PDF) | `200` `text/html` |
+| `GET /profiles/me/cv.pdf` | CV nuevo en PDF (`?inline=true` para abrir en el navegador; `?layout=` para forzar un diseño) | `200` `application/pdf` |
+| `GET /profiles/me/cv.docx` | CV nuevo en Word (`?layout=` opcional) | `200` `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| `GET /profiles/me/cv.html` | Vista previa del CV (mismo diseño que el PDF; `?layout=` opcional) | `200` `text/html` |
+| `GET /profiles/me/cv-design` | Diseño del CV: el que rige, el de reglas, el de IA y el catálogo (§8.1) | `200` `CvDesignView` |
+| `POST /profiles/me/cv-design/requests` | Pedir a la IA (WF-07) el diseño más adecuado, en segundo plano | `202` `CvDesignView` |
+| `PUT /profiles/me/cv-design` | Elegir un diseño (`{"layout": "cronologico"}`) o volver al automático (`{"layout": null}`) | `200` `CvDesignView` |
 
 > No usar desde el front: `GET /profiles` y `GET /profiles/{id}` (internos para matching y admin) ni `/profiles/cv-extract*` (compatibilidad con la página de prueba `/profiles/cv-test`).
 
@@ -331,7 +334,7 @@ Paso 3 (privacidad): `{ "consents": { "data_processing": true, "ai_processing": 
 Disponible cuando `completion.can_generate_cv = true`; si no, `409 PROFILE_INCOMPLETE` con `details.missing`. Se arma **por reglas** con lo que el estudiante confirmó (no usa IA ni inventa nada) y siempre refleja el último guardado.
 
 **Diseño:** moderno y profesional, A4, una columna, tipografía Inter y un color de acento. Lo pueden leer bien los ATS y los filtros con IA:
-- todo el contenido es texto real (sin imágenes, tablas ni columnas), con títulos estándar en este orden: Perfil profesional, Competencias, Experiencia, Proyectos, Educación, Idiomas, Certificaciones, Voluntariado;
+- todo el contenido es texto real (sin imágenes, tablas ni columnas), con títulos estándar: Perfil profesional, Competencias, Experiencia, Proyectos, Educación, Idiomas, Certificaciones, Voluntariado. El orden depende del diseño (§8.1);
 - niveles explícitos ("Python (Avanzado)", "Inglés — B2 · Intermedio alto") y fechas uniformes ("mar. 2025 – Actualidad");
 - metadatos del archivo con autor y palabras clave (skills, puestos buscados e idiomas); el PDF es etiquetado (PDF/UA) y el Word usa estilos nativos (Título, Encabezado 1, Viñetas).
 
@@ -356,6 +359,54 @@ async function downloadCv(format: 'pdf' | 'docx') {
 - Nombre del archivo: `CV_Nombre_Apellido.pdf` / `.docx` (sin acentos).
 - **Vista previa:** `GET /profiles/me/cv.html` → `<iframe sandbox srcdoc={html}>` (el HTML es autocontenido).
 - El PDF también se puede abrir en otra pestaña con `GET /profiles/me/cv.pdf?inline=true` (vía blob URL).
+- Cada descarga trae el header `X-Cv-Layout` con el id del diseño con que se generó.
+
+#### 8.1 Diseño del CV (desde 0.5.0)
+
+Hay tres diseños. Todos son ATS-friendly: una columna, texto real y títulos estándar. Sólo cambia **el orden de las secciones**:
+
+| `id` | Nombre | Cuándo conviene | Orden |
+|---|---|---|---|
+| `cronologico` | Cronológico | Ya tiene experiencia laboral relevante | perfil → experiencia → proyectos → educación → competencias → certificaciones → idiomas → voluntariado |
+| `primer_empleo` | Primer empleo | Poca o ninguna experiencia | perfil → educación → proyectos → competencias → experiencia → voluntariado → certificaciones → idiomas |
+| `competencias` | Por competencias | Perfil técnico con muchas competencias y proyectos o certificaciones | perfil → competencias → proyectos → experiencia → certificaciones → educación → idiomas → voluntariado |
+
+**Quién elige el diseño (`effective.source`), de mayor a menor prioridad:**
+1. `user`: el que eligió el estudiante con `PUT /me/cv-design`.
+2. `ai`: la última sugerencia del agente `cv_designer` (WF-07), si terminó bien, es del catálogo y **el perfil no cambió** desde que se pidió (si cambió, `stale: true` y no rige).
+3. `rules`: la elección por reglas. Siempre hay una (`origin: "RULES"`, `engine_version`):
+   - ≥ 12 meses de experiencia o ≥ 2 puestos → `cronologico`;
+   - si no, ≥ 8 competencias y ≥ 2 proyectos o certificaciones → `competencias`;
+   - si no → `primer_empleo`.
+
+**Pedir la sugerencia a la IA** (`POST /me/cv-design/requests` → `202`):
+- Requiere `consents.ai_processing = true` (si no, `409 AI_CONSENT_REQUIRED`) y el paso 1 completo (si no, `409 PROFILE_INCOMPLETE`).
+- Corre en segundo plano. El front consulta `GET /me/cv-design` hasta que `ai_recommendation.status` deje de ser `processing`. Si ya hay un pedido en curso no se repite; un pedido que sigue en curso a los 10 min se muestra como `failed`.
+- La IA recibe sólo un **resumen sin datos personales**: cantidad y meses de experiencia, puestos, cantidad de proyectos, certificaciones y estudios, competencias principales, carrera y puestos buscados. Nunca recibe nombre, contacto, empresas, fechas exactas ni sueldo.
+- profile-service vuelve a validar la respuesta: un diseño fuera del catálogo queda como `failed` y las secciones desconocidas o repetidas se descartan.
+
+**`CvDesignView`:**
+
+```json
+{
+  "profile_id": "prof-…",
+  "effective": { "id": "primer_empleo", "name": "Primer empleo", "description": "…", "best_for": "…",
+                 "section_order": ["summary", "education", "projects", "skills", "experience", "volunteering", "certifications", "languages"],
+                 "source": "ai" },
+  "rule_based": { "origin": "RULES", "engine_version": "cv-layout-1.0.0", "layout": "cronologico",
+                  "section_order": ["summary", "experience", "…"], "reasons": ["Tenés 21 meses de experiencia en 1 puesto(s): …"] },
+  "ai_recommendation": { "origin": "AI", "status": "completed", "request_id": "cvd-…", "requested_at": "…",
+                         "layout": "primer_empleo", "section_order": ["summary", "education", "…"],
+                         "rationale": "…", "model": "…", "prompt_version": "1.0.0", "generated_at": "…",
+                         "disclaimer": "…", "stale": false, "error": null },
+  "user_choice": null,
+  "catalog": [{ "id": "cronologico", "name": "Cronológico", "description": "…", "best_for": "…", "section_order": ["…"] }]
+}
+```
+
+- `ai_recommendation` es `null` hasta el primer pedido. `status`: `processing` | `completed` | `failed` (con `error`).
+- `user_choice`: `null` o `{ "layout", "chosen_at" }`.
+- En el front: el diseño por reglas con el badge verde "Calculado por reglas" y la sugerencia de la IA con el badge ámbar "Sugerido por IA" y su `disclaimer`, en paneles separados.
 
 ---
 
@@ -398,7 +449,9 @@ Siempre `{"error": {"code", "message", "details"}}`.
 | 404 | `CV_SUGGESTIONS_NOT_FOUND` | No hay extracción guardada | — |
 | 404 | `CV_JOB_NOT_FOUND` | `job_id` inexistente (p. ej. reinicio del servicio) | Volver a subir |
 | 409 | `PROFILE_ALREADY_EXISTS` | `POST /me` con perfil existente | Usar `PATCH` |
-| 409 | `PROFILE_INCOMPLETE` | Generar CV sin el paso 1 completo | Mostrar `details.missing` |
+| 409 | `PROFILE_INCOMPLETE` | Generar CV o pedir el diseño a la IA sin el paso 1 completo | Mostrar `details.missing` |
+| 409 | `AI_CONSENT_REQUIRED` | Pedir el diseño a la IA sin `consents.ai_processing` | Ofrecer el paso de privacidad |
+| 422 | `UNKNOWN_CV_LAYOUT` | `layout` fuera del catálogo (`PUT /me/cv-design` o `?layout=`) | — |
 | 422 | `INVALID_INPUT` | Validación (`details.errors[].loc` = ruta del campo) o `COMPLETAR_MANUALMENTE` sin reemplazar (`details.fields`) | Marcar campos |
 | 422 | `INVALID_CV_FILE` | Archivo no permitido o > 5 MB | Mensaje junto al input |
 | 422 | `UNSUPPORTED_FORMAT` | Formato de CV desconocido | — |

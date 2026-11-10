@@ -1,10 +1,14 @@
 """Raíz de composición de profile-service (inyección de dependencias)."""
 
 import logging
+import threading
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from app.application.account_events_service import AccountEventsService
 from app.application.company_service import CompanyProfileService
+from app.application.cv_design_service import CvDesignService
 from app.application.profile_service import ProfileService
 from app.application.upload_cv_use_case import CvExtractionJobStore, UploadAndExtractCvUseCase
 from app.domain.company import CompanyCompletenessPolicy
@@ -14,6 +18,7 @@ from app.domain.ports import (
     AccountDirectory,
     Clock,
     CompanyProfileRepository,
+    CvDesignGateway,
     CvWebhookGateway,
     DeletedAccounts,
     EventPublisher,
@@ -29,6 +34,7 @@ from app.infrastructure.config import ProfileSettings
 from app.infrastructure.events_n8n import HttpN8nProfileEventPublisher
 from app.infrastructure.jwt_verifier import JwksKeyResolver, JwtTokenVerifier
 from app.infrastructure.n8n_client import HttpN8nCvWebhookGateway
+from app.infrastructure.n8n_cv_design import HttpN8nCvDesignGateway
 from app.infrastructure.renderers.docx import DocxCvRenderer
 from app.infrastructure.renderers.html import HtmlCvRenderer
 from app.infrastructure.renderers.pdf import WeasyPrintCvRenderer
@@ -57,6 +63,7 @@ logger = logging.getLogger(__name__)
 class Container:
     settings: ProfileSettings
     profiles: ProfileService
+    cv_designs: CvDesignService
     companies: CompanyProfileService
     cv_upload: UploadAndExtractCvUseCase
     tokens: TokenVerifier
@@ -75,6 +82,8 @@ def build_container(
     logos: LogoStore | None = None,
     deleted_accounts: DeletedAccounts | None = None,
     webhook: CvWebhookGateway | None = None,
+    cv_design_gateway: CvDesignGateway | None = None,
+    cv_design_runner: Callable[[Callable[[], None]], None] | None = None,
     publisher: EventPublisher | None = None,
     accounts: AccountDirectory | None = None,
     tokens: TokenVerifier | None = None,
@@ -125,9 +134,25 @@ def build_container(
         job_store=CvExtractionJobStore(),
     )
     html = HtmlCvRenderer()
+    policy = ProfileCompletenessPolicy()
+    lock = threading.RLock()  # compartido: perfil, extracción de CV y diseño del CV
+    design_options: dict[str, Any] = {"runner": cv_design_runner} if cv_design_runner else {}
+    cv_designs = CvDesignService(
+        repository=repository,
+        policy=policy,
+        gateway=cv_design_gateway
+        or HttpN8nCvDesignGateway(
+            webhook_base_url=settings.n8n_webhook_base_url,
+            service_token=settings.service_token,
+            timeout_seconds=settings.cv_design_timeout_seconds,
+        ),
+        clock=clock,
+        lock=lock,
+        **design_options,
+    )
     profiles = ProfileService(
         repository=repository,
-        policy=ProfileCompletenessPolicy(),
+        policy=policy,
         extractor=SkillExtractor(load_skill_catalog(settings.skills_catalog_path)),
         publisher=publisher
         or HttpN8nProfileEventPublisher(
@@ -139,6 +164,8 @@ def build_container(
         cv_upload=cv_upload,
         cv_builder=CvDocumentBuilder(),
         renderers=(html, WeasyPrintCvRenderer(html), DocxCvRenderer()),
+        designs=cv_designs,
+        lock=lock,
     )
     companies = CompanyProfileService(
         repository=company_repository,
@@ -169,6 +196,7 @@ def build_container(
     return Container(
         settings,
         profiles,
+        cv_designs,
         companies,
         cv_upload,
         verifier,

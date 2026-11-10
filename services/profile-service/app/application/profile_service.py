@@ -13,14 +13,16 @@ import logging
 import re
 import threading
 from collections.abc import Mapping, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 from app.application.suggestion_mapper import CvSuggestionMapper
 from app.application.upload_cv_use_case import UploadAndExtractCvUseCase
 from app.application.views import admin_view, company_view, owner_view, service_view
 from app.domain.auth import Principal, Role
 from app.domain.completion import Completion, ProfileCompletenessPolicy
+from app.domain.cv_design import DEFAULT_SECTION_ORDER, EffectiveDesign
 from app.domain.cv_document import CvDocumentBuilder
 from app.domain.errors import (
     ForbiddenError,
@@ -54,6 +56,13 @@ MAX_SERVICE_PAGE = 200
 class GeneratedCv:
     file: RenderedFile
     filename: str
+    layout: str = ""
+
+
+class CvDesignResolver(Protocol):
+    """Decide con qué diseño se genera el CV (lo implementa `CvDesignService`)."""
+
+    def resolve(self, profile: StudentProfile, override: str | None = None) -> EffectiveDesign: ...
 
 
 def _find_placeholders(value: Any, path: str = "") -> list[str]:
@@ -101,6 +110,8 @@ class ProfileService:
         cv_upload: UploadAndExtractCvUseCase,
         cv_builder: CvDocumentBuilder,
         renderers: Sequence[CvRenderer],
+        designs: CvDesignResolver | None = None,
+        lock: AbstractContextManager[Any] | None = None,
     ) -> None:
         self._repo = repository
         self._policy = policy
@@ -112,9 +123,11 @@ class ProfileService:
         self._cv_upload = cv_upload
         self._cv_builder = cv_builder
         self._renderers = {r.format: r for r in renderers}
+        self._designs = designs
         self._mapper = CvSuggestionMapper(extractor)
-        # Serializa leer-modificar-guardar: el worker del CV escribe en paralelo al usuario.
-        self._lock = threading.RLock()
+        # Serializa leer-modificar-guardar: los workers del CV y del diseño escriben en
+        # paralelo al usuario (el lock se comparte con CvDesignService).
+        self._lock = lock or threading.RLock()
 
     # ------------------------------------------------------------ el estudiante ---
 
@@ -199,7 +212,8 @@ class ProfileService:
                 raise SuggestionsNotFoundError()
             self._repo.update(dataclasses.replace(profile, cv_suggestions=None))
 
-    def generate_cv(self, principal: Principal, fmt: str) -> GeneratedCv:
+    def generate_cv(self, principal: Principal, fmt: str, layout: str | None = None) -> GeneratedCv:
+        """`layout` fuerza un diseño del catálogo (vista previa); si no, rige el elegido."""
         renderer = self._renderers.get(fmt)
         if renderer is None:
             raise UnsupportedFormatError(fmt, sorted(self._renderers))
@@ -212,9 +226,16 @@ class ProfileService:
                 if m.required and m.step.value == "cv"
             ]
             raise ProfileIncompleteError("Completá los datos del CV antes de generarlo", missing)
-        document = self._cv_builder.build(profile, self._clock.now())
+        if self._designs is not None:
+            design = self._designs.resolve(profile, layout)
+            layout_id, sections = design.layout.id, design.section_order
+        else:
+            layout_id, sections = "", DEFAULT_SECTION_ORDER
+        document = self._cv_builder.build(
+            profile, self._clock.now(), layout=layout_id, sections=sections
+        )
         rendered = renderer.render(document)
-        return GeneratedCv(rendered, f"{document.file_stem}.{rendered.extension}")
+        return GeneratedCv(rendered, f"{document.file_stem}.{rendered.extension}", layout_id)
 
     # --------------------------------------------- servicios, admin y empresas ---
 

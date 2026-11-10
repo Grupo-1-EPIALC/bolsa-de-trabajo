@@ -135,26 +135,6 @@
     {% endif %}
   </header>
 
-  {% if doc.summary %}
-  <section>
-    <h2>Perfil profesional</h2>
-    <p class="summary">{{ doc.summary }}</p>
-    {% if doc.availability %}<p class="availability"><b>Disponibilidad:</b> {{ doc.availability }}</p>{% endif %}
-  </section>
-  {% endif %}
-
-  {% if doc.skill_groups %}
-  <section>
-    <h2>Competencias</h2>
-    {% for group in doc.skill_groups %}
-    <div class="skill-group">
-      <span class="skill-label">{{ group.label }}</span>
-      {% for s in group.skills %}<span class="chip">{{ s.name }} <span class="lvl">({{ s.level_label }})</span></span>{% endfor %}
-    </div>
-    {% endfor %}
-  </section>
-  {% endif %}
-
   {% macro entries(items) %}
     {% for e in items %}
     <div class="entry">
@@ -172,49 +152,59 @@
     {% endfor %}
   {% endmacro %}
 
-  {% if doc.experience %}
+  {# Una sola columna; el orden de las secciones lo decide el diseño (app/domain/cv_design.py). #}
+  {% for section in doc.sections %}
+  {% if section == 'summary' and doc.summary %}
+  <section>
+    <h2>Perfil profesional</h2>
+    <p class="summary">{{ doc.summary }}</p>
+    {% if doc.availability %}<p class="availability"><b>Disponibilidad:</b> {{ doc.availability }}</p>{% endif %}
+  </section>
+  {% elif section == 'skills' and doc.skill_groups %}
+  <section>
+    <h2>Competencias</h2>
+    {% for group in doc.skill_groups %}
+    <div class="skill-group">
+      <span class="skill-label">{{ group.label }}</span>
+      {% for s in group.skills %}<span class="chip">{{ s.name }} <span class="lvl">({{ s.level_label }})</span></span>{% endfor %}
+    </div>
+    {% endfor %}
+  </section>
+  {% elif section == 'experience' and doc.experience %}
   <section>
     <h2>Experiencia</h2>
     {{ entries(doc.experience) }}
   </section>
-  {% endif %}
-
-  {% if doc.projects %}
+  {% elif section == 'projects' and doc.projects %}
   <section>
     <h2>Proyectos</h2>
     {{ entries(doc.projects) }}
   </section>
-  {% endif %}
-
-  {% if doc.education %}
+  {% elif section == 'education' and doc.education %}
   <section>
     <h2>Educación</h2>
     {{ entries(doc.education) }}
   </section>
-  {% endif %}
-
-    {% if doc.languages %}
-    <section>
-      <h2>Idiomas</h2>
-      {% for l in doc.languages %}
-      <p class="line"><b>{{ l.name }}</b> — {{ l.level_label }}{% if l.certification %} <span class="muted">({{ l.certification }})</span>{% endif %}</p>
-      {% endfor %}
-    </section>
-    {% endif %}
-    {% if doc.certifications %}
-    <section>
-      <h2>Certificaciones</h2>
-      {% for c in doc.certifications %}
-      <p class="line"><b>{{ c.name }}</b>{% if c.detail %} <span class="muted">· {{ c.detail }}</span>{% endif %}</p>
-      {% endfor %}
-    </section>
-    {% endif %}
-
-  {% if doc.volunteering %}
+  {% elif section == 'languages' and doc.languages %}
+  <section>
+    <h2>Idiomas</h2>
+    {% for l in doc.languages %}
+    <p class="line"><b>{{ l.name }}</b> — {{ l.level_label }}{% if l.certification %} <span class="muted">({{ l.certification }})</span>{% endif %}</p>
+    {% endfor %}
+  </section>
+  {% elif section == 'certifications' and doc.certifications %}
+  <section>
+    <h2>Certificaciones</h2>
+    {% for c in doc.certifications %}
+    <p class="line"><b>{{ c.name }}</b>{% if c.detail %} <span class="muted">· {{ c.detail }}</span>{% endif %}</p>
+    {% endfor %}
+  </section>
+  {% elif section == 'volunteering' and doc.volunteering %}
   <section>
     <h2>Voluntariado</h2>
     {{ entries(doc.volunteering) }}
   </section>
   {% endif %}
+  {% endfor %}
 </body>
 </html>
