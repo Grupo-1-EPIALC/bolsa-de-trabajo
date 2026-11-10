@@ -130,7 +130,7 @@ async def health(_: Request) -> JSONResponse:
         {
             "status": "ok",
             "service": "mcp-tools",
-            "version": "0.5.0",
+            "version": "0.6.0",
             "tools": sorted(REGISTERED_TOOLS.keys()),
             "profiles": sorted(TOOL_PROFILES.keys()),
         }

@@ -66,6 +66,12 @@ La descripción de cada herramienta es lo que lee el LLM (docstring en `mcp-tool
 - **Secciones válidas:** `summary`, `skills`, `experience`, `projects`, `education`, `languages`, `certifications`, `volunteering`.
 - **Fuente de verdad:** el catálogo vive en profile-service (`app/domain/cv_design.py`). Las enumeraciones del schema y la tabla de la skill se actualizan en el mismo PR si cambia, y profile-service vuelve a validar la respuesta contra su catálogo.
 
+### Formación general: `student_recommendations` y la skill `orientacion-postulante` (desde 0.6.0)
+
+- **Para qué:** el agente `training_advisor` de n8n (WF-06, `mode=training`) recomienda qué competencias sumar o mejorar **en general**. La base son las brechas por reglas de matching-service sobre las ofertas más parecidas al perfil (`skill_gaps`, [`matching.md`](matching.md) parte B §B.2), no una oferta.
+- **Forma:** `{"summary"?: "<5 a 600 caracteres>", "items": [{"type": "course" | "skill" | "profile_tip", "skill", "text", "priority": "alta" | "media" | "baja"}]}` con hasta 5 ítems. Ya no existe `type: "project"`: la IA no pide portfolios, proyectos personales ni nada similar.
+- **`match_student_recommendations`:** `next_steps` de cada oferta sólo admite `apply` y `profile_tip` (hasta 3). Lo que conviene aprender va en la formación general.
+
 ## 4. Endpoints HTTP
 
 | Método y ruta | Para qué |
