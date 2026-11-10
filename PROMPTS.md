@@ -56,6 +56,7 @@
 | P-038 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.1-optimizacion-cv` | Optimizar flujo de armado de CV, corregir parpadeo de pantalla al sincronizar estados y agregar manejo de excepciones 404 (`ACCOUNT_DELETED` / recursos ausentes) | Eliminación de flickering al navegar entre pasos de perfil, debounce/memoización en guardado automático de borrador, captura limpia de excepciones ApiError 404 en el cliente HTTP sin cierres inesperados ni alertas flotantes residuales | aceptado |
 | P-039 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.1-deuda-tecnica` | Atender deuda técnica del frontend según AGENTS.md §4.7 (etiquetado de tests unitarios) y sanitización final de tipos en TypeScript | Mapeo y re-etiquetado explícito de la suite de tests en Vitest con los identificadores normativos `UT-FE-01` a `UT-FE-04`, eliminación de `any` residuales y verificación limpia de `npm run typecheck`, `npm run format:check` y `npm run test` | aceptado |
 | P-040 | 2026-11-10 | Andres | Claude Code (`mcp-agent`, `n8n-agent`, `profile-agent`, `frontend-agent`) | `feature/mcp/v0.5.0-skill-diseno-cv`, `feature/n8n/v0.5.0-wf07-diseno-cv`, `feature/profile/v0.5.0-diseno-cv`, `feature/frontend/v0.9.0-diseno-cv` | Buscar skills de diseño de CV legibles por IA (ATS) y armar un agente que elija el mejor diseño según el contenido | Híbrido IA + reglas: catálogo de 3 diseños de una columna en profile-service, selector por reglas, agente `cv_designer` en WF-07 con la skill `diseno-cv` y el schema `cv_design`, y pantalla para elegir | aceptado (pendiente revisión del equipo) |
+| P-041 | 2026-11-10 | Andres | Claude Code (`profile-agent`) | `feature/profile/v0.5.0-diseno-cv` | Mejorar cómo se muestran las competencias y los colores del CV, buscando plantillas IA friendly | Estilo clásico tipo Harvard / "Jake's Resume": competencias en una línea por categoría separadas por comas (nivel sólo si es avanzado o experto), texto casi negro y un acento azul marino, sin fondos | aceptado (pendiente revisión del equipo) |
 
 ---
 
@@ -575,7 +576,19 @@
 - **Archivos afectados:** `mcp-tools/app/data/skills/diseno-cv/`, `mcp-tools/app/data/schemas/cv_design.schema.json`, `n8n/agentes/cv_designer.json`, `n8n/prompts/cv_designer.md`, `n8n/generate_workflows.py`, `n8n/workflows/WF-07-diseno-cv.json`, `services/profile-service/app/domain/cv_design*.py`, `services/profile-service/app/application/cv_design_service.py`, `services/profile-service/app/infrastructure/n8n_cv_design.py`, `services/profile-service/app/templates/cv.html`, `frontend/src/components/profile/CvDesignPicker.tsx`, `frontend/src/profile/cvDesign.ts`, contratos, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** aceptado (pendiente revisión del equipo).
 
-### P-041 — (plantilla)
+### P-041 — Estilo del CV: competencias en texto y colores sobrios
+- **Fecha:** 2026-11-10 · **Autor:** Andres · **Agente:** Claude Code (`profile-agent`) · **Rama:** `feature/profile/v0.5.0-diseno-cv` · **HU:** generación del CV "IA friendly"
+- **Prompt (textual):**
+  > no me gusta como muestra los skills ni los colores, mejora ese aspecto del diseño buscando plantillas que se adapten al modelo ia friendly
+- **Resumen de la respuesta:**
+  - **Búsqueda:** las guías de ATS 2026 coinciden en listar las competencias como texto separado por comas, agrupado por categoría. Las barras, estrellas y chips no se leen bien o rompen el orden. Para los colores, recomiendan un solo acento suave sobre una columna. Se tomó como referencia el estilo clásico de las plantillas Harvard y "Jake's Resume".
+  - **Competencias:** `SkillGroup.line` arma una línea por categoría ("Técnicas: Python (avanzado), PostgreSQL, React"). El nivel sólo se aclara si es avanzado o experto: "(Inicial)" o "(Básico)" no suman en un CV. Se aplica igual en el PDF, el HTML y el DOCX.
+  - **Colores:** texto casi negro (`#111827` / `#1f2937`), gris `#4b5563` para fechas (contraste AA) y un solo acento azul marino (`#1f3a5f`) en la línea del encabezado y los títulos. Se sacaron los chips, el fondo del bloque de disponibilidad y el azul del titular.
+  - Plantilla 1.2.0; tests de UT-PROF-06 actualizados.
+- **Archivos afectados:** `services/profile-service/app/templates/cv.html`, `app/domain/cv_document.py`, `app/infrastructure/renderers/html.py`, `app/infrastructure/renderers/docx.py`, `tests/test_cv_generation.py`, `contracts/profile.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
+
+### P-042 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
