@@ -32,7 +32,7 @@ class MissingSkillsAnalyzer:
 
     def analyze(self, profile: StudentProfile, job: JobOpportunity) -> list[MissingSkill]:
         have = profile.skill_levels()
-        names = _profile_names(profile)
+        names = _profile_names(profile, self._skills)
         gaps: list[MissingSkill] = []
         for req in job.skills:
             cov = self._skills.coverage(have, req.normalized)
@@ -57,7 +57,7 @@ class MissingSkillsAnalyzer:
 
     def matched(self, profile: StudentProfile, job: JobOpportunity) -> list[MatchedSkill]:
         have = profile.skill_levels()
-        names = _profile_names(profile)
+        names = _profile_names(profile, self._skills)
         result: list[MatchedSkill] = []
         for req in job.skills:
             cov = self._skills.coverage(have, req.normalized)
@@ -83,6 +83,10 @@ class MissingSkillsAnalyzer:
         return Priority.HIGH if absent else Priority.MEDIUM
 
 
-def _profile_names(profile: StudentProfile) -> dict[str, str]:
-    """Clave normalizada → nombre como lo escribió el estudiante."""
-    return {s.normalized: s.name for s in profile.skills}
+def _profile_names(profile: StudentProfile, skills: SkillDictionary) -> dict[str, str]:
+    """Clave → nombre oficial del diccionario (`Posgres` → PostgreSQL); si no la conoce, el
+    nombre como lo escribió el estudiante."""
+    return {
+        s.normalized: (entry.name if (entry := skills.entry(s.normalized)) else s.name)
+        for s in profile.skills
+    }

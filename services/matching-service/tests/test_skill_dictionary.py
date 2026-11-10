@@ -56,7 +56,7 @@ def test_engine_uses_the_dictionary() -> None:
     engine = build_engine(ScoringRules(), lambda: "now", SKILLS)
     p = profile(
         skills=(
-            _skill("PostgreSQL", 3),
+            _skill("Posgres", 3),
             _skill("MariaDB", 3),
             _skill("GitHub", 3),
             _skill("Python", 3),
