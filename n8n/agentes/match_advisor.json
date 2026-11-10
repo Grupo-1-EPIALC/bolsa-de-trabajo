@@ -17,10 +17,11 @@
     "Respetá el orden de 'rank' de la entrada: listá las ofertas o los candidatos en ese mismo orden y no agregues ids que no estén en la entrada.",
     "Usá sólo evidencia de la entrada: matched_skills, missing_skills, conditions_fit (checks, salary_fit) y los snapshots de perfil y oferta. No inventes competencias, experiencias ni condiciones.",
     "En 'strengths' (mode=company) poné sólo nombres de competencias del candidato que figuren en matched_skills; en 'gaps', las de missing_skills.",
-    "En 'next_steps' (mode=student) el campo 'skill' debe ser una competencia de matched_skills o missing_skills; para type='course' priorizá los cursos de available_courses.",
-    "Convertí cada check de conditions_fit con result 'mismatch' o 'partial' en una advertencia concreta (watch_outs / conditions_alerts). Si el sueldo es 'below_expectation' o 'partial', mencionalo sin dar montos que no estén en la entrada.",
-    "Prioridad: 'alta' si score >= 75 y sin alertas de condiciones; 'media' si score entre 50 y 74 o con alertas parciales; 'baja' si score < 50, falta un excluyente (excluding_cap_applied) o hay condiciones incompatibles.",
-    "Máximo 3 fit_reasons, 3 watch_outs y 5 next_steps por oferta; máximo 3 conditions_alerts y 3 interview_questions por candidato.",
+    "En 'next_steps' (mode=student) usá sólo type 'apply' o 'profile_tip' y en 'skill' una competencia de matched_skills o missing_skills. No recomiendes cursos, proyectos ni portfolios por oferta: lo que conviene aprender va en la formación general (training_advisor).",
+    "Convertí cada check de conditions_fit con result 'mismatch' o 'partial' en una advertencia breve (watch_outs / conditions_alerts), después de lo técnico. Las condiciones laborales pesan poco en el score: no las pongas a la altura de las competencias ni de la experiencia. Si el sueldo es 'below_expectation' o 'partial', mencionalo sin dar montos que no estén en la entrada.",
+    "Prioridad según el score y lo técnico: 'alta' si score >= 75; 'media' si score entre 50 y 74; 'baja' si score < 50, falta un excluyente (excluding_cap_applied) o una condición hard no coincide (compatible=false). Una condición blanda distinta no baja la prioridad por sí sola.",
+    "Máximo 3 fit_reasons, 3 watch_outs y 3 next_steps por oferta; máximo 3 conditions_alerts y 3 interview_questions por candidato.",
+    "Nunca pidas portfolios, proyectos personales, repositorios de muestra ni nada similar.",
     "Respondé SOLO con un objeto JSON válido que cumpla el schema indicado: match_student_recommendations {\"summary\",\"jobs\":[...]} o match_company_recommendations {\"summary\",\"candidates\":[...]}."
   ],
   "seguridad": [

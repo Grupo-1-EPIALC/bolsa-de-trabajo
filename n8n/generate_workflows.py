@@ -1957,6 +1957,7 @@ def build_wf_recommender() -> dict[str, Any]:
     """WF-06: Recomendador para Postulantes (`mode=student`) y Empresas (`mode=company`) con nodos de Agente + MCP."""
     gather_context_js = (
         MCP_HELPER_JS
+        + MATCHING_HELPER_JS
         + r"""
 const incoming = $input.first().json;
 const headers = Object.fromEntries(
@@ -2060,8 +2061,8 @@ if (mode === 'student') {
       source_text: sourceText,
       expected_score: topScore,
       reported_score: topScore,
-      prompt_version: '1.0.0',
-      user_prompt: `mode=student. Recomendá al estudiante ${profileId} las ofertas del ranking por reglas, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","jobs":[...]}:\n\n${sourceText}`,
+      prompt_version: '1.1.0',
+      user_prompt: `mode=student. Recomendá al estudiante ${profileId} las ofertas del ranking por reglas, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","jobs":[...]}. En next_steps usá sólo type apply o profile_tip: no propongas cursos, proyectos ni portfolios (la formación es general y va aparte):\n\n${sourceText}`,
     },
   }];
 }
@@ -2105,13 +2106,15 @@ if (mode === 'company') {
       source_text: sourceText,
       expected_score: topScore,
       reported_score: topScore,
-      prompt_version: '1.0.0',
+      prompt_version: '1.1.0',
       user_prompt: `mode=company. Recomendá los candidatos del ranking por reglas para la oferta ${jobId}, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","candidates":[...]}:\n\n${sourceText}`,
     },
   }];
 }
 
 if (mode === 'training') {
+  // Formación GENERAL (no por oferta): qué competencias sumar o mejorar según las ofertas
+  // activas más parecidas al perfil. Las brechas las calcula matching-service por reglas.
   const profileId = String(body.profile_id || '');
   if (!profileId) {
     return [{
@@ -2123,82 +2126,54 @@ if (mode === 'training') {
     }];
   }
 
-  const profileRes = await callMcpTool('get_profile', { profile_id: profileId });
-  if (!profileRes.ok) {
-    return [{ json: { valid: false, status_code: 404, error: profileRes.error } }];
+  const gapsRes = await callMatching('GET', `/api/v1/matches/students/${encodeURIComponent(profileId)}/skill-gaps`);
+  if (!gapsRes.ok) {
+    return [{ json: { valid: false, status_code: gapsRes.status_code, error: gapsRes.error } }];
+  }
+  const gaps = gapsRes.data || {};
+  const skillGaps = gaps.skill_gaps || [];
+  const base = { mode: 'training', request_id: requestId, profile_id: profileId, subject_id: profileId, rule_based: gaps };
+  if (!skillGaps.length) {
+    return [{ json: { ...base, valid: false, skip_ai: true, status_code: 200, reason: 'Según las ofertas más parecidas a tu perfil, no te falta ninguna competencia.' } }];
   }
 
-  let jobs = [];
-  if (body.job_id) {
-    const singleJob = await callMcpTool('get_job', { job_id: String(body.job_id) });
-    if (!singleJob.ok) return [{ json: { valid: false, status_code: 404, error: singleJob.error } }];
-    jobs = [singleJob];
-  } else {
-    const jobsRes = await callMcpTool('list_active_jobs', { limit: Number(recoCfg.max_jobs_per_student || 5) });
-    jobs = jobsRes.data || [];
-  }
-
-  const ruleMatches = [];
-  const allMissingNames = new Set();
-  for (const job of jobs) {
-    const jid = job.id || job.job_id;
-    const matchRes = await callMcpTool('compute_match', { profile_id: profileId, job_id: jid });
-    const missRes = await callMcpTool('missing_skills', { profile_id: profileId, job_id: jid });
-    const missingList = missRes.data || [];
-    for (const m of missingList) {
-      if (m.skill) allMissingNames.add(m.skill);
-    }
-    ruleMatches.push({
-      job_id: jid,
-      title: job.title,
-      score: matchRes.score,
-      excluding_cap_applied: Boolean(matchRes.excluding_cap_applied),
-      breakdown: matchRes.breakdown || matchRes.criteria_breakdown || [],
-      missing_skills: missingList,
-      origin: 'RULES',
-      engine_version: matchRes.engine_version || '1.0.0',
-    });
-  }
-
-  ruleMatches.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
-  const topMatch = ruleMatches[0] || null;
+  // Resumen del perfil sin datos personales (el snapshot que arma matching-service).
+  const rk = await callMcpTool('rank_jobs_for_student', { profile_id: profileId, limit: 1 });
+  const profileSnapshot = (rk && rk.ok && rk.profile) || { profile_id: profileId };
+  const maxItems = Math.min(5, requestedLimit || Number(recoCfg.max_items_per_job || 5));
   const coursesRes = await callMcpTool('search_courses', {
-    skills: Array.from(allMissingNames),
-    limit: Number(recoCfg.max_items_per_job || 5),
-  });
+    skills: skillGaps.map(g => g.skill),
+    limit: maxItems,
+  }).catch(() => ({}));
   const courses = coursesRes.data || [];
 
-  const sourcePayload = {
-    profile: profileRes,
-    jobs,
-    rule_based_matches: ruleMatches,
+  const source = {
+    mode: 'training',
+    profile: profileSnapshot,
+    rule_based: {
+      origin: 'RULES',
+      engine_version: gaps.engine_version,
+      similar_jobs: (gaps.similar_jobs || []).map(j => ({ title: j.title, score: j.score })),
+      skill_gaps: skillGaps,
+    },
     available_courses: courses,
   };
-  const sourceText = JSON.stringify(sourcePayload, null, 2);
+  const sourceText = JSON.stringify(source, null, 2);
 
   return [{
     json: {
+      ...base,
       valid: true,
-      mode: 'training',
-      request_id: requestId,
-      subject_id: profileId,
-      profile_id: profileId,
-      primary_job_id: topMatch ? topMatch.job_id : 'job-general',
-      rule_based: {
-        origin: 'RULES',
-        engine_version: '1.0.0',
-        matches: ruleMatches,
-      },
       task: 'recommend_student',
       agent: 'training_advisor',
       role: 'default',
       perfil_mcp: 'postulante',
       schema_name: 'student_recommendations',
       source_text: sourceText,
-      expected_score: topMatch ? topMatch.score : null,
-      reported_score: topMatch ? topMatch.score : null,
-      prompt_version: '1.0.0',
-      user_prompt: `Generá hasta ${recoCfg.max_items_per_job || 5} recomendaciones accionables en JSON ({"items":[...]}) para el estudiante ${profileId} a partir de estos resultados calculados por reglas y cursos disponibles:\n\n${sourceText}`,
+      expected_score: null,
+      reported_score: null,
+      prompt_version: '2.0.0',
+      user_prompt: `Recomendá al estudiante ${profileId}, en general y no para una oferta, hasta ${maxItems} competencias para sumar o mejorar, a partir de las brechas calculadas por reglas sobre las ofertas más parecidas a su perfil. type: course | skill | profile_tip. No pidas portfolios, proyectos personales ni nada similar. Respondé en JSON {"summary":"...","items":[...]}:\n\n${sourceText}`,
     },
   }];
 }
@@ -2268,7 +2243,11 @@ if (ctx.mode === 'student' || ctx.mode === 'company') {
     seen.add(id);
     const clean = { ...raw };
     delete clean.score; delete clean.rank; delete clean.origin; delete clean.breakdown;
-    entries.push({ ...clean, [key]: id, items: isStudent ? (clean.next_steps || []) : [] });
+    if (isStudent) {
+      clean.next_steps = (Array.isArray(clean.next_steps) ? clean.next_steps : [])
+        .filter(st => st && (st.type === 'apply' || st.type === 'profile_tip'));
+    }
+    entries.push({ ...clean, [key]: id, items: isStudent ? clean.next_steps : [] });
   }
   entries.sort((a, b) => Number(ruleById.get(String(a[key])).rank) - Number(ruleById.get(String(b[key])).rank));
 
@@ -2308,15 +2287,15 @@ if (ctx.mode === 'student' || ctx.mode === 'company') {
   }];
 }
 
-// mode=training: formación (cursos, proyectos, consejos) para una oferta. Se guarda igual que
-// los otros modos (`/recommendations/batch`, mode=training) para cerrar el pedido con su request_id.
+// mode=training: qué sumar o mejorar en general (no por oferta). Se guarda igual que los otros
+// modos (`/recommendations/batch`, mode=training) para cerrar el pedido con su request_id.
 const aiData = orq.data || {};
-const ALLOWED_TYPES = new Set(['course', 'project', 'profile_tip']);
+const ALLOWED_TYPES = new Set(['course', 'skill', 'profile_tip']);
 const ALLOWED_PRIORITIES = new Set(['alta', 'media', 'baja']);
 const items = (Array.isArray(aiData.items) ? aiData.items : [])
   .filter((it) => it && typeof it === 'object' && String(it.text || '').trim())
   .map((it) => ({
-    type: ALLOWED_TYPES.has(it.type) ? it.type : 'profile_tip',
+    type: ALLOWED_TYPES.has(it.type) ? it.type : 'skill',
     skill: String(it.skill || ''),
     text: String(it.text).trim(),
     priority: ALLOWED_PRIORITIES.has(it.priority) ? it.priority : 'media',
@@ -2335,7 +2314,7 @@ const saved = await callMatching('POST', '/api/v1/matches/recommendations/batch'
   subject_id: ctx.subject_id || ctx.profile_id,
   request_id: ctx.request_id || '',
   summary: String(aiData.summary || ''),
-  entries: [{ job_id: ctx.primary_job_id, items }],
+  entries: [{ items }],
   ...meta,
 });
 

@@ -225,7 +225,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 | **CV Structurer** | n8n `WF-01` → `WF-00` | `POST /webhook/cv-extract` / `cv.uploaded` | `parse_cv_file` (`parse_cv_text`) | JSON estandarizado `cv_suggestions` (`origin="AI"`, sin `null`, con `"COMPLETAR_MANUALMENTE"` / `[]`) |
 | **Match Advisor (Jean Grey)** | n8n `WF-06` → `WF-00` | `POST /webhook/recommendations` (`mode=student\|company`), disparado por matching-service (`/recommendations/requests`) | `rank_jobs_for_student`, `rank_candidates_for_job`, `search_courses` (el guardado va por REST a matching-service `/recommendations/batch`) | `match_student_recommendations` / `match_company_recommendations` sin score; bloques separados `rule_based` (`origin="RULES"`) y `ai_recommendations` (`origin="AI"`). Cantidad de ofertas/candidatos: la configura un admin en matching-service |
 | **CV Designer (Tony Stark)** | n8n `WF-07` → `WF-00` | `POST /webhook/cv-design`, disparado por profile-service (`/profiles/me/cv-design/requests`) | `leer_skill` (`diseno-cv`), `validate_json_schema` | `cv_design` (`layout` del catálogo, `section_order`, `rationale`); profile-service lo vuelve a validar y nunca cambia el contenido del CV |
-| **Training Advisor** | n8n `WF-06` → `WF-00` | `POST /webhook/recommendations` (`mode=training`) | `get_profile`, `get_job`, `list_active_jobs`, `compute_match`, `missing_skills`, `search_courses`, `save_recommendation` | `student_recommendations` (cursos, proyectos, tips) |
+| **Training Advisor** | n8n `WF-06` → `WF-00` | `POST /webhook/recommendations` (`mode=training`, sólo `profile_id`) | `rank_jobs_for_student` (snapshot del perfil), `search_courses`; las brechas generales por REST a matching-service (`/students/{id}/skill-gaps`) | `student_recommendations` general, no por oferta (cursos, competencias para sumar o mejorar y consejos de perfil; sin portfolios ni proyectos) |
 | **Match Notifier** | n8n `WF-02` a `WF-04` | `job.created`, `profile.updated` | `get_agent_settings` (`notifications`); el resto por REST a matching, jobs y profile | Mails con resultados por reglas: oferta nueva y resumen al estudiante, candidato nuevo a la empresa (sin datos personales) |
 | **Errores** | n8n `WF-05` | Falla de cualquier workflow (`errorWorkflow`) | `get_agent_settings` (`notifications.admin_email`) | Mail al admin con workflow, nodo, error y link a la ejecución |
 
@@ -251,12 +251,13 @@ Restricciones: SOLID, capas, tests unitarios pytest/Jest/Vitest, no tocar otros 
 Entregá: archivos modificados + tests + cómo probar + entrada P-NNN en PROMPTS.md.
 ```
 
-### 6.2 Prompt de runtime — Training Advisor (`n8n/prompts/training_advisor.md`, v1.0.0)
+### 6.2 Prompt de runtime — Training Advisor (`n8n/prompts/training_advisor.md`, v2.0.0)
 ```
-Sos un orientador de carrera. Recibís el perfil de un estudiante, una oferta,
-el resultado de compatibilidad calculado por reglas y las competencias faltantes.
-NO recalcules el puntaje. Usá search_courses para proponer formación.
-Devolvé JSON: {"items":[{"type":"course|project|profile_tip","skill":str,
+Sos un orientador de carrera. Recomendás qué competencias sumar o mejorar EN GENERAL,
+no para una oferta. Recibís un resumen del perfil sin datos personales y las brechas
+calculadas por reglas sobre las ofertas más parecidas (skill_gaps). NO recalcules el
+puntaje. Usá search_courses. No pidas portfolios ni proyectos.
+Devolvé JSON: {"summary":str,"items":[{"type":"course|skill|profile_tip","skill":str,
 "text":str,"priority":"alta|media|baja"}]} con máximo 5 ítems.
 ```
 
