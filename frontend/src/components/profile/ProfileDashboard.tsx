@@ -1,5 +1,6 @@
 import React from 'react';
 import { CompletionCard } from './CompletionCard';
+import { CvDesignPicker } from './CvDesignPicker';
 import { CvDownloads } from './CvDownloads';
 import type { ProfileStep, ProfileView } from '../../types/profile';
 
@@ -116,6 +117,8 @@ export const ProfileDashboard: React.FC<ProfileDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {profile.completion.can_generate_cv && <CvDesignPicker profileVersion={profile.version} />}
 
       <div className="row g-4">
         <div className="col-lg-5">

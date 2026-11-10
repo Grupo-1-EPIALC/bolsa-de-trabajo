@@ -1,6 +1,13 @@
 // profile-service · /api/v1/profiles (contracts/profile.md, parte A)
 import { ApiError, apiFetch, apiRequest } from './api';
-import type { CvJob, CvResult, ProfileSections, ProfileView } from '../types/profile';
+import type {
+  CvDesignView,
+  CvJob,
+  CvLayoutId,
+  CvResult,
+  ProfileSections,
+  ProfileView,
+} from '../types/profile';
 
 export type CvFormat = 'pdf' | 'docx';
 
@@ -70,6 +77,24 @@ export const profileService = {
   /** DELETE /profiles/me/cv-suggestions · descarta la extracción. */
   discardSuggestions(): Promise<void> {
     return apiFetch<void>('/profiles/me/cv-suggestions', { method: 'DELETE' });
+  },
+
+  /** GET /profiles/me/cv-design · diseño que rige, el de reglas, el de IA y el catálogo. */
+  getCvDesign(): Promise<CvDesignView> {
+    return apiFetch<CvDesignView>('/profiles/me/cv-design');
+  },
+
+  /** POST /profiles/me/cv-design/requests · pide a la IA (WF-07) que elija, en segundo plano. */
+  requestCvDesign(): Promise<CvDesignView> {
+    return apiFetch<CvDesignView>('/profiles/me/cv-design/requests', { method: 'POST' });
+  },
+
+  /** PUT /profiles/me/cv-design · elegir un diseño; null vuelve a la elección automática. */
+  chooseCvDesign(layout: CvLayoutId | null): Promise<CvDesignView> {
+    return apiFetch<CvDesignView>('/profiles/me/cv-design', {
+      method: 'PUT',
+      body: JSON.stringify({ layout }),
+    });
   },
 
   /** Descarga el CV generado (PDF o Word) usando un blob (la descarga necesita el JWT). */

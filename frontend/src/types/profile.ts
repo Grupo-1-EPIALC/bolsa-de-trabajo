@@ -235,3 +235,52 @@ export interface CvJob {
   result: CvResult | null;
   error: ApiErrorBody | null;
 }
+
+/** Diseño del CV (contracts/profile.md, parte A §8.1). */
+export type CvLayoutId = 'cronologico' | 'primer_empleo' | 'competencias';
+export type CvSectionKey =
+  | 'summary'
+  | 'skills'
+  | 'experience'
+  | 'projects'
+  | 'education'
+  | 'languages'
+  | 'certifications'
+  | 'volunteering';
+
+export interface CvLayoutInfo {
+  id: CvLayoutId;
+  name: string;
+  description: string;
+  best_for: string;
+  section_order: CvSectionKey[];
+}
+
+export interface CvDesignView {
+  profile_id: string;
+  effective: CvLayoutInfo & { source: 'user' | 'ai' | 'rules' };
+  rule_based: {
+    origin: 'RULES';
+    engine_version: string;
+    layout: CvLayoutId;
+    section_order: CvSectionKey[];
+    reasons: string[];
+  };
+  ai_recommendation: {
+    origin: 'AI';
+    status: 'processing' | 'completed' | 'failed';
+    request_id: string;
+    requested_at: string;
+    layout: CvLayoutId | null;
+    section_order: CvSectionKey[];
+    rationale: string;
+    model: string | null;
+    prompt_version: string | null;
+    generated_at: string | null;
+    disclaimer: string;
+    stale: boolean;
+    error: string | null;
+  } | null;
+  user_choice: { layout: CvLayoutId; chosen_at: string } | null;
+  catalog: CvLayoutInfo[];
+}
