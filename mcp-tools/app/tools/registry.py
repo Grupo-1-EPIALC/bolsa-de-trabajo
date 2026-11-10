@@ -329,7 +329,7 @@ def register_tools(mcp: FastMCP, container: ServiceContainer) -> dict[str, Calla
     @_expose
     def validate_json_schema(schema_name: str, payload_json: str) -> JsonDict:
         """Valida determinísticamente un JSON contra un schema registrado
-        (`cv_standard`, `student_recommendations`, `company_recommendations`)."""
+        (`cv_standard`, `cv_design`, `student_recommendations`, `company_recommendations`)."""
         return _run_sync(lambda: container.verification.validate_json(schema_name, payload_json))
 
     @_expose

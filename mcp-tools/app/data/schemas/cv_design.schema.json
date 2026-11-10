@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bolsa.local/schemas/cv_design.schema.json",
+  "title": "Diseño de CV sugerido por IA (CV Designer)",
+  "description": "Elección de un diseño del catálogo de profile-service (app/domain/cv_design.py). Las enumeraciones deben coincidir con ese catálogo.",
+  "type": "object",
+  "required": ["layout", "section_order", "rationale"],
+  "additionalProperties": false,
+  "properties": {
+    "layout": {
+      "type": "string",
+      "enum": ["cronologico", "primer_empleo", "competencias"]
+    },
+    "section_order": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "summary",
+          "skills",
+          "experience",
+          "projects",
+          "education",
+          "languages",
+          "certifications",
+          "volunteering"
+        ]
+      }
+    },
+    "rationale": { "type": "string", "minLength": 10, "maxLength": 600 }
+  }
+}
