@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveView } from './navigation';
 
-describe('resolveView', () => {
+describe('[UT-FE-01] Navegación SPA y resolución de vistas', () => {
   it('sin sesión muestra la portada en lugar del área privada', () => {
     expect(resolveView('app', false)).toBe('home');
   });

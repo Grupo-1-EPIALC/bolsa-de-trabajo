@@ -53,6 +53,8 @@
 | P-035 | 2026-11-08 | Andres | Claude Code (`matching-agent`) | `fix/matching/v0.2.1-company-id-en-snapshot` | Aplicar el fix: el resumen de ofertas de matching no incluye `company_id`, así que "Ofertas para vos" no puede abrir el perfil público de la empresa | matching 0.2.1: `job_snapshot` suma `company_id` (el mismo que jobs-service ya publica en el detalle); contrato `matching.md` (ejemplo y `JobSnapshot`). Test nuevo; 107 tests; verificado en vivo con el perfil público de la empresa | pendiente de revisión |
 | P-036 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.0-modales-empresa-puntaje` | Diseñar e integrar modal de desglose explícito de puntuación de matching ("¿Por qué este puntaje?") | Creación del componente RuleScoreModal.tsx en Bootstrap 5 conectado al desglose por reglas (score_breakdown, missing_skills, conditions_fit y advertencia por regla excluyente) | aceptado |
 | P-037 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.0-modales-empresa-puntaje` | Implementar servicio y modal de Perfil Público de la Empresa accesible desde ofertas de trabajo | Creación del método getPublicProfile en companyService.ts y maquetado de CompanyPublicProfileModal.tsx para mostrar marca empleadora, rubro, beneficios y sedes sin exponer datos administrativos | aceptado |
+| P-038 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.1-optimizacion-cv` | Optimizar flujo de armado de CV, corregir parpadeo de pantalla al sincronizar estados y agregar manejo de excepciones 404 (`ACCOUNT_DELETED` / recursos ausentes) | Eliminación de flickering al navegar entre pasos de perfil, debounce/memoización en guardado automático de borrador, captura limpia de excepciones ApiError 404 en el cliente HTTP sin cierres inesperados ni alertas flotantes residuales | aceptado |
+| P-039 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.1-deuda-tecnica` | Atender deuda técnica del frontend según AGENTS.md §4.7 (etiquetado de tests unitarios) y sanitización final de tipos en TypeScript | Mapeo y re-etiquetado explícito de la suite de tests en Vitest con los identificadores normativos `UT-FE-01` a `UT-FE-04`, eliminación de `any` residuales y verificación limpia de `npm run typecheck`, `npm run format:check` y `npm run test` | aceptado |
 
 ---
 
@@ -328,7 +330,7 @@
 - **Archivos afectados:** `services/auth-service/src/` (`admin/account-events.ts`, `admin/account-event-dispatcher.ts`, `admin/typeorm-account-event-outbox.ts`, `admin/http-account-event-sender.ts`, `admin/admin-users.service.ts`, `admin/admin.module.ts`, `auth/access-token-validator.ts`, `auth/jwt.strategy.ts`, `auth/auth.service.ts`, `auth/auth.module.ts`, `auth/current-user.decorator.ts`, `users/user.entity.ts`, 2 migraciones, specs), `contracts/account_events.md`, `contracts/auth_frontend.md`, `AGENTS.md`, `docker-compose.yml`, `.env.example`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 2).
 
-##### P-023 — Arreglos y estabilización del Frontend (Bootstrap y sanitización)
+### P-023 — Arreglos y estabilización del Frontend (Bootstrap y sanitización)
 * **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Copilot / Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.2.1-estilo-bootstrap` · **HU:** Correcciones transversales de UI, flujos de sesión y sanitización de payloads (PATCH)
 * **Prompt (resumido):**
   > Corrige fallos de integración y errores 422 en el envío de formularios de perfil mediante la limpieza de propiedades calculadas por el backend (como `normalized` o `months`), estabilizar la visualización de componentes en Bootstrap y asegurar la compatibilidad de los flujos de estudiante y empresa con la arquitectura actual.
@@ -339,7 +341,7 @@
 * **Archivos afectados:** `frontend/src/components/profile/ProfileWizard.tsx`, `frontend/src/components/profile/StepCvData.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-##### P-024 — Sincronización de estado y manejo de excepciones 404 en sugerencias de CV
+### P-024 — Sincronización de estado y manejo de excepciones 404 en sugerencias de CV
 * **Fecha:** 2026-11-06 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.2.2-estilo-bootstrap` · **HU:** Correcciones de sincronización de UI y flujos de perfil de estudiante
 * **Prompt (resumido):**
   > Corregir la persistencia del cartel de sugerencias de IA en el dashboard y perfil que requería recargar con F5, y solucionar el error visual provocado por la respuesta 404 del backend al descartar sugerencias.
@@ -350,7 +352,7 @@
 * **Archivos afectados:** `frontend/src/pages/StudentArea.tsx`, `frontend/src/components/profile/ProfileWizard.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-##### P-025 — Recuperación de contraseña (solicitud y confirmación con token)
+### P-025 — Recuperación de contraseña (solicitud y confirmación con token)
 * **Fecha:** 2026-11-07 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.3.0-auth-flujos` · **HU:** HU-06 (Recuperar contraseña por mail)
 * **Prompt (resumido):**
   > Crear modal y formulario de recuperación de clave (solicitud y confirmación por mail) interceptando tokens desde la URL.
@@ -361,7 +363,7 @@
 * **Archivos afectados:** `frontend/src/services/authService.ts`, `frontend/src/components/auth/ForgotPasswordModal.tsx`, `frontend/src/pages/ResetPasswordConfirmPage.tsx`, `frontend/src/components/auth/AuthForm.tsx`, `frontend/src/App.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-##### P-026 — Confirmación de cambio de correo electrónico
+### P-026 — Confirmación de cambio de correo electrónico
 * **Fecha:** 2026-11-07 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.3.0-auth-flujos` · **HU:** HU-05 (Cambiar email con confirmación)
 * **Prompt (resumido):**
   > Crear pantalla receptora de confirmación de cambio de correo electrónico con rotación de sesión.
@@ -371,7 +373,7 @@
 * **Archivos afectados:** `frontend/src/services/authService.ts`, `frontend/src/pages/ConfirmEmailPage.tsx`, `frontend/src/App.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-##### P-027 — Sección "Mi cuenta" en cabecera de usuario
+### P-027 — Sección "Mi cuenta" en cabecera de usuario
 * **Fecha:** 2026-11-07 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.3.0-auth-flujos` · **HU:** HU-04 (Cambiar clave conociendo la actual) / HU-05
 * **Prompt (resumido):**
   > Desarrollar modal "Mi cuenta" para estudiantes y empresas con cambio de clave y solicitud de cambio de correo.
@@ -393,7 +395,7 @@
 - **Archivos afectados:** `frontend/src/` (`pages/AdminArea.tsx`, `components/admin/*`, `admin/*`, `services/adminService.ts`, `services/matchingService.ts`, `types/admin.ts`, `types/matching.ts`, `navigation.ts`, `App.tsx`, `components/layout/SiteHeader.tsx`, `components/layout/SiteFooter.tsx`, `pages/CompanyArea.tsx`, `pages/StudentArea.tsx`), `frontend/package.json` y `package-lock.json` (0.4.0), `contracts/pendientes_frontend.md`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 3).
 
-##### P-029 — Consolidación local de Panel Admin y Flujos Auth (v0.5.0)
+### P-029 — Consolidación local de Panel Admin y Flujos Auth (v0.5.0)
 * **Fecha:** 2026-11-08 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/v0.5.0-frontend/auth-flujos-panel-admin` · **HU:** HU-04, HU-05, HU-06, HU-10
 * **Prompt (resumido):**
   > Fusionar localmente la rama del panel de administración (v0.4.0) con los flujos de autenticación (v0.3.0), resolviendo conflictos en App.tsx, SiteHeader.tsx y PROMPTS.md para generar una entrega unificada v0.5.0.
@@ -508,7 +510,7 @@
 - **Archivos afectados:** `services/matching-service/app/application/serializers.py`, `app/main.py`, `pyproject.toml`, `tests/test_services.py`, `contracts/matching.md`, `PROMPTS.md`.
 - **Decisión:** pendiente de revisión (Integrante 3).
 
-##### P-036 — Modal de desglose de puntuación por reglas ("¿Por qué este puntaje?")
+### P-036 — Modal de desglose de puntuación por reglas ("¿Por qué este puntaje?")
 * **Fecha:** 2026-11-09 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.8.0` · **HU:** HU-08 / HU-12 (Desglose explícito de scoring por reglas)
 * **Prompt (resumido):**
   > Diseña e integra modal de desglose explícito de puntuación de matching ("¿Por me este puntaje?") en Bootstrap 5 que detalle la puntuación de 0 a 100 basada en los 6 criterios determinísticos, alertas de tope por reglas excluyentes, competencias faltantes y grado de compatibilidad de condiciones laborales.
@@ -519,7 +521,7 @@
 * **Archivos afectados:** `frontend/src/components/matching/RuleScoreModal.tsx`, `frontend/src/components/matching/RuleMatch.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-##### P-037 — Perfil público de la empresa desde una oferta
+### P-037 — Perfil público de la empresa desde una oferta
 * **Fecha:** 2026-11-09 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.8.0` · **HU:** HU-14 / HU-15 (Consulta pública de marca empleadora)
 * **Prompt (resumido):**
   > Implementa servicio y modal de Perfil Público de la Empresa accesible desde cualquier oferta de trabajo o listado de búsquedas.
@@ -530,7 +532,28 @@
 * **Archivos afectados:** `frontend/src/services/companyService.ts`, `frontend/src/components/company/CompanyPublicProfileModal.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-### P-038 — (plantilla)
+### P-038 — Optimización del asistente de CV, corrección de parpadeo y manejo de 404
+* **Fecha:** 2026-11-09 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.8.1-optimizacion-cv` · **HU:** HU-04 / HU-05 (Carga y edición de perfil de estudiante)
+* **Prompt (resumido):**
+  > Optimiza la velocidad y renderizado del asistente de armado de CV (ProfileWizard) evitando el parpadeo de pantalla (flickering) al transicionar estados o guardar borradores, e intercepta errores 404 en la API sin romper la experiencia del usuario.
+* **Resumen de la respuesta:**
+  - Estabilización del renderizado reactivo en `ProfileWizard.tsx` y `StudentArea.tsx` previniendo destrucciones innecesarias del DOM durante el polling o actualización del perfil.
+  - Sanitización en cliente para interceptar excepciones `ApiError` con estado `404` (recursos no encontrados o sugerencias ya descartadas), evitando alertas de error globales o cierres de sesión abruptos.
+* **Archivos afectados:** `frontend/src/components/profile/ProfileWizard.tsx`, `frontend/src/pages/StudentArea.tsx`, `frontend/src/services/api.ts`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+### P-039 — Cobertura de deuda técnica (AGENTS.md §4.7) y estandarización de tests Vitest
+* **Fecha:** 2026-11-09 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `feature/frontend/v0.8.1-deuda-tecnica` · **HU:** Deuda Técnica / RNF de Calidad del Frontend
+* **Prompt (resumido):**
+  > Resuelve los ítems de deuda técnica estipulados en AGENTS.md §4.7, etiquetando los tests unitarios con sus IDs formales (UT-FE-01 a UT-FE-04) y asegurando que las herramientas de CI queden en verde.
+* **Resumen de la respuesta:**
+  - Estandarización y etiquetado normativo de la suite de pruebas unitarias Vitest (`UT-FE-01` a `UT-FE-04`) para la capa de servicios, cliente HTTP y renderizado de scoring.
+  - Depuración de tipos TypeScript y verificación integral en consola previa a PR (`npm run typecheck`, `npm run format:check` y `npm run test` con 0 errores).
+* **Archivos afectados:** `frontend/src/__tests__/*`, `frontend/package.json`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+
+### P-040 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
