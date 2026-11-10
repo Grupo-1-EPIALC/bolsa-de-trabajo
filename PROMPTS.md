@@ -57,6 +57,7 @@
 | P-039 | 2026-11-09 | Dario | Gemini (`frontend-agent`) | `feature/frontend/v0.8.1-deuda-tecnica` | Atender deuda técnica del frontend según AGENTS.md §4.7 (etiquetado de tests unitarios) y sanitización final de tipos en TypeScript | Mapeo y re-etiquetado explícito de la suite de tests en Vitest con los identificadores normativos `UT-FE-01` a `UT-FE-04`, eliminación de `any` residuales y verificación limpia de `npm run typecheck`, `npm run format:check` y `npm run test` | aceptado |
 | P-040 | 2026-11-10 | Andres | Claude Code (`mcp-agent`, `n8n-agent`, `profile-agent`, `frontend-agent`) | `feature/mcp/v0.5.0-skill-diseno-cv`, `feature/n8n/v0.5.0-wf07-diseno-cv`, `feature/profile/v0.5.0-diseno-cv`, `feature/frontend/v0.9.0-diseno-cv` | Buscar skills de diseño de CV legibles por IA (ATS) y armar un agente que elija el mejor diseño según el contenido | Híbrido IA + reglas: catálogo de 3 diseños de una columna en profile-service, selector por reglas, agente `cv_designer` en WF-07 con la skill `diseno-cv` y el schema `cv_design`, y pantalla para elegir | aceptado (pendiente revisión del equipo) |
 | P-041 | 2026-11-10 | Andres | Claude Code (`profile-agent`) | `feature/profile/v0.5.0-diseno-cv` | Mejorar cómo se muestran las competencias y los colores del CV, buscando plantillas IA friendly | Estilo clásico tipo Harvard / "Jake's Resume": competencias en una línea por categoría separadas por comas (nivel sólo si es avanzado o experto), texto casi negro y un acento azul marino, sin fondos | aceptado (pendiente revisión del equipo) |
+| P-042 | 2026-11-10 | Andres | Claude Code (`matching-agent`, `mcp-agent`, `n8n-agent`, `frontend-agent`) | `feature/matching/v0.3.0-ponderacion-y-formacion-general`, `feature/mcp/v0.6.0-formacion-general`, `feature/n8n/v0.6.0-formacion-general`, `feature/frontend/v0.10.0-formacion-general` | Ponderar menos las condiciones no técnicas, más la experiencia, no pedir portfolios, formación general según el perfil y las búsquedas más parecidas, y barra de progreso en el front | Pesos 2.0.0 (técnico 60, experiencia 25 con relevancia, condiciones 7 y sólo lo legal excluye), `skill_gaps` por reglas sobre las ofertas más parecidas, `training_advisor` 2.0.0 sin proyectos y barra de progreso estimada | aceptado (pendiente revisión del equipo) |
 
 ---
 
@@ -588,7 +589,25 @@
 - **Archivos afectados:** `services/profile-service/app/templates/cv.html`, `app/domain/cv_document.py`, `app/infrastructure/renderers/html.py`, `app/infrastructure/renderers/docx.py`, `tests/test_cv_generation.py`, `contracts/profile.md`, `PROMPTS.md`.
 - **Decisión:** aceptado (pendiente revisión del equipo).
 
-### P-042 — (plantilla)
+### P-042 — Ponderación de las recomendaciones y formación general
+- **Fecha:** 2026-11-10 · **Autor:** Andres · **Agente:** Claude Code (`matching-agent`, `mcp-agent`, `n8n-agent`, `frontend-agent`) · **Ramas:** `feature/matching/v0.3.0-ponderacion-y-formacion-general`, `feature/mcp/v0.6.0-formacion-general`, `feature/n8n/v0.6.0-formacion-general`, `feature/frontend/v0.10.0-formacion-general` · **HU:** recomendaciones de empleo
+- **Prompt (textual):**
+  > necesito unos cambios en las recomendaciones de empleo. No se puede valuar de igual forma la disponibilidad o modelaidas que los skills, a las cuestiones no tecnicas dales menos ponderacion. Podera mas la experiencia. No pidas porfolios ni nada similar. Las recomenrtdaciones de areas o skills a agregar / mejorar son en general y no en funcion de cada puesto. Se calucula en base al perfil y a las busquedas mas similares.
+  >
+  > ademas pone una barra de progreso en el front mientras busca recomendaciones
+- **Resumen de la respuesta:**
+  - **matching-service 0.3.0 (reglas 2.0.0):**
+    - pesos: obligatorias 40, deseables 10, niveles 10, experiencia 25, formación 5, idiomas 3 y el nuevo criterio `conditions` 7;
+    - experiencia: años frente al mínimo (o a 1 año si la oferta no pide) y relevancia según `skills_used`;
+    - modalidad, ubicación, horario y tipo de vínculo dejan de excluir: sólo siguen siendo duros la licencia y la autorización para trabajar;
+    - `SkillGapAggregator` junta las competencias que faltan en las 10 ofertas más parecidas al perfil (`GET /students/{id}/skill-gaps`) y la formación pasa a ser general (`GET /recommendations/students/{id}/training`).
+  - **mcp-tools 0.6.0:** `student_recommendations` sin `project` (`course | skill | profile_tip`); `next_steps` por oferta sólo `apply | profile_tip`; skill `orientacion-postulante` reescrita.
+  - **n8n:** WF-06 `mode=training` usa las brechas generales; `training_advisor` 2.0.0 y `match_advisor` 1.1.0 no piden portfolios ni proyectos y ponen las condiciones laborales como avisos breves.
+  - **Front 0.10.0:** tarjeta "Qué sumar o mejorar" (reglas e IA separados) en "Ofertas para vos" y barra de progreso estimada mientras la IA genera recomendaciones de ofertas, candidatos y formación.
+- **Archivos afectados:** `services/matching-service/**`, `mcp-tools/app/data/**`, `n8n/generate_workflows.py`, `n8n/prompts/*`, `n8n/agentes/*`, `n8n/workflows/WF-06-recomendador.json`, `frontend/src/**`, `contracts/matching.md`, `contracts/mcp_tools.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
+
+### P-043 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
