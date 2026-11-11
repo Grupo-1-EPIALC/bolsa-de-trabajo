@@ -59,6 +59,8 @@
 | P-041 | 2026-11-10 | Andres | Claude Code (`profile-agent`) | `feature/profile/v0.5.0-diseno-cv` | Mejorar cómo se muestran las competencias y los colores del CV, buscando plantillas IA friendly | Estilo clásico tipo Harvard / "Jake's Resume": competencias en una línea por categoría separadas por comas (nivel sólo si es avanzado o experto), texto casi negro y un acento azul marino, sin fondos | aceptado (pendiente revisión del equipo) |
 | P-042 | 2026-11-10 | Andres | Claude Code (`matching-agent`, `mcp-agent`, `n8n-agent`, `frontend-agent`) | `feature/matching/v0.3.0-ponderacion-y-formacion-general`, `feature/mcp/v0.6.0-formacion-general`, `feature/n8n/v0.6.0-formacion-general`, `feature/frontend/v0.10.0-formacion-general` | Ponderar menos las condiciones no técnicas, más la experiencia, no pedir portfolios, formación general según el perfil y las búsquedas más parecidas, y barra de progreso en el front | Pesos 2.0.0 (técnico 60, experiencia 25 con relevancia, condiciones 7 y sólo lo legal excluye), `skill_gaps` por reglas sobre las ofertas más parecidas, `training_advisor` 2.0.0 sin proyectos y barra de progreso estimada | aceptado (pendiente revisión del equipo) |
 | P-043 | 2026-11-10 | Andres | Claude Code (`matching-agent`, `mcp-agent`, `n8n-agent`, `frontend-agent`) | `feature/matching/v0.4.0-diccionario-skills`, `feature/mcp/v0.7.0-resolver-skills`, `feature/n8n/v0.7.0-diccionario-skills`, `feature/frontend/v0.11.0-skills-similares` | Diccionario de skills con nombres distintos (MySQL/MariaDB, Postgres/PostgreSQL) y lista de herramientas similares que facilitan el aprendizaje (GitHub/GitLab), para las reglas y como herramienta del agente | `skill_dictionary.json` (148 skills: alias, implies, equivalentes y similares) en matching-service, `resolver_skills` en mcp-tools, prompts que usan `via` y `similar_to`, y la UI con "SQL (por PostgreSQL)" | aceptado (pendiente revisión del equipo) |
+| P-044 | 2026-11-11 | Dario | Gemini (`frontend-agent`) | `fix/frontend/v0.11.1-correccion-todas-las-ofertas` | Reseteo de scroll al tope de la pantalla (`window.scrollTo(0,0)`) al navegar entre ofertas o cambiar de sección | Implementación de `useEffect` en `JobDetail.tsx` y `App.tsx` para restablecer la posición vertical del viewport al tope en cada cambio de vista o navegación de ofertas | aceptado |
+| P-045 | 2026-11-11 | Dario | Gemini (`frontend-agent`) | `fix/frontend/v0.11.1-correccion-todas-las-ofertas` | Sincronización del Header con la sección de ofertas (`'jobs'`) y mantenimiento del modal de contraseña | Mapeo exacto de la ruta `'jobs'` en `STUDENT_NAV` dentro de `SiteHeader.tsx` manteniendo la invocación de `AccountSettingsModal` al pulsar sobre el correo del usuario | aceptado |
 
 ---
 
@@ -628,7 +630,27 @@
 - **Archivos afectados:** `services/matching-service/**`, `mcp-tools/**`, `n8n/**`, `frontend/src/**`, `contracts/matching.md`, `contracts/mcp_tools.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** aceptado (pendiente revisión del equipo).
 
-### P-044 — (plantilla)
+### P-044 — Reseteo automático de scroll en navegación de ofertas
+* **Fecha:** 2026-11-11 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `fix/frontend/v0.11.1-correccion-todas-las-ofertas` · **HU:** Correcciones de UI y Navegación SPA
+* **Prompt (resumido):**
+  > Corrige un fallo en UX, la posición de la pantalla al scrolear hacia abajo en "Todas las ofertas" y seleccionar una empresa, se mantiene y la vista de detalle de la empresa queda situada respetando scroll en pantalla anterior, se debe resetear arriba (scroll to top) y no mantener la posición desplazada de la vista anterior.
+* **Resumen de la respuesta:**
+  - Importación e inclusión de `useEffect` en `JobDetail.tsx` ejecutando `window.scrollTo(0, 0)` al montarse el componente.
+  - Sincronización en `App.tsx` para forzar el reseteo del scroll vertical de la ventana ante cada cambio de vista (`activeView`) o sección activa (`section`).
+* **Archivos afectados:** `frontend/src/components/jobs/JobDetail.tsx`, `frontend/src/App.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+### P-045 — Sincronización de rutas Header/Footer y modal de configuración de cuenta
+* **Fecha:** 2026-11-11 · **Autor:** Dario · **Agente:** Gemini (`frontend-agent`) · **Rama:** `fix/frontend/v0.11.1-correccion-todas-las-ofertas` · **HU:** HU-04 (Seguridad de cuenta) / Navegación Consistente
+* **Prompt (resumido):**
+  > Agrega en el Header la opción "Todas las ofertas", ya que solo esta visible en el Footer y hace que la funcionalidad solo sea accesible desde alli, cuida de que  ambas apunten a la sección correcta ('jobs') y asegura que las funcionalidades previa del Header no sean afectadas, ni se pierda el estado ni el renderizado de `AccountSettingsModal`.
+* **Resumen de la respuesta:**
+  - Corrección de la propiedad `section` en `STUDENT_NAV` dentro de `SiteHeader.tsx` asignando `'jobs'` para evitar desalineaciones con la ruta manejada en `SiteFooter.tsx`.
+  - Preservación del estado local `showAccountModal` y su renderizado flotante sobre el `header` al interactuar con el email del usuario.
+* **Archivos afectados:** `frontend/src/components/layout/SiteHeader.tsx`, `frontend/src/components/layout/SiteFooter.tsx`, `PROMPTS.md`.
+* **Decisión:** aceptado.
+
+### P-046 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …

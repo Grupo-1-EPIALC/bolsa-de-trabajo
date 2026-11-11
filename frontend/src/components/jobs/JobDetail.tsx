@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { dateLabel, jobFacts, salaryLabel } from '../../jobs/format';
 import {
   AVAILABILITY_START,
@@ -14,6 +14,7 @@ import {
 } from '../../profile/labels';
 import type { Options } from '../../profile/labels';
 import type { JobOpportunity, RequirementKind } from '../../types/jobs';
+import { CompanyPublicProfileModal } from '../company/CompanyPublicProfileModal';
 
 const KIND_CLASS: Record<RequirementKind, string> = {
   required: 'text-bg-primary',
@@ -50,9 +51,17 @@ export const JobDetail: React.FC<JobDetailProps> = ({
   backLabel = 'Volver',
   children,
 }) => {
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
+
+  // Resetea la posición del scroll al tope de la pantalla cuando se monta la vista
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const wc = job.work_conditions;
   const req = job.requirements;
   const hours = wc?.weekly_hours ? `${wc.weekly_hours.min}–${wc.weekly_hours.max} hs/semana` : '';
+
   return (
     <article className="card card-elevated">
       <div className="card-body p-4 p-md-5">
@@ -71,7 +80,9 @@ export const JobDetail: React.FC<JobDetailProps> = ({
           </div>
           <div className="text-md-end">
             <span
-              className={`badge rounded-pill ${job.status === 'active' ? 'text-bg-success' : 'text-bg-secondary'}`}
+              className={`badge rounded-pill ${
+                job.status === 'active' ? 'text-bg-success' : 'text-bg-secondary'
+              }`}
             >
               {labelOf(JOB_STATUS, job.status)}
             </span>
@@ -118,9 +129,10 @@ export const JobDetail: React.FC<JobDetailProps> = ({
             {req.education
               .map(
                 (e) =>
-                  `${labelOf(EDUCATION_LEVEL, e.level)} ${labelOf(EDUCATION_STATUS, e.status).toLowerCase()}${
-                    e.field ? ` en ${e.field}` : ''
-                  }`,
+                  `${labelOf(EDUCATION_LEVEL, e.level)} ${labelOf(
+                    EDUCATION_STATUS,
+                    e.status,
+                  ).toLowerCase()}${e.field ? ` en ${e.field}` : ''}`,
               )
               .join(', ')}
           </Row>
@@ -162,6 +174,14 @@ export const JobDetail: React.FC<JobDetailProps> = ({
         </p>
         {children}
       </div>
+
+      {showCompanyModal && job.company_id && (
+        <CompanyPublicProfileModal
+          companyId={job.company_id}
+          companyNameFallback={job.company_snapshot?.name}
+          onClose={() => setShowCompanyModal(false)}
+        />
+      )}
     </article>
   );
 };
