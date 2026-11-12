@@ -1,0 +1,7 @@
+# Dependencias Python de todos los servicios, para correrlos fuera de Docker.
+# pip install -r requirements.txt   (Python 3.12)
+
+-r services/profile-service/requirements.txt
+-r services/jobs-service/requirements.txt
+-r services/matching-service/requirements.txt
+-r mcp-tools/requirements.txt
