@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { AuthMode, StudentSection, View } from '../../navigation';
 import type { SessionUser } from '../../services/session';
-import { AccountSettingsModal } from '../auth/AccountSettingsModal';
+import { AccountSettingsModal } from '../auth/AccountSettingsModal'; // Ajusta la ruta a tu componente de modal si varía
 
 interface SiteHeaderProps {
   user: SessionUser | null;
@@ -15,18 +15,15 @@ interface SiteHeaderProps {
 
 const COMPANY_NAV: Array<{ section: StudentSection; label: string; icon: string }> = [
   { section: 'panel', label: 'Mi empresa', icon: 'bi-building' },
+  { section: 'searches', label: 'Búsquedas', icon: 'bi-search' },
   { section: 'profile', label: 'Perfil de la empresa', icon: 'bi-pencil-square' },
 ];
 
-const ADMIN_NAV: Array<{ section: StudentSection; label: string; icon: string }> = [
-  { section: 'panel', label: 'Panel', icon: 'bi-shield-lock' },
-  { section: 'users', label: 'Cuentas', icon: 'bi-people' },
-  { section: 'settings', label: 'Matching', icon: 'bi-sliders' },
-];
-
+// Incluye 'jobs' para "Todas las ofertas"
 const STUDENT_NAV: Array<{ section: StudentSection; label: string; icon: string }> = [
   { section: 'panel', label: 'Mi panel', icon: 'bi-grid' },
   { section: 'recommendations', label: 'Ofertas para vos', icon: 'bi-briefcase' },
+  { section: 'jobs', label: 'Todas las ofertas', icon: 'bi-search' },
   { section: 'profile', label: 'Mi perfil', icon: 'bi-person-vcard' },
 ];
 
@@ -40,9 +37,7 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
   onLogout,
 }) => {
   const [open, setOpen] = useState(false);
-
-  // 👈 1. Estado local para controlar el modal "Mi cuenta"
-  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false); // Estado devuelto para el modal
 
   const go = (fn: () => void) => () => {
     fn();
@@ -59,15 +54,15 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
             Portal de empleo para estudiantes y graduados
           </span>
           {user ? (
-            // 👈 2. Botón clickeable en la barra superior con el email del usuario para abrir "Mi cuenta"
+            /* Botón interactivo sobre el email para activar el modal de cuenta/password */
             <button
               type="button"
-              className="btn btn-link text-white text-decoration-none p-0 small fw-semibold d-inline-flex align-items-center gap-1"
+              className="btn btn-link text-white text-decoration-none p-0 border-0 shadow-none align-baseline"
               onClick={() => setShowAccountModal(true)}
-              title="Abrir Mi cuenta"
+              title="Configuración de cuenta y cambio de clave"
             >
-              <i className="bi bi-person-circle fs-6" aria-hidden="true" />
-              <span>{user.email}</span>
+              <i className="bi bi-person-circle me-1" aria-hidden="true" />
+              <span className="fw-semibold">{user.email}</span>
             </button>
           ) : (
             <span className="d-flex gap-3">
@@ -122,7 +117,7 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
                     ? STUDENT_NAV
                     : user.role === 'company'
                       ? COMPANY_NAV
-                      : ADMIN_NAV
+                      : []
                   ).map((item) => (
                     <li className="nav-item" key={item.section}>
                       <button
@@ -136,26 +131,13 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
                       </button>
                     </li>
                   ))}
-
-                  {/* Acceso a "Mi cuenta" para dispositivos móviles en el desplegable */}
-                  <li className="nav-item d-md-none">
-                    <button
-                      type="button"
-                      className="nav-link"
-                      onClick={go(() => setShowAccountModal(true))}
-                    >
-                      <i className="bi bi-gear me-2" aria-hidden="true" />
-                      Mi cuenta ({user.email})
-                    </button>
-                  </li>
-
                   <li className="nav-item ms-lg-2">
                     <button
                       type="button"
-                      className="btn btn-outline-primary btn-pill btn-sm"
+                      className="btn btn-outline-danger btn-pill btn-sm"
                       onClick={go(onLogout)}
                     >
-                      <i className="bi bi-box-arrow-right me-2" aria-hidden="true" />
+                      <i className="bi bi-box-arrow-right me-1" aria-hidden="true" />
                       Cerrar sesión
                     </button>
                   </li>
@@ -171,20 +153,19 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
                       Inicio
                     </button>
                   </li>
-                  <li className="nav-item">
+                  <li className="nav-item ms-lg-2">
                     <button
                       type="button"
-                      className={`nav-link ${activeView === 'auth' ? 'active' : ''}`}
+                      className="btn btn-outline-primary btn-pill btn-sm"
                       onClick={go(() => onAuth('login'))}
                     >
-                      <i className="bi bi-box-arrow-in-right me-2" aria-hidden="true" />
                       Ingresar
                     </button>
                   </li>
-                  <li className="nav-item ms-lg-2 mt-2 mt-lg-0">
+                  <li className="nav-item">
                     <button
                       type="button"
-                      className="btn btn-nav-cta"
+                      className="btn btn-primary btn-pill btn-sm"
                       onClick={go(() => onAuth('register'))}
                     >
                       Registrate
@@ -197,7 +178,7 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
         </div>
       </nav>
 
-      {/* 👈 3. Modal de configuración de la cuenta renderizado sobrepuesto */}
+      {/* Modal de configuración de la cuenta superpuesto (restaurado) */}
       {showAccountModal && user && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center p-3"

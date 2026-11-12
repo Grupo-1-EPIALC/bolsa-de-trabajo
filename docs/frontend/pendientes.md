@@ -89,6 +89,8 @@
 
 ## 6. Modal "¿Por qué este puntaje?"
 
+> Implementado en front 0.8.0 (P-036)
+
 **Contrato:** `matching_frontend.md` §3, §4.4 y §5.
 
 - Lo abre un botón en `RuleMatch`, tanto en las recomendaciones del estudiante como en los candidatos de la empresa.
@@ -98,6 +100,8 @@
 - Lleva el badge verde "Calculado por reglas".
 
 ## 7. Perfil público de la empresa desde una oferta
+
+> Implementado en front 0.8.0 (P-037)
 
 **Contrato:** `company_profile_frontend.md` §3 y §8.
 
@@ -117,12 +121,16 @@
 
 ## 9. `401 ACCOUNT_DELETED`
 
+> Implementado en front 0.8.1 (P-038)
+
 **Contrato:** `account_events.md`, `profiles_matching.md` §8 y `jobs_matching.md` §11.
 
 - Si un admin borra la cuenta, profile y jobs responden `401` con el código `ACCOUNT_DELETED`.
 - Hoy `api.ts` intenta renovar el token y después muestra "Tu sesión venció". Con ese código conviene no reintentar, cerrar la sesión y avisar "Tu cuenta fue dada de baja".
 
 ## 10. Deuda técnica frente a `AGENTS.md` §4.7
+
+> Implementado en front 0.8.1 (P-039)
 
 `AGENTS.md` §4.7 nombra herramientas que el front todavía no usa. Hay que decidir en la daily si se suman o si se actualiza `AGENTS.md`; agregar una librería se discute antes (§2.4).
 
