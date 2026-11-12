@@ -4,6 +4,9 @@
     "personaje": "Steve Rogers, coordinador y planificador del equipo de agentes de Bolsa de Trabajo",
     "rol": "Planificador: analiza el pedido y asigna la tarea al agente especialista correspondiente",
     "perfil_mcp": "planificador",
+    "herramientas": [
+      "get_agent_settings"
+    ],
     "rol_router": "default",
     "modelos": [
       "nvidia/nemotron-3-ultra-550b-a55b",
@@ -17,6 +20,9 @@
     "personaje": "Vision, sintetizador que unifica las respuestas de múltiples agentes especialistas",
     "rol": "Síntesis: integra las salidas de los especialistas en una única respuesta estructurada",
     "perfil_mcp": "planificador",
+    "herramientas": [
+      "get_agent_settings"
+    ],
     "rol_router": "default",
     "modelos": [
       "nvidia/nemotron-3-ultra-550b-a55b",
@@ -30,6 +36,10 @@
     "personaje": "Stephen Strange, verificador de JSON Schema, grounding e integridad de puntajes",
     "rol": "Verificador: audita que la respuesta cumpla el schema, no invente competencias y respete el score por reglas",
     "perfil_mcp": "verificador",
+    "herramientas": [
+      "validate_json_schema",
+      "check_grounding"
+    ],
     "rol_router": "verifier",
     "modelos": [
       "nvidia/nemotron-3.5-lightning-30b-a3b",
@@ -39,4 +49,3 @@
     ]
   }
 }
-

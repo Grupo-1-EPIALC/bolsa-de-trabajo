@@ -1,7 +1,7 @@
 # Contrato · mcp-tools
 
 > **Para:** quien mantiene los workflows de n8n y mcp-tools.
-> **Servicio:** `mcp-tools` 0.4.0 (Python, SDK oficial MCP · `ProfiledFastMCP`). **Interno:** sólo lo consume n8n por la red `mcp_internal`; nunca pasa por el gateway.
+> **Servicio:** `mcp-tools` 0.8.0 (Python, SDK oficial MCP · `ProfiledFastMCP`). **Interno:** sólo lo consume n8n por la red `mcp_internal`; nunca pasa por el gateway.
 > **Partes:** 1. Conexión y seguridad · 2. Perfiles de herramientas · 3. Herramientas · 4. Endpoints HTTP · 5. Configuración (`get_agent_settings`) · 6. Datos reales o mocks · 7. Errores. Los `§` de cada parte se refieren a esa parte.
 > Los documentos de los que sale este contrato están en [`historico/`](historico/). Todos los ejemplos usan datos ficticios.
 
@@ -11,7 +11,7 @@
 
 - **URL:** `http://mcp-tools:8000/mcp` (transporte `streamable-http` en Docker; `stdio` en desarrollo local, `MCP_TRANSPORT`).
 - **Autenticación** en `/mcp` y `/router/*`: `X-Service-Token`, `X-API-Key`, `Authorization: Bearer` o `?key=` con el `SERVICE_TOKEN`. Los logs enmascaran `key=***`.
-- **Parámetros de la conexión:** `?perfil=<perfil>` (qué herramientas ve el agente, §2), `&sesion=<id>` (protección anti-bucle de `leer_skill`) y `&agente=<id>`.
+- **Parámetros de la conexión:** `?perfil=<perfil>` (qué herramientas ve el agente, §2), `&herramientas=<a,b>` (opcional, §2), `&sesion=<id>` (protección anti-bucle de `leer_skill`) y `&agente=<id>`.
 - Hacia los servicios usa `X-Service-Token`: `PROFILE_SERVICE_URL`, `JOBS_SERVICE_URL` y `MATCHING_SERVICE_URL`.
 - Todas las herramientas son **de sólo lectura**, salvo `save_recommendation`.
 - El puntaje lo calcula matching-service (`compute_match`, `rank_*`): ningún agente lo calcula ni lo modifica (AGENTS §2.2).
@@ -26,6 +26,8 @@
 | `empresa` | `get_agent_settings`, `resolver_skills`, `leer_skill`, `list_skills`, `get_job`, `get_profile`, `list_candidate_profiles`, `compute_match`, `missing_skills`, `rank_candidates_for_job`, `save_recommendation`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
 | `verificador` | `get_agent_settings`, `resolver_skills`, `leer_skill`, `list_skills`, `validate_json_schema`, `check_grounding`, `fecha_hora` |
 | `adjuntos` | `parse_cv_file`, `parse_cv_text`, `leer_archivo` |
+
+**`&herramientas=<a,b>` (opcional):** las herramientas que usa ese agente puntual, separadas por comas. Achica el perfil y nunca lo amplía: una herramienta fuera del perfil se ignora. Vacío (`&herramientas=`) = ninguna herramienta. Sin el parámetro rige el perfil completo. n8n lo arma desde `herramientas` de cada agente (`n8n/agentes/*.json`), así el agente no recibe definiciones que no usa.
 
 ## 3. Herramientas
 

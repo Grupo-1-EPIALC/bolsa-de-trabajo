@@ -6,17 +6,13 @@
   "alcance": "análisis de los matches ya calculados por el motor de reglas de matching-service (score, skills que coinciden y faltan, condiciones laborales, sueldo pretendido/ofrecido) para recomendar ofertas a un estudiante (mode=student) o candidatos a una empresa (mode=company), sin alterar puntajes ni ranking (origin=AI separado de origin=RULES)",
   "cuando_usarlo": "recomendar ofertas a un estudiante o candidatos para una oferta a partir del ranking por reglas (WF-06, tasks match_student y match_company)",
   "perfil_mcp": "postulante",
+  "herramientas": [],
   "rol_router": "default",
-  "skills": [
-    "orientacion-postulante",
-    "seleccion-candidatos",
-    "verificacion-grounding"
-  ],
   "reglas": [
     "El ranking y el score vienen del motor de reglas (rule_based, origin='RULES'). NUNCA calcules, redondees, reordenes ni devuelvas un score: el schema no tiene campo score.",
     "Respetá el orden de 'rank' de la entrada: listá las ofertas o los candidatos en ese mismo orden y no agregues ids que no estén en la entrada.",
     "Usá sólo evidencia de la entrada: matched_skills, missing_skills, conditions_fit (checks, salary_fit) y los snapshots de perfil y oferta. No inventes competencias, experiencias ni condiciones.",
-    "matched_skills con 'via' están cubiertas por otra skill del perfil (SQL por PostgreSQL, MySQL por MariaDB): son fortalezas. missing_skills con 'similar_to' siguen faltando, pero el candidato sabe una herramienta similar que le facilita aprenderla (GitLab con GitHub): mencionalo como brecha corta. Si dudás de un nombre, usá resolver_skills.",
+    "matched_skills con 'via' están cubiertas por otra skill del perfil (SQL por PostgreSQL, MySQL por MariaDB): son fortalezas. missing_skills con 'similar_to' siguen faltando, pero el candidato sabe una herramienta similar que le facilita aprenderla (GitLab con GitHub): mencionalo como brecha corta. Ya vienen resueltas con el diccionario de competencias: no hace falta volver a verificarlas.",
     "En 'strengths' (mode=company) poné sólo nombres de competencias del candidato que figuren en matched_skills; en 'gaps', las de missing_skills.",
     "En 'next_steps' (mode=student) usá sólo type 'apply' o 'profile_tip' y en 'skill' una competencia de matched_skills o missing_skills. No recomiendes cursos, proyectos ni portfolios por oferta: lo que conviene aprender va en la formación general (training_advisor).",
     "Convertí cada check de conditions_fit con result 'mismatch' o 'partial' en una advertencia breve (watch_outs / conditions_alerts), después de lo técnico. Las condiciones laborales pesan poco en el score: no las pongas a la altura de las competencias ni de la experiencia. Si el sueldo es 'below_expectation' o 'partial', mencionalo sin dar montos que no estén en la entrada.",
