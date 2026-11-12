@@ -55,7 +55,7 @@ services:
 
   mail:
     <<: *common
-    image: axllent/mailpit:latest
+    image: axllent/mailpit:v1.33.1
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
@@ -64,7 +64,7 @@ services:
 
   n8n:
     <<: *common
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.123.95
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,7 +117,7 @@ services:
   # n8n/workflows, y los publica. Corre en cada `up`, así una base nueva nunca queda vacía.
   # El repo es la fuente de verdad: los cambios hechos sólo en la UI se pisan al reiniciar.
   n8n-init:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.123.95
     restart: "no"
     depends_on: *depends-db
     entrypoint: ["/bin/sh", "/n8n-init/bootstrap.sh"]

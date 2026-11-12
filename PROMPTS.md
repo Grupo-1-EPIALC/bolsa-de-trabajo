@@ -63,6 +63,7 @@
 | P-045 | 2026-11-11 | Dario | Gemini (`frontend-agent`) | `fix/frontend/v0.11.1-correccion-todas-las-ofertas` | Sincronización del Header con la sección de ofertas (`'jobs'`) y mantenimiento del modal de contraseña | Mapeo exacto de la ruta `'jobs'` en `STUDENT_NAV` dentro de `SiteHeader.tsx` manteniendo la invocación de `AccountSettingsModal` al pulsar sobre el correo del usuario | aceptado |
 | P-048 | 2026-11-04 a 2026-11-12 (registro retrospectivo) | Luciano | Copilot SDK en VS Code (`auth-agent`, Docker y Git) | `feature/create-auth-service` → `feature/auth/v0.1.0-auth-service` | Explicar el contrato de carga de CV; revisar e implementar `auth-service` en NestJS; resolver Docker/PostgreSQL, `.env`, login `/login`, pruebas y preparación del MR, incluida la convención de ramas | `auth-service` implementado con TypeORM, JWT RS256, registro/login, refresh, recuperación y cambio de credenciales, JWKS y migraciones; integración local con PostgreSQL/Docker verificada. Se reportaron 10 tests Jest exitosos y typecheck/build/Prettier correctos; cobertura global aproximada de 37 %. Se explicó el renombrado remoto y la sincronización de la rama | implementación realizada; revisión y pendientes del MR por confirmar |
 | P-049 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`auth-agent`) | — | Documentar las respuestas de `/register` y `/login` dentro de `services/auth-service`, usando los ejemplos compartidos | Se agregó `services/auth-service/AUTH-RESPONSES.md` con ejemplos, campos de respuesta, estados HTTP y errores; los tokens de los ejemplos se reemplazaron por placeholders | aceptado |
+| P-050 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`devops-agent`) | — | Revisar `docker-compose.yml`, reemplazar las etiquetas `latest` por versiones estables y comprobar si hay Makefile o `requirements.txt` | Se fijaron n8n en `1.123.95` y Mailpit en `v1.33.1` (también `n8n-init`); no se encontró Makefile y se identificó un requirements agregador y cuatro archivos por servicio | aceptado |
 
 ---
 
@@ -716,4 +717,15 @@
   - Se creó `services/auth-service/AUTH-RESPONSES.md` con ejemplos de éxito para estudiante y empresa, descripción de campos, códigos de estado y errores comunes.
   - Los tokens compartidos en los ejemplos no se copiaron al documento; se usaron placeholders para evitar registrar credenciales en el repositorio. `git diff --check` pasó.
 - **Archivos afectados:** `services/auth-service/AUTH-RESPONSES.md`, `PROMPTS.md`.
+- **Decisión:** aceptado.
+
+### P-050 — Versiones de imágenes Docker y archivos de dependencias
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`devops-agent`) · **Rama:** —
+- **Prompt (textual):**
+  > Fijate en el archivo `docker-compose.yml`, y las dependencias que tengan versiones "lastest" por favor pone las versiones estables funcionando, y revisar si hay algún makefile o requeriment.txt
+- **Resumen de la respuesta:**
+  - Se reemplazó `latest` por n8n `1.123.95` en `n8n` y `n8n-init`, y Mailpit `v1.33.1`; se actualizó la nota correspondiente en `docs/ARQUITECTURA.md`.
+  - No se encontró Makefile. Se encontraron `requirements.txt` en la raíz y en `profile-service`, `jobs-service`, `matching-service` y `mcp-tools`; usan rangos de versiones y no se modificaron.
+  - Pasaron `docker compose config -q`, la verificación de existencia de ambos tags de imagen y `git diff --check`.
+- **Archivos afectados:** `docker-compose.yml`, `docs/ARQUITECTURA.md`, `PROMPTS.md`.
 - **Decisión:** aceptado.
