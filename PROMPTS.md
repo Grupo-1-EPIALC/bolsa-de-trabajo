@@ -61,6 +61,8 @@
 | P-043 | 2026-11-10 | Andres | Claude Code (`matching-agent`, `mcp-agent`, `n8n-agent`, `frontend-agent`) | `feature/matching/v0.4.0-diccionario-skills`, `feature/mcp/v0.7.0-resolver-skills`, `feature/n8n/v0.7.0-diccionario-skills`, `feature/frontend/v0.11.0-skills-similares` | Diccionario de skills con nombres distintos (MySQL/MariaDB, Postgres/PostgreSQL) y lista de herramientas similares que facilitan el aprendizaje (GitHub/GitLab), para las reglas y como herramienta del agente | `skill_dictionary.json` (148 skills: alias, implies, equivalentes y similares) en matching-service, `resolver_skills` en mcp-tools, prompts que usan `via` y `similar_to`, y la UI con "SQL (por PostgreSQL)" | aceptado (pendiente revisión del equipo) |
 | P-044 | 2026-11-11 | Dario | Gemini (`frontend-agent`) | `fix/frontend/v0.11.1-correccion-todas-las-ofertas` | Reseteo de scroll al tope de la pantalla (`window.scrollTo(0,0)`) al navegar entre ofertas o cambiar de sección | Implementación de `useEffect` en `JobDetail.tsx` y `App.tsx` para restablecer la posición vertical del viewport al tope en cada cambio de vista o navegación de ofertas | aceptado |
 | P-045 | 2026-11-11 | Dario | Gemini (`frontend-agent`) | `fix/frontend/v0.11.1-correccion-todas-las-ofertas` | Sincronización del Header con la sección de ofertas (`'jobs'`) y mantenimiento del modal de contraseña | Mapeo exacto de la ruta `'jobs'` en `STUDENT_NAV` dentro de `SiteHeader.tsx` manteniendo la invocación de `AccountSettingsModal` al pulsar sobre el correo del usuario | aceptado |
+| P-048 | 2026-11-04 a 2026-11-12 (registro retrospectivo) | Luciano | Copilot SDK en VS Code (`auth-agent`, Docker y Git) | `feature/create-auth-service` → `feature/auth/v0.1.0-auth-service` | Explicar el contrato de carga de CV; revisar e implementar `auth-service` en NestJS; resolver Docker/PostgreSQL, `.env`, login `/login`, pruebas y preparación del MR, incluida la convención de ramas | `auth-service` implementado con TypeORM, JWT RS256, registro/login, refresh, recuperación y cambio de credenciales, JWKS y migraciones; integración local con PostgreSQL/Docker verificada. Se reportaron 10 tests Jest exitosos y typecheck/build/Prettier correctos; cobertura global aproximada de 37 %. Se explicó el renombrado remoto y la sincronización de la rama | implementación realizada; revisión y pendientes del MR por confirmar |
+| P-049 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`auth-agent`) | — | Documentar las respuestas de `/register` y `/login` dentro de `services/auth-service`, usando los ejemplos compartidos | Se agregó `services/auth-service/AUTH-RESPONSES.md` con ejemplos, campos de respuesta, estados HTTP y errores; los tokens de los ejemplos se reemplazaron por placeholders | aceptado |
 
 ---
 
@@ -688,10 +690,30 @@
 - **Archivos afectados:** `n8n/generate_workflows.py`, `n8n/workflows/WF-06-recomendador.json`, `n8n/prompts/match_advisor.md`, `contracts/n8n.md`, `PROMPTS.md`.
 - **Decisión:** aceptado (pendiente revisión del equipo).
 
-### P-048 — (plantilla)
-- **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
-- **Prompt (textual o resumido):**
-  > …
+### P-048 — Auth-service, Docker y preparación del MR
+- **Fecha:** 2026-11-04 a 2026-11-12 (registro retrospectivo) · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`auth-agent`, Docker y Git) · **Ramas:** `feature/create-auth-service` → `feature/auth/v0.1.0-auth-service`
+- **Prompt (resumido a partir del historial disponible):**
+  > Explicame cómo implementar el contrato para comunicarme con el agente de carga de CV siguiendo las reglas y revisá los archivos de `services/auth-service`. Confirmá si Docker tiene base de datos, prepará el `.env` y, con Docker en marcha, dame un `curl` para Postman y los datos de conexión a la DB. Cambiá la URL de login a `/login`; revisá variables, `.env` y pendientes para el MR, y ayudame a resolver el error de CI por el formato de la rama, su renombrado en GitHub/local y el upstream.
+  >
+  > También pregunté dónde localizar y borrar los 20 GB asociados a Docker, si había que regenerar el contenedor, si convenía incluir `.env.example` en el MR para el TP y confirmé: “No importa, authService debe acceder a la base de datos”. Entre las solicitudes textuales disponibles: “Podes crear vos el .env”, “podemos cambiar esta url a login?”, “estoy para hacer el mr entonces?” y “Una descripción para el mr, me haces”. Luego compartí el error del CI y la salida de `git branch -r`, y consulté dónde renombrar la rama y cómo sincronizar el upstream.
 - **Resumen de la respuesta:**
-  - …
-- **Archivos afectados:** …
+  - Se implementó `auth-service` con NestJS y TypeORM, incluyendo registro/login, roles, empresa y validación de CUIT, JWT RS256, sesiones refresh, recuperación y cambio de credenciales, JWKS, validaciones, errores y migraciones.
+  - Se preparó configuración local para Docker/PostgreSQL y claves JWT ignoradas por Git; se agregó `/login` conservando `/token` como alias, se actualizó el rate limit del gateway y se documentó el endpoint.
+  - Se verificaron typecheck, build, Prettier, 10 tests Jest, Compose y pruebas locales del servicio. La cobertura global reportada fue aproximadamente 37 %, por debajo del objetivo del proyecto.
+  - Se explicó que el CI requiere `<tipo>/<servicio>/v<semver>-<descripción>` y cómo renombrar la rama remota y configurar el seguimiento local. El historial disponible no confirma el resultado final del `git fetch` ni del upstream.
+- **Archivos afectados:** `services/auth-service/`, `docker-compose.yml`, `.env.example`, `gateway/nginx.conf`, `README.md`, `PROMPTS.md` (registro retrospectivo).
+- **Decisión:** implementación realizada; pendientes de revisar antes del MR: cobertura requerida, alineación de versión del paquete con la rama y seguimiento de la rama remota.
+
+### P-049 — Respuestas de registro e inicio de sesión
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`auth-agent`) · **Rama:** —
+- **Prompt (textual):**
+  > Me ayudas a hacer un documento dentro del repo de auth con la documentación de las responses de /register y /login
+  >
+  > response del register: [compartió un ejemplo JSON de éxito con `user`, `access_token`, `refresh_token`, `token_type` y `expires_in`; se omitieron los valores de tokens]
+  >
+  > response del login: [compartió un ejemplo JSON de éxito con la misma estructura; se omitieron los valores de tokens]
+- **Resumen de la respuesta:**
+  - Se creó `services/auth-service/AUTH-RESPONSES.md` con ejemplos de éxito para estudiante y empresa, descripción de campos, códigos de estado y errores comunes.
+  - Los tokens compartidos en los ejemplos no se copiaron al documento; se usaron placeholders para evitar registrar credenciales en el repositorio. `git diff --check` pasó.
+- **Archivos afectados:** `services/auth-service/AUTH-RESPONSES.md`, `PROMPTS.md`.
+- **Decisión:** aceptado.
