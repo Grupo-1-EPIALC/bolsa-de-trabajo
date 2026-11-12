@@ -5,7 +5,7 @@ Transporte configurable por entorno:
   - streamable-http  (Docker; endpoint http://mcp-tools:8000/mcp)
 
 Los nodos `@n8n/n8n-nodes-langchain.mcpClientTool` y `@n8n/n8n-nodes-langchain.mcpClient`
-se conectan a `/mcp?key=<SERVICE_TOKEN>&sesion=<id>&agente=<id>&perfil=<perfil>`.
+se conectan a `/mcp?key=<SERVICE_TOKEN>&sesion=<id>&agente=<id>&perfil=<perfil>&herramientas=<a,b>`.
 """
 
 import logging
@@ -93,23 +93,37 @@ TOOL_PROFILES: dict[str, set[str]] = {
 }
 
 
-class ProfiledFastMCP(FastMCP):
-    """Filtra las herramientas expuestas según el query param `?perfil=` de la conexión MCP."""
+def allowed_tools(perfil: str | None, herramientas: str | None) -> set[str] | None:
+    """Herramientas que ve una conexión. `None` = todas.
 
-    def _current_profile(self) -> str:
+    - `perfil`: techo por tipo de agente (`TOOL_PROFILES`); uno desconocido no filtra.
+    - `herramientas`: lista separada por comas con las que usa ese agente puntual. Sólo achica
+      el perfil (nunca agrega una que el perfil no tenga). Vacía = ninguna herramienta.
+    """
+    allowed = TOOL_PROFILES.get(perfil or "todas")
+    if herramientas is None:
+        return allowed
+    wanted = {name.strip() for name in herramientas.split(",") if name.strip()}
+    return wanted if allowed is None else wanted & allowed
+
+
+class ProfiledFastMCP(FastMCP):
+    """Filtra las herramientas según `?perfil=` y `?herramientas=` de la conexión MCP."""
+
+    def _query(self, name: str) -> str | None:
         try:
             ctx = self.get_context()
             req: Any = ctx.request_context.request
             if req is not None and hasattr(req, "query_params"):
-                val = req.query_params.get("perfil")
-                return str(val) if val else "todas"
+                val = req.query_params.get(name)
+                return None if val is None else str(val)
         except (LookupError, ValueError, AttributeError):
-            return "todas"
-        return "todas"
+            return None
+        return None
 
     async def list_tools(self) -> list[Tool]:
         all_tools = await super().list_tools()
-        allowed = TOOL_PROFILES.get(self._current_profile())
+        allowed = allowed_tools(self._query("perfil"), self._query("herramientas"))
         if allowed is None:
             return all_tools
         return [t for t in all_tools if t.name in allowed]
@@ -134,7 +148,7 @@ async def health(_: Request) -> JSONResponse:
         {
             "status": "ok",
             "service": "mcp-tools",
-            "version": "0.7.0",
+            "version": "0.8.0",
             "tools": sorted(REGISTERED_TOOLS.keys()),
             "profiles": sorted(TOOL_PROFILES.keys()),
         }
