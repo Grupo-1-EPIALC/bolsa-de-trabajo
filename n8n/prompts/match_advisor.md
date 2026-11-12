@@ -1,6 +1,6 @@
 ---
 id: match_advisor
-prompt_version: "1.3.0"
+prompt_version: "1.4.0"
 role: default
 schema: match_student_recommendations | match_company_recommendations
 origin: AI

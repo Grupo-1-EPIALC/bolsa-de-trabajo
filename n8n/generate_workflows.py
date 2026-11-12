@@ -2288,10 +2288,57 @@ if (mode === 'student') {
   };
   const sourceText = JSON.stringify(source);
   const topScore = items[0].match ? items[0].match.score : null;
+
+  // Una llamada por oferta (en paralelo) + una para el resumen general: cada respuesta es
+  // corta, así que la espera es la de la oferta más lenta y no la suma de todas.
+  const rows = source.rule_based.items;
+  const NEXT_STEPS_RULE = 'En next_steps usá sólo type apply o profile_tip: no propongas cursos, proyectos ni portfolios (la formación es general y va aparte).';
+  const parallel = {
+    key: 'job_id',
+    list: 'jobs',
+    items: rows.map((row) => {
+      const itemSource = {
+        mode: 'student',
+        profile: source.profile,
+        rule_based: { origin: 'RULES', engine_version: ranking.engine_version, items: [row] },
+      };
+      const itemText = JSON.stringify(itemSource);
+      return {
+        id: String(row.job_id),
+        payload: {
+          task: 'match_student',
+          source_text: itemText,
+          expected_score: row.score,
+          reported_score: row.score,
+          user_prompt: `mode=student. Analizá para el estudiante ${profileId} SÓLO esta oferta del ranking por reglas (rank ${row.rank}), sin devolver score, en JSON {"summary":"...","jobs":[{"job_id":"${row.job_id}",...}]} con una única entrada. ${NEXT_STEPS_RULE}\n\n${itemText}`,
+        },
+      };
+    }),
+    summary: {
+      task: 'match_student',
+      source_text: sourceText,
+      expected_score: null,
+      reported_score: null,
+      user_prompt: `mode=student. Escribí SÓLO el resumen general (1 o 2 oraciones) de qué ofertas del ranking por reglas le convienen al estudiante ${profileId} y por qué, sin scores. El análisis por oferta lo hace otro paso: devolvé {"summary":"...","jobs":[]}.\n\n${JSON.stringify({
+        mode: 'student',
+        profile: source.profile,
+        ranking: rows.map((r) => ({
+          rank: r.rank,
+          title: r.job && r.job.title,
+          company: r.job && r.job.company_name,
+          score: r.score,
+          matched: (r.matched_skills || []).map((m) => m.skill),
+          missing: (r.missing_skills || []).map((m) => m.skill),
+          compatible: r.conditions_fit.compatible,
+        })),
+      })}`,
+    },
+  };
   return [{
     json: {
       ...base,
       valid: true,
+      parallel,
       task: 'match_student',
       agent: 'match_advisor',
       role: 'default',
@@ -2300,7 +2347,7 @@ if (mode === 'student') {
       source_text: sourceText,
       expected_score: topScore,
       reported_score: topScore,
-      prompt_version: '1.3.0',
+      prompt_version: '1.4.0',
       user_prompt: `mode=student. Recomendá al estudiante ${profileId} las ofertas del ranking por reglas, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","jobs":[...]}. En next_steps usá sólo type apply o profile_tip: no propongas cursos, proyectos ni portfolios (la formación es general y va aparte):\n\n${sourceText}`,
     },
   }];
@@ -2333,10 +2380,54 @@ if (mode === 'company') {
   };
   const sourceText = JSON.stringify(source);
   const topScore = items[0].match ? items[0].match.score : null;
+
+  // Una llamada por candidato (en paralelo) + una para el resumen general del pool.
+  const rows = source.rule_based.items;
+  const parallel = {
+    key: 'profile_id',
+    list: 'candidates',
+    items: rows.map((row) => {
+      const itemSource = {
+        mode: 'company',
+        job: source.job,
+        rule_based: { origin: 'RULES', engine_version: ranking.engine_version, items: [row] },
+      };
+      const itemText = JSON.stringify(itemSource);
+      return {
+        id: String(row.profile_id),
+        payload: {
+          task: 'match_company',
+          source_text: itemText,
+          expected_score: row.score,
+          reported_score: row.score,
+          user_prompt: `mode=company. Analizá para la oferta ${jobId} SÓLO este candidato del ranking por reglas (rank ${row.rank}), sin devolver score, en JSON {"summary":"...","candidates":[{"profile_id":"${row.profile_id}",...}]} con una única entrada.\n\n${itemText}`,
+        },
+      };
+    }),
+    summary: {
+      task: 'match_company',
+      source_text: sourceText,
+      expected_score: null,
+      reported_score: null,
+      user_prompt: `mode=company. Escribí SÓLO el resumen general (1 o 2 oraciones) del pool de candidatos del ranking por reglas para la oferta ${jobId}, sin scores ni datos personales. El análisis por candidato lo hace otro paso: devolvé {"summary":"...","candidates":[]}.\n\n${JSON.stringify({
+        mode: 'company',
+        job: source.job,
+        ranking: rows.map((r) => ({
+          rank: r.rank,
+          profile_id: r.profile_id,
+          score: r.score,
+          matched: (r.matched_skills || []).map((m) => m.skill),
+          missing: (r.missing_skills || []).map((m) => m.skill),
+          compatible: r.conditions_fit.compatible,
+        })),
+      })}`,
+    },
+  };
   return [{
     json: {
       ...base,
       valid: true,
+      parallel,
       task: 'match_company',
       agent: 'match_advisor',
       role: 'default',
@@ -2345,7 +2436,7 @@ if (mode === 'company') {
       source_text: sourceText,
       expected_score: topScore,
       reported_score: topScore,
-      prompt_version: '1.3.0',
+      prompt_version: '1.4.0',
       user_prompt: `mode=company. Recomendá los candidatos del ranking por reglas para la oferta ${jobId}, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","candidates":[...]}:\n\n${sourceText}`,
     },
   }];
@@ -2579,6 +2670,101 @@ return [{
 """
     )
 
+    # Un pedido a WF-00 (orquestador + verificador) por oferta o candidato y uno para el
+    # resumen. Los manda el nodo HTTP Request, que despacha todos los ítems a la vez (un Code
+    # node con Promise.all quedaba limitado a 6 pedidos simultáneos).
+    split_js = r'''
+const par = $input.first().json.parallel;
+return [
+  { json: { kind: 'summary', id: '', payload: par.summary } },
+  ...par.items.map((it) => ({ json: { kind: 'item', id: it.id, payload: it.payload } })),
+];
+'''
+
+    combine_js = r'''
+// Junta las respuestas de WF-00 (mismo orden que los pedidos) con la forma que devuelve WF-00.
+const par = $('Obtener Contexto por Reglas (MCP)').first().json.parallel;
+const sent = $('Preparar Pedidos por Ítem').all().map((i) => i.json);
+const results = $input.all().map((i) => i.json);
+
+// A veces NVIDIA deja una respuesta colgada y el timeout del LLM no la corta: el nodo HTTP
+// la abandona a los 100 s y acá se reintenta una vez, en paralelo, sólo esa oferta o candidato.
+const BASE = ($env.N8N_INTERNAL_WEBHOOK_URL || 'http://localhost:5678/webhook').replace(/\/+$/, '');
+const retryOrq = async (payload) => {
+  try {
+    return await this.helpers.httpRequest({
+      method: 'POST',
+      url: `${BASE}/orquestador`,
+      headers: { 'X-Service-Token': $env.SERVICE_TOKEN || '', 'Content-Type': 'application/json' },
+      body: payload,
+      json: true,
+      timeout: 100000,
+    });
+  } catch (e) {
+    return { ok: false, error: { code: 'AI_ITEM_FAILED', message: String((e && e.message) || e) } };
+  }
+};
+const toRetry = results
+  .map((r, i) => i)
+  .filter((i) => sent[i] && sent[i].kind === 'item' && !(results[i] && results[i].ok));
+const retried = await Promise.all(toRetry.map((i) => retryOrq(sent[i].payload)));
+toRetry.forEach((i, k) => { results[i] = retried[k]; });
+
+let summaryRes = null;
+const entries = [];
+const models = new Set();
+let allVerified = true;
+const failed = [];
+results.forEach((r, i) => {
+  const req = sent[i] || {};
+  if (req.kind === 'summary') { summaryRes = r; return; }
+  const id = String(req.id);
+  if (!r || !r.ok) {
+    allVerified = false;
+    failed.push({ id, error: (r && (r.error || r.message)) || null });
+    return;
+  }
+  const list = Array.isArray(r.data && r.data[par.list]) ? r.data[par.list] : [];
+  // Se pidió una sola entrada: si el modelo cambió el id, igual es el análisis de este ítem.
+  const entry = list.find((e) => e && String(e[par.key]) === id) || list[0];
+  if (!entry) {
+    allVerified = false;
+    failed.push({ id, error: { code: 'AI_ITEM_EMPTY', message: 'Sin análisis para el ítem' } });
+    return;
+  }
+  entries.push({ ...entry, [par.key]: id });
+  if (r.model) models.add(r.model);
+  allVerified = allVerified && Boolean(r.verified);
+});
+
+if (!entries.length) {
+  return [{
+    json: {
+      ok: false,
+      status_code: 503,
+      error: { code: 'AI_ADVISOR_FAILED', message: 'No se pudo generar la recomendación IA', details: failed },
+    },
+  }];
+}
+
+const summaryOk = Boolean(summaryRes && summaryRes.ok && summaryRes.data && summaryRes.data.summary);
+const firstOk = results.find((r, i) => sent[i] && sent[i].kind === 'item' && r && r.ok && r.data && r.data.summary);
+const summary = summaryOk ? summaryRes.data.summary : (firstOk ? firstOk.data.summary : '');
+if (summaryOk && summaryRes.model) models.add(summaryRes.model);
+
+return [{
+  json: {
+    ok: true,
+    status_code: 200,
+    data: { summary, [par.list]: entries },
+    model: [...models].join(', ') || 'nvidia',
+    verified: allVerified && summaryOk && Boolean(summaryRes.verified),
+    failed_items: failed,
+    retried_items: toRetry.map((i) => sent[i].id),
+  },
+}];
+'''
+
     nodes = [
         _node(
             "rec-webhook",
@@ -2617,6 +2803,46 @@ return [{
                 "options": {"waitForSubWorkflow": True},
             },
         ),
+        _node(
+            "rec-if-parallel",
+            "¿Análisis por ítem?",
+            "n8n-nodes-base.if",
+            2.2,
+            [600, -100],
+            {
+                "conditions": _cond(
+                    "rec-if-parallel-c", "={{ $json.parallel }}", "", "exists", "object"
+                ),
+                "options": {},
+            },
+        ),
+        _code("rec-split", "Preparar Pedidos por Ítem", split_js, [780, -240]),
+        _node(
+            "rec-parallel",
+            "Analizar en Paralelo (WF-00 por ítem)",
+            "n8n-nodes-base.httpRequest",
+            4.2,
+            [980, -240],
+            {
+                "method": "POST",
+                "url": "={{ ($env.N8N_INTERNAL_WEBHOOK_URL || 'http://localhost:5678/webhook').replace(/\\/+$/, '') + '/orquestador' }}",
+                "sendHeaders": True,
+                "headerParameters": {
+                    "parameters": [{"name": "X-Service-Token", "value": "={{ $env.SERVICE_TOKEN }}"}]
+                },
+                "sendBody": True,
+                "specifyBody": "json",
+                "jsonBody": "={{ JSON.stringify($json.payload) }}",
+                # NVIDIA devolvió 429 con 11 pedidos simultáneos al mismo modelo: salen de a
+                # 10 y el siguiente lote arranca 10 s después (el resumen ya terminó).
+                "options": {
+                    "timeout": 100000,
+                    "batching": {"batch": {"batchSize": 10, "batchInterval": 10000}},
+                },
+            },
+            onError="continueRegularOutput",
+        ),
+        _code("rec-combine", "Combinar Análisis", combine_js, [1180, -240]),
         _code("rec-format", "Persistir y Formatear Bloques", persist_and_format_js, [980, 0]),
         _note(
             "rec-note",
@@ -2635,7 +2861,12 @@ return [{
     connections = _conn(
         ("Webhook Recommendations", 0, "Obtener Contexto por Reglas (MCP)"),
         ("Obtener Contexto por Reglas (MCP)", 0, "¿Contexto Válido?"),
-        ("¿Contexto Válido?", 0, "Invocar WF-00 Orquestador"),
+        ("¿Contexto Válido?", 0, "¿Análisis por ítem?"),
+        ("¿Análisis por ítem?", 0, "Preparar Pedidos por Ítem"),
+        ("Preparar Pedidos por Ítem", 0, "Analizar en Paralelo (WF-00 por ítem)"),
+        ("Analizar en Paralelo (WF-00 por ítem)", 0, "Combinar Análisis"),
+        ("¿Análisis por ítem?", 1, "Invocar WF-00 Orquestador"),
+        ("Combinar Análisis", 0, "Persistir y Formatear Bloques"),
         ("¿Contexto Válido?", 1, "Persistir y Formatear Bloques"),
         ("Invocar WF-00 Orquestador", 0, "Persistir y Formatear Bloques"),
     )

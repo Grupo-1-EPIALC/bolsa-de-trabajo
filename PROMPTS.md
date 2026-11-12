@@ -674,7 +674,21 @@
 - **Archivos afectados:** `mcp-tools/**`, `n8n/generate_workflows.py`, `n8n/agentes/*`, `n8n/prompts/match_advisor.md`, `n8n/prompts/training_advisor.md`, `n8n/workflows/*`, `contracts/mcp_tools.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** aceptado (pendiente revisión del equipo).
 
-### P-047 — (plantilla)
+### P-047 — Análisis de IA por oferta o candidato en paralelo
+- **Fecha:** 2026-11-11 · **Autor:** Andres · **Agente:** Claude Code (`n8n-agent`) · **Rama:** `feature/n8n/v0.8.0-recomendaciones-rapidas` (probado primero en una rama local de prueba; mismo PR que P-046) · **HU:** recomendaciones de empleo
+- **Prompt (textual):**
+  > crea una rama de test sumando las llamadas en paralelo pero no la suubas que quiero probar primero
+  >
+  > iintegralo en el mismo PR con las modificaciones anteriores ya que todas tienen el mismo objetivo
+- **Resumen de la respuesta:**
+  - WF-06 (`mode=student|company`) pide a WF-00 un análisis por ítem del ranking y uno para el resumen, todos a la vez con el nodo HTTP Request. Un Code node con `Promise.all` quedaba limitado a 6 pedidos simultáneos.
+  - Salen de a 10 con 10 s entre lotes, porque con 11 simultáneos NVIDIA devolvió 429. Cada pedido tiene 100 s y el que se cuelga se reintenta una vez (NVIDIA a veces deja una respuesta abierta que el timeout del LLM no corta).
+  - `match_advisor` 1.4.0 (un ítem por pedido).
+  - **Medido** con el mismo perfil: student 23,8–37,7 s (antes 46–96 s) y company 32,7 s con 10 candidatos; 111 s cuando hubo que reintentar un candidato colgado.
+- **Archivos afectados:** `n8n/generate_workflows.py`, `n8n/workflows/WF-06-recomendador.json`, `n8n/prompts/match_advisor.md`, `contracts/n8n.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
+
+### P-048 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
