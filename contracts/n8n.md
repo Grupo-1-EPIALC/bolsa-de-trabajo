@@ -11,7 +11,7 @@
 
 | Workflow | Qué hace |
 |---|---|
-| `WF-0R` Agente especialista y Router NVIDIA | Ejecuta al agente pedido con el modelo que reserva el router (`router_*` de mcp-tools) |
+| `WF-0R` Agente especialista y Router NVIDIA | Ejecuta al agente pedido con el modelo que reserva el router (`router_*` de mcp-tools). Cada agente ve sólo sus herramientas (§5.1); el que no usa ninguna corre por `Agente sin herramientas`, sin conexión MCP |
 | `WF-0V` Verificador | JSON Schema (`validate_json_schema`) + grounding (`check_grounding`) + integridad de score + agente verificador |
 | `WF-00` Orquestador | Coordina especialista → verificador, con reintento si rechaza (`AGENT_MAX_VERIFY_RETRIES`) |
 | `WF-01` Procesar CV | `POST /webhook/cv-extract`: extrae el CV con el agente CV Structurer (§3) |
@@ -54,17 +54,32 @@ También se acepta `X-Webhook-Token` con `N8N_WEBHOOK_TOKEN`. Sin token válido:
 { "mode": "student", "request_id": "req-…", "limit": 5, "profile_id": "prof-…" }
 ```
 
-- `mode=student` (`profile_id`): ranking con `rank_jobs_for_student` y agente `match_advisor` (`perfil=postulante`, prompt 1.2.0). En `next_steps` sólo `apply` o `profile_tip`: no hay cursos, proyectos ni portfolios por oferta (WF-06 descarta otros tipos).
+- `mode=student` (`profile_id`): ranking con `rank_jobs_for_student` y agente `match_advisor` (`perfil=postulante`, prompt 1.3.0). En `next_steps` sólo `apply` o `profile_tip`: no hay cursos, proyectos ni portfolios por oferta (WF-06 descarta otros tipos).
 - `mode=company` (`job_id`): ranking con `rank_candidates_for_job` y `match_advisor` (`perfil=empresa`).
-- `mode=training` (sólo `profile_id`): qué competencias sumar o mejorar **en general**, no por oferta. WF-06 pide las brechas por reglas a matching-service (`GET /api/v1/matches/students/{profile_id}/skill-gaps`, sobre las ofertas más parecidas al perfil), el snapshot del perfil sin datos personales (`rank_jobs_for_student`) y los cursos (`search_courses`). Ejecuta `training_advisor` (`perfil=postulante`, prompt 2.1.0) y guarda con `mode=training` en `/recommendations/batch` una sola entrada con hasta 5 ítems `{type: course | skill | profile_tip, skill, text, priority}`, sin score ni proyectos. Si no hay brechas, no llama a la IA (`skipped`). Detalle en [`matching.md`](matching.md), parte B §B.2.
-- Diccionario de competencias: las brechas y los matches por reglas ya vienen normalizados ([`matching.md`](matching.md) §5.1). `matched_skills[].via` dice qué skill del perfil cubre la pedida (SQL por PostgreSQL) y `missing_skills[].similar_to` / `skill_gaps[].similar_to`, qué herramienta similar ya sabe y le facilita aprenderla (GitHub para GitLab). Los agentes la usan como puente y pueden consultar `resolver_skills` (MCP) si dudan de un nombre.
+- `mode=training` (sólo `profile_id`): qué competencias sumar o mejorar **en general**, no por oferta. WF-06 pide las brechas por reglas a matching-service (`GET /api/v1/matches/students/{profile_id}/skill-gaps`, sobre las ofertas más parecidas al perfil), el snapshot del perfil sin datos personales (`rank_jobs_for_student`) y los cursos (`search_courses`). Ejecuta `training_advisor` (`perfil=postulante`, prompt 2.2.0) y guarda con `mode=training` en `/recommendations/batch` una sola entrada con hasta 5 ítems `{type: course | skill | profile_tip, skill, text, priority}`, sin score ni proyectos. Si no hay brechas, no llama a la IA (`skipped`). Detalle en [`matching.md`](matching.md), parte B §B.2.
+- Diccionario de competencias: las brechas y los matches por reglas ya vienen normalizados ([`matching.md`](matching.md) §5.1). `matched_skills[].via` dice qué skill del perfil cubre la pedida (SQL por PostgreSQL) y `missing_skills[].similar_to` / `skill_gaps[].similar_to`, qué herramienta similar ya sabe y le facilita aprenderla (GitHub para GitLab). Los agentes la usan como puente. `match_advisor` y `training_advisor` no usan herramientas: todo lo que necesitan (ranking, brechas, snapshot del perfil y cursos) lo junta WF-06 por código, en paralelo, antes de llamar a la IA, y lo manda como JSON compacto.
 - El resultado se guarda con `POST /api/v1/matches/recommendations/batch`, separando `rule_based` (`origin: "RULES"`) de `ai_recommendations` (`origin: "AI"`, `model`, `generated_at`, `prompt_version`, `disclaimer`). Nunca se devuelve un score propio ([`matching.md`](matching.md), parte B).
 
 ## 5. Salidas de IA y verificación
 
 - Los agentes responden **sólo JSON** que cumpla su schema: `cv_standard`, `cv_design`, `match_student_recommendations`, `match_company_recommendations`, `company_recommendations`, `student_recommendations` y `verifier_verdict`. Los schemas vigentes son los de `mcp-tools/app/data/schemas/` (los usa `validate_json_schema`); las copias anteriores quedaron en [`historico/`](historico/).
+- Antes de verificar, `WF-00` recorta la salida a los topes del schema (`maxItems`, `maxLength`, tomados de `mcp-tools/app/data/schemas/` al generar los workflows): un ítem de más no provoca un reintento. Los textos se cortan en una palabra con `…`.
 - `WF-0V` rechaza una salida si no cumple el schema, si menciona competencias que no están en la fuente (`check_grounding`) o si el score reportado no es el del motor. El orquestador reintenta con la instrucción del verificador.
 - Catálogo de agentes en `n8n/agentes/*.json` y prompts versionados en `n8n/prompts/*.md`.
+
+### 5.1 Herramientas y reglas por agente
+
+Cada agente declara en `herramientas` las herramientas MCP que usa. El generador arma su system prompt sólo con esas filas de `mcp-tools/app/data/reglas.md` (con sus propias skills y schemas como ejemplo) y n8n se conecta con `&herramientas=` para que el MCP no le ofrezca otras ([`mcp_tools.md`](mcp_tools.md) §2). Las `skills` exigen `leer_skill`. La regla del puntaje por reglas va sólo a los agentes de matching (perfiles `postulante` y `empresa`).
+
+| Agente | Herramientas |
+|---|---|
+| `cv_structurer` | ninguna (el texto del CV llega en el pedido) |
+| `cv_designer` | `leer_skill` (`diseno-cv`), `validate_json_schema` (`cv_design`) |
+| `match_advisor` | ninguna (WF-06 manda el ranking por reglas) |
+| `training_advisor` | ninguna (WF-06 manda brechas, perfil y cursos) |
+| `company_advisor` | `leer_skill`, `get_job`, `get_profile`, `compute_match`, `missing_skills`, `resolver_skills` |
+| `verificador` | `validate_json_schema`, `check_grounding` |
+| `orquestador`, `sintesis` | `get_agent_settings` |
 
 ## 6. Configuración y credenciales
 

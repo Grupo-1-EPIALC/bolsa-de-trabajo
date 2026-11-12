@@ -650,7 +650,31 @@
 * **Archivos afectados:** `frontend/src/components/layout/SiteHeader.tsx`, `frontend/src/components/layout/SiteFooter.tsx`, `PROMPTS.md`.
 * **Decisión:** aceptado.
 
-### P-046 — (plantilla)
+### P-046 — Recomendaciones de IA más rápidas y herramientas por agente
+- **Fecha:** 2026-11-11 · **Autor:** Andres · **Agente:** Claude Code (`mcp-agent`, `n8n-agent`) · **Ramas:** `feature/mcp/v0.8.0-herramientas-por-agente`, `feature/n8n/v0.8.0-recomendaciones-rapidas` · **HU:** recomendaciones de empleo
+- **Prompt (textual):**
+  > cuando uso los agentes de IA sobre todo en las recomendaciones demora bastante, quisiera que analises si no hay algun cuello de botella o alguna tarea que pueda agilizarse para responder mas rapido sin perder calidad
+  >
+  > revisa las ejecuciones con mi usuario
+  >
+  > empesa a aplicar los cambios y las reglas van por agente, si estos agentes no las usan dejalas en los que si.
+  >
+  > revisa que tambien los agentes para leer y armar el cv no tengan reglas que no les corresponden
+- **Resumen de la respuesta:**
+  - **Diagnóstico** (ejecuciones de n8n): el 99 % del tiempo es la generación del LLM en WF-0R; el verificador tarda 0,1 s y el contexto por reglas < 0,5 s. Dos recomendaciones hicieron un reintento completo (30–50 s) sólo porque el modelo devolvió 4 `watch_outs` donde el schema acepta 3.
+  - **mcp-tools 0.8.0:** `&herramientas=a,b` en la conexión MCP achica el perfil a las herramientas del agente (nunca lo amplía; vacío = ninguna).
+  - **n8n:**
+    - cada agente declara `herramientas`; el system prompt lleva sólo esas filas de `reglas.md` con sus skills y schemas, y la regla del puntaje sólo va a los agentes de matching;
+    - `match_advisor`, `training_advisor` y `cv_structurer` no usan herramientas (los datos llegan en el pedido) y corren por `Agente sin herramientas`, sin conexión MCP;
+    - `cv_designer` y `company_advisor` dejan la skill `verificacion-grounding` (es del verificador);
+    - WF-00 recorta la salida a los topes del schema antes de verificar, en vez de reintentar;
+    - WF-06 manda el contexto como JSON compacto y pide configuración, ranking, brechas y perfil en paralelo;
+    - prompts `match_advisor` 1.3.0 y `training_advisor` 2.2.0.
+  - **Resultado medido** con el mismo perfil: entrada de `match_advisor` 11.617 → 5.944 tokens y de `training_advisor` 8.052 → 3.313; sin reintentos por topes. La salida no cambia: el próximo paso es una llamada por oferta en paralelo.
+- **Archivos afectados:** `mcp-tools/**`, `n8n/generate_workflows.py`, `n8n/agentes/*`, `n8n/prompts/match_advisor.md`, `n8n/prompts/training_advisor.md`, `n8n/workflows/*`, `contracts/mcp_tools.md`, `contracts/n8n.md`, `AGENTS.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
+
+### P-047 — (plantilla)
 - **Fecha:** · **Autor:** · **Agente:** · **Rama:** · **HU:**
 - **Prompt (textual o resumido):**
   > …
