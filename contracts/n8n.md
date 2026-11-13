@@ -1,7 +1,7 @@
 # Contrato · n8n (workflows y agentes de IA)
 
 > **Para:** quien mantiene n8n (workflows, agentes, prompts) y los servicios que lo llaman.
-> **Servicio:** n8n con los workflows de `n8n/workflows/` (generados con `python n8n/generate_workflows.py` e importados y publicados por `n8n-init`). Toda la IA del sistema corre acá; no existe `ai-service`.
+> **Servicio:** n8n con los workflows de `n8n/workflows/` (generados con `python n8n/generate_workflows.py` e importados y publicados por `n8n/init/bootstrap.sh` al arrancar n8n). Toda la IA del sistema corre acá; no existe `ai-service`.
 > **Partes:** 1. Workflows · 2. Webhooks · 3. Extracción de CV (WF-01) · 4. Recomendaciones (WF-06) · 5. Salidas de IA y verificación · 6. Configuración y credenciales · 7. Notificaciones por mail (WF-02 a WF-05) · 8. Diseño del CV (WF-07). Los `§` de cada parte se refieren a esa parte.
 > Los documentos de los que sale este contrato están en [`historico/`](historico/). Todos los ejemplos usan datos ficticios.
 
@@ -85,7 +85,7 @@ Cada agente declara en `herramientas` las herramientas MCP que usa. El generador
 ## 6. Configuración y credenciales
 
 - Variables de n8n (`docker-compose.yml`): `MCP_URL`, `PROFILE_SERVICE_URL`, `JOBS_SERVICE_URL`, `MATCHING_SERVICE_URL`, `SERVICE_TOKEN`, `N8N_WEBHOOK_TOKEN`, `SMTP_*`, `N8N_INTERNAL_WEBHOOK_URL`. Los parámetros dinámicos se leen con `get_agent_settings` ([`mcp_tools.md`](mcp_tools.md) §5), nunca con valores fijos.
-- `n8n-init` crea en cada arranque las credenciales "OpenAI account" (NVIDIA NIM, desde `NVIDIA_API_KEY`), "SMTP Bolsa" y "Postgres n8n (avisos)", y la tabla `bolsa.notifications_sent`. Después importa y publica los workflows. El repo es la fuente de verdad: los cambios hechos sólo en la UI se pisan al reiniciar.
+- Antes de arrancar, el contenedor de n8n corre `n8n/init/bootstrap.sh`, que crea las credenciales "OpenAI account" (NVIDIA NIM, desde `NVIDIA_API_KEY`), "SMTP Bolsa" y "Postgres n8n (avisos)", y la tabla `bolsa.notifications_sent`. Después importa y publica los workflows. El repo es la fuente de verdad: los cambios hechos sólo en la UI se pisan al reiniciar.
 
 ## 7. Notificaciones por mail (WF-02 a WF-05)
 
@@ -161,7 +161,7 @@ Los webhooks internos (`student-offer`, `company-alerts`) son sólo para n8n. No
 | `admin_email` | `NOTIFY_ADMIN_EMAIL` | vacío | Destino de WF-05. Vacío = no avisa errores |
 | `frontend_url` | `FRONTEND_URL` | `http://localhost:8080` | Link de los botones del mail |
 
-SMTP: `n8n-init` crea la credencial **SMTP Bolsa** desde `SMTP_HOST`/`SMTP_PORT`, con `SMTP_USER`/`SMTP_PASSWORD`/`SMTP_SECURE` opcionales para un servidor real. En dev los mails van a Mailpit (http://localhost:8025). El remitente es `Bolsa de Trabajo <SMTP_FROM>`.
+SMTP: el arranque de n8n crea la credencial **SMTP Bolsa** desde `SMTP_HOST`/`SMTP_PORT`, con `SMTP_USER`/`SMTP_PASSWORD`/`SMTP_SECURE` opcionales para un servidor real. En dev los mails van a Mailpit (http://localhost:8025). El remitente es `Bolsa de Trabajo <SMTP_FROM>`.
 
 ---
 
@@ -173,7 +173,7 @@ SMTP: `n8n-init` crea la credencial **SMTP Bolsa** desde `SMTP_HOST`/`SMTP_PORT`
   - `execution:{workflow_id}|{execution_id}`: error avisado (WF-05).
 - Antes de mandar, un nodo Postgres **reserva** la clave en `bolsa.notifications_sent` (base propia de n8n) con `INSERT … ON CONFLICT DO NOTHING RETURNING`. Sólo sale el mail cuya clave se reservó. Aunque lleguen varios eventos a la vez, una sola ejecución gana cada clave: se probó con 6 avisos simultáneos de la misma oferta y salió un solo mail.
 - La reserva es previa al envío: si el SMTP falla, ese mail no se reintenta (preferimos perder un aviso a duplicarlo) y WF-05 avisa del error.
-- La tabla la crea `n8n-init` (`CREATE TABLE IF NOT EXISTS`). Sobrevive a reinicios y a la reimportación de los workflows.
+- La tabla la crea el arranque de n8n (`CREATE TABLE IF NOT EXISTS`). Sobrevive a reinicios y a la reimportación de los workflows.
 
 ```sql
 -- Qué se avisó (base n8n)
@@ -184,7 +184,7 @@ SELECT workflow, notification_key, created_at FROM bolsa.notifications_sent ORDE
 
 ### 6. Cómo probarlo
 
-1. `docker compose up -d --build` (n8n-init importa y publica WF-02 a WF-05).
+1. `docker compose up -d --build` (al arrancar, n8n importa y publica WF-02 a WF-05).
 2. Un estudiante completa su perfil aceptando "contacto por email" → en Mailpit llega "Tenés N ofertas compatibles…". Las empresas de esas ofertas reciben "Nuevo candidato compatible…".
 3. Una empresa publica una oferta compatible → el estudiante recibe "Nueva oferta para vos: …".
 4. Repetir el evento o editar el perfil no reenvía nada.
