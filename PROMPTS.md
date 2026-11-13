@@ -67,6 +67,7 @@
 | P-051 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`matching-agent`) | `chore/matching-service/fix-persistence` | Agregar persistencia para configuraciones y recomendaciones de `matching-service`, y registrar el prompt en `PROMPTS.md` | Configuración, recomendaciones de IA y estados de pedidos almacenados en PostgreSQL, schema `matching`; valores iniciales tomados de `scoring_rules.yaml`; se incorporaron pruebas de persistencia entre reinicios | aceptado |
 | P-056 | 2026-11-12 | Andres | Claude Code (`devops-agent`, `n8n-agent`) | `chore/n8n/v0.8.1-arranque-en-un-contenedor` | Por qué hay 2 contenedores de n8n y eliminar el de más | El arranque (`bootstrap.sh`) pasa al entrypoint del contenedor `n8n` y se quita `n8n-init`; n8n se fija en `2.45.7` porque con `1.123.95` no se publicaba ningún workflow | aceptado |
 | P-057 | 2026-11-12 | Andres | Claude Code (`frontend-agent`) | `fix/frontend/v0.11.2-leyenda-config-matching` | Revisar la leyenda del admin que dice que matching guarda la configuración en memoria, y si pasa lo mismo con las recomendaciones | La leyenda y `contracts/matching.md` dicen ahora que la configuración y las recomendaciones se guardan en PostgreSQL; verificado con un reinicio de matching-service | aceptado |
+| P-058 | 2026-11-13 | Andres | Claude Code (`qa-agent`, `devops-agent`) | `docs/manuales/v0.1.0-manuales-y-datos-de-prueba` | Dejar sólo las cuentas propias, crear 50 estudiantes y 10 empresas de prueba con logo y 5 búsquedas, Excel, dump SQL con instrucciones y manuales de instalación y de usuario con capturas | Datos cargados por las APIs, `infra/datos-prueba/` (dump + Excel), sección del README y `docs/manuales/` (2 PDF con 45 capturas) | aceptado |
 
 ---
 
@@ -793,6 +794,8 @@
   - Si una base quedó con workflows activados por n8n 1.x, 2.45.7 no los puede reimportar (`no permission to deactivate`): se arregla una vez con `docker compose run --rm --no-deps --entrypoint n8n n8n unpublish:workflow --all`.
   - **Probado:** un solo contenedor `healthy`, los 10 workflows publicados sin errores de activación, recomendaciones para el estudiante en 37,7 s (5 ítems verificados y guardados) y extracción de CV en 19 s.
 - **Archivos afectados:** `docker-compose.yml`, `n8n/init/bootstrap.sh`, `n8n/generate_workflows.py` (comentario), `README.md`, `.env.example`, `contracts/n8n.md`, `docs/ARQUITECTURA.md`, `docs/RESPONSABILIDADES.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
+
 ### P-057 — Leyenda de la configuración de matching
 - **Fecha:** 2026-11-12 · **Autor:** Andres · **Agente:** Claude Code (`frontend-agent`) · **Rama:** `fix/frontend/v0.11.2-leyenda-config-matching`
 - **Prompt (textual):**
@@ -804,4 +807,19 @@
   - **Recomendaciones:** se guardan en `matching.recommendations` y los pedidos en `matching.recommendation_requests`. Verificado: tras reiniciar matching-service, `GET /recommendations/students/{id}` sigue devolviendo las 5 recomendaciones de IA (`status: ready`). En el front no había textos que dijeran lo contrario.
   - Frontend 0.11.2. `tsc`, prettier y vitest (63 tests) en verde.
 - **Archivos afectados:** `frontend/src/components/admin/MatchingSettings.tsx`, `frontend/package.json`, `frontend/package-lock.json`, `contracts/matching.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
+
+### P-058 — Datos de prueba, dump y manuales
+- **Fecha:** 2026-11-13 · **Autor:** Andres · **Agente:** Claude Code (`qa-agent`, `devops-agent`) · **Rama:** `docs/manuales/v0.1.0-manuales-y-datos-de-prueba`
+- **Prompt (textual):**
+  > deja mi usuario garzamorada y el usuario admin y crea registrandolos en un excel con la misma clave 50 usuarios de prueba con distintos perfiles entre Administracion, IT, Educacion y Administracion publica y unas 10 empresas con unas 5 busquedas distitas cada una (si podes haceles un logo). Cuando termines hace un dump del sql y agrega las instrucciones al readme para importar los datos de configuracion y de prueba. Tambien quiero que generes un manual que incluya la instalacion de la app y un manual con cada uno de los niveles de usuario que tenga capturas de pantalla de las distintas opciones (si intalas algo para generar el pdf y las capturas que no quede en el proyecto)
+- **Resumen de la respuesta:**
+  - **Limpieza local** (con backup previo de las bases `bolsa` y `n8n`): quedaron sólo las cuentas del autor y `admin@bolsa.local`; se borraron las demás cuentas, perfiles, empresas, ofertas, recomendaciones, avisos enviados y CVs huérfanos. El seed de demo se apagó en el `.env` local (`PROFILE_SEED_DEMO`/`JOBS_SEED_DEMO=false`) para que no vuelva al reiniciar.
+  - **Datos de prueba ficticios**, cargados por las APIs internas (registro, perfil, logo y búsquedas) para respetar las validaciones y los eventos: 50 estudiantes con perfil completo (13 IT, 13 Administración, 12 Educación, 12 Administración pública), 10 empresas (3 IT, 3 Administración, 2 Educación, 2 Administración pública) con CUIT válido, perfil completo, logo PNG dibujado con Pillow y 5 búsquedas distintas cada una, y `admin.prueba@example.test` (rol `admin`) para el manual. Todas con la clave de la planilla. El matching por reglas ordena bien por área (68–90 puntos para un perfil de IT).
+  - `infra/datos-prueba/usuarios_prueba.xlsx`: cuentas, estudiantes, empresas y búsquedas.
+  - `infra/datos-prueba/bolsa_datos_prueba.sql`: dump sólo de datos de `auth`, `profile`, `jobs` y `matching`, con `TRUNCATE` previo. Se sacó de una copia temporal de la base **sin la cuenta personal del autor**, y sin sesiones, tokens ni outbox. Probado sobre una base vacía: 62 cuentas, 50 perfiles, 10 logos, 50 búsquedas y la configuración de matching. La configuración de n8n no va: la arma `bootstrap.sh` desde `.env`.
+  - `README.md`: sección "Datos de configuración y de prueba" (bash y PowerShell) y enlace a los manuales.
+  - `docs/manuales/manual_instalacion.pdf` (12 páginas) y `docs/manuales/manual_usuario.pdf` (45 páginas: acceso, estudiante, empresa y administrador), con 45 capturas de la app real, incluidas las funciones de IA (lectura del CV, recomendaciones por oferta, formación general, diseño del CV y análisis de candidatos). Capturas y PDF con Playwright/Chromium en un contenedor descartable: no se instaló nada en el proyecto.
+  - La rama integra `chore/n8n/v0.8.1-arranque-en-un-contenedor` y `fix/frontend/v0.11.2-leyenda-config-matching`, porque el manual describe el arranque con un solo contenedor de n8n y la leyenda corregida.
+- **Archivos afectados:** `infra/datos-prueba/bolsa_datos_prueba.sql`, `infra/datos-prueba/usuarios_prueba.xlsx`, `docs/manuales/manual_instalacion.pdf`, `docs/manuales/manual_usuario.pdf`, `README.md`, `PROMPTS.md`.
 - **Decisión:** aceptado (pendiente revisión del equipo).

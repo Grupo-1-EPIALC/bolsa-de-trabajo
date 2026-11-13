@@ -3,6 +3,7 @@
 Matching estudiante–oferta con microservicios REST, scoring por reglas y agentes de IA orquestados en `n8n`.
 - Reglas de arquitectura y agentes: [AGENTS.md](AGENTS.md).
 - Historial de prompts de desarrollo: [PROMPTS.md](PROMPTS.md).
+- Manuales de instalación y de uso (estudiante, empresa y admin): [docs/manuales/](docs/manuales/).
 
 ## Requisitos
 
@@ -40,6 +41,38 @@ Los datos viven en **volúmenes externos**, fuera de los contenedores y de compo
 | `bolsa_cv_storage` | CVs subidos por los estudiantes |
 
 Para empezar de cero hay que borrarlos a mano (**se pierde todo**): `docker compose down && docker volume rm bolsa_pg_data bolsa_n8n_data bolsa_cv_storage && sh infra/scripts/create-volumes.sh`.
+
+### Datos de configuración y de prueba
+
+En [`infra/datos-prueba/`](infra/datos-prueba/) hay un juego de datos ficticio listo para importar:
+
+| Archivo | Qué tiene |
+|---|---|
+| `bolsa_datos_prueba.sql` | Dump (sólo datos) de los schemas `auth`, `profile`, `jobs` y `matching`: 2 cuentas `admin`, 10 empresas con perfil, logo y 5 búsquedas cada una, 50 estudiantes con el perfil completo (Administración, IT, Educación y Administración pública) y la configuración de matching |
+| `usuarios_prueba.xlsx` | Las cuentas con su clave (todas las de prueba usan la misma), los perfiles, las empresas y las búsquedas |
+
+La configuración de n8n (credenciales y workflows) no va en el dump: la crea `n8n/init/bootstrap.sh` en cada arranque desde `.env` y `n8n/workflows/`. Para que los agentes de IA respondan, cargá `NVIDIA_API_KEY` en `.env`.
+
+Para importarlos:
+
+1. En `.env`, apagá los datos de demo para que no se mezclen con los de prueba:
+   ```bash
+   PROFILE_SEED_DEMO=false
+   JOBS_SEED_DEMO=false
+   ```
+2. Levantá el entorno y esperá a que todo quede `healthy`. Los servicios crean las tablas al arrancar:
+   ```bash
+   docker compose up -d --build
+   docker compose ps
+   ```
+3. Importá el dump. **Reemplaza** todas las cuentas, perfiles, búsquedas y recomendaciones que haya:
+   ```bash
+   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' < infra/datos-prueba/bolsa_datos_prueba.sql
+   ```
+   En PowerShell: `Get-Content infra/datos-prueba/bolsa_datos_prueba.sql -Raw | docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q'`.
+4. Entrá en http://localhost:8080 con cualquier cuenta de `usuarios_prueba.xlsx`.
+
+Los mails de prueba (`@example.test`) no salen a internet: llegan a Mailpit. Los manuales de instalación y de uso están en [`docs/manuales/`](docs/manuales/).
 
 ## URLs
 
