@@ -1,20 +1,53 @@
 # Bolsa de Trabajo · MVP
 
+**TP2 · Elementos de Programación IA y LowCode · 2.º cuatrimestre 2026 · Grupo 1**
+Proyecto A: Plataforma de vinculación y desarrollo profesional.
+
 Matching estudiante–oferta con microservicios REST, scoring por reglas y agentes de IA orquestados en `n8n`.
-- Reglas de arquitectura y agentes: [AGENTS.md](AGENTS.md).
-- Historial de prompts de desarrollo: [PROMPTS.md](PROMPTS.md).
-- Manuales de instalación y de uso (estudiante, empresa y admin): [docs/manuales/](docs/manuales/).
+
+## Objetivo
+
+Vincular estudiantes y graduados con las ofertas laborales de empresas. El sistema:
+
+1. Registra perfiles de estudiantes, a mano o **importando el CV en PDF/DOCX, que la IA interpreta** y el estudiante revisa antes de guardar.
+2. Registra empresas y sus búsquedas con requisitos (competencias obligatorias, deseables y excluyentes, experiencia, idiomas, condiciones).
+3. Compara perfil ↔ oferta y calcula un **puntaje de compatibilidad por reglas explícitas** (`origin: "RULES"`), con el desglose por criterio y las **competencias faltantes**.
+4. Pide a **agentes de IA en n8n** recomendaciones de formación, de mejora del perfil y de candidatos (`origin: "AI"`), verificadas antes de mostrarse.
+5. Automatiza con n8n la lectura de CVs, las recomendaciones y los avisos por mail (oferta nueva, candidato nuevo, errores).
+
+El front **siempre muestra separados** el resultado por reglas (badge verde) y la sugerencia de la IA (badge ámbar, con aviso de que es orientativa). La IA nunca calcula ni cambia el puntaje.
+
+## Documentación
+
+| Documento | Contenido |
+|---|---|
+| [docs/manuales/](docs/manuales/) | Manuales de instalación y de uso (estudiante, empresa y admin) |
+| [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Diagrama de arquitectura, redes, puertos y recorrido de los datos |
+| [docs/BITACORA_IA.md](docs/BITACORA_IA.md) | Bitácora de uso de IA: herramientas, decisiones, modelo elegido y sus límites, dificultades y correcciones |
+| [docs/RESPONSABILIDADES.md](docs/RESPONSABILIDADES.md) | Responsabilidades de cada integrante |
+| [docs/ENTREGA.md](docs/ENTREGA.md) | Correspondencia entre la consigna y el repositorio |
+| [PROMPTS.md](PROMPTS.md) | Historial de prompts de desarrollo y decisiones |
+| [AGENTS.md](AGENTS.md) | Reglas de arquitectura y de agentes |
+| [contracts/](contracts/) | Un contrato por servicio (endpoints, JSON, errores) |
+| [n8n/workflows/](n8n/workflows/) | Workflows de n8n exportados en JSON |
 
 ## Requisitos
 
-- Docker Desktop (Compose v2)
-- Para trabajar fuera de Docker: Python 3.12 y Node 22
+- Docker Desktop (Compose v2). Es lo único obligatorio.
+- `openssl` para generar las claves JWT (viene con Git Bash en Windows, macOS y Linux).
+- **API key gratuita de NVIDIA NIM** para los agentes de IA: crear una cuenta en <https://build.nvidia.com>, entrar a *API Keys* y generar una. Sin la key funciona todo lo demás (cuentas, perfiles, búsquedas, puntaje por reglas, avisos), pero la lectura de CVs y las recomendaciones de IA no responden.
+- Para trabajar fuera de Docker: Python 3.12 y Node 22.
 
 ## Levantar el entorno
 
 ```bash
-cp .env.example .env            # completar valores (en dev los de ejemplo sirven)
-mkdir -p secrets                # claves JWT de auth-service (ver .env.example)
+cp .env.example .env            # completar NVIDIA_API_KEY (el resto de los valores de ejemplo sirven en dev)
+
+# Claves RSA con las que auth-service firma los JWT (no se suben al repo)
+mkdir -p secrets
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out secrets/jwt_private.pem
+openssl rsa -in secrets/jwt_private.pem -pubout -out secrets/jwt_public.pem
+
 sh infra/scripts/create-volumes.sh   # una sola vez: volúmenes externos con los datos
 docker compose up -d --build    # modo desarrollo (hot reload)
 docker compose ps               # todos deben quedar "healthy"
@@ -28,7 +61,19 @@ Modo tipo producción (sin `docker-compose.override.yml`):
 docker compose -f docker-compose.yml up -d --build
 ```
 
-Apagar: `docker compose down`.
+### Iniciar, detener y reiniciar
+
+| Acción | Comando |
+|---|---|
+| Levantar todo | `docker compose up -d --build` |
+| Ver el estado | `docker compose ps` |
+| Ver los logs de un servicio | `docker compose logs -f matching-service` |
+| Detener sin borrar contenedores | `docker compose stop` |
+| Volver a arrancar lo detenido | `docker compose start` |
+| Reiniciar un servicio | `docker compose restart profile-service` |
+| Reiniciar n8n y volver a cargar los workflows | `docker compose up -d --force-recreate n8n` |
+| Reconstruir un servicio después de cambiar dependencias | `docker compose up -d --build jobs-service` |
+| Apagar y borrar contenedores (los datos quedan) | `docker compose down` |
 
 ### Datos persistentes
 
@@ -74,6 +119,36 @@ Para importarlos:
 
 Los mails de prueba (`@example.test`) no salen a internet: llegan a Mailpit. Los manuales de instalación y de uso están en [`docs/manuales/`](docs/manuales/).
 
+Si no se importa el dump, los servicios cargan solos un juego de demo (15 perfiles y 12 ofertas) mientras `PROFILE_SEED_DEMO` y `JOBS_SEED_DEMO` estén en `true`, pero no hay cuentas de administrador. Para tener una, registrarse como estudiante y cambiarle el rol (con los valores de `POSTGRES_USER` y `POSTGRES_DB` de `.env`):
+
+```bash
+docker compose exec postgres psql -U postgres -d bolsa \
+  -c "UPDATE auth.users SET role='admin' WHERE email='admin@bolsa.local';"
+```
+
+y volver a iniciar sesión.
+
+Todos los datos del repositorio son **ficticios**.
+
+## Funcionalidades principales
+
+**Estudiante:** registro e inicio de sesión · alta del perfil importando el CV (la IA propone los datos y el estudiante los revisa y confirma) o a mano · "Ofertas para vos" con el puntaje por reglas, el desglose "¿Por qué este puntaje?" y las competencias faltantes · recomendaciones de formación y de mejora del perfil generadas por IA · descarga del CV en PDF o Word con el diseño sugerido por la IA o elegido por el estudiante · cambio y recuperación de clave y de correo.
+
+**Empresa:** registro con razón social y CUIT validado · perfil público (logo, rubro, sedes, beneficios) · alta, edición, cierre y reapertura de búsquedas · candidatos ordenados por reglas con el análisis de la IA.
+
+**Administrador:** cuentas de estudiantes y empresas (buscar, editar, forzar cambio de clave, borrar) · cantidad de ofertas y candidatos que se recomiendan · enlaces a la documentación de las APIs.
+
+**Automatizaciones (n8n):** lectura y estructuración del CV · recomendaciones para estudiantes y empresas · diseño del CV · mail a estudiantes compatibles cuando se publica una oferta · aviso a empresas cuando aparece un candidato compatible · aviso al admin cuando falla un workflow.
+
+### Recorrido sugerido para la demo
+
+1. **Empresa:** publicar una búsqueda con competencias obligatorias y ver en Mailpit el aviso a los estudiantes compatibles.
+2. **Estudiante:** crear el perfil subiendo un CV en PDF; la IA completa los campos y marca los que hay que revisar.
+3. En "Ofertas para vos", abrir una oferta: puntaje por reglas, "¿Por qué este puntaje?", faltantes y luego las recomendaciones de la IA.
+4. **Empresa:** ver los candidatos de la búsqueda (reglas + IA) y el aviso de candidato nuevo en Mailpit.
+5. **Errores:** subir un archivo que no es un CV o pesa más de 5 MB, crear una búsqueda sin competencias obligatorias (422), detener un servicio con `docker compose stop matching-service` y mostrar el mensaje del front y el mail de error al admin.
+6. Mostrar las ejecuciones en n8n y los endpoints en Swagger.
+
 ## URLs
 
 | Qué | URL |
@@ -89,6 +164,8 @@ Si algún puerto está ocupado en tu máquina, cambialo en `.env` (`GATEWAY_PORT
 
 ## Servicios y Arquitectura
 
+El diagrama de componentes y los recorridos de datos están en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
+
 | Servicio | Stack | Puerto interno | Ruta en el gateway Nginx | Red / Acceso | Schema DB |
 |---|---|---|---|---|---|
 | `auth-service` | NestJS (Node 22) | 3000 | `/api/v1/auth/` | `backend` (vía `gateway`) | `auth` |
@@ -98,6 +175,9 @@ Si algún puerto está ocupado en tu máquina, cambialo en `.env` (`GATEWAY_PORT
 | `frontend` | React 18 + Vite | 8080 | `/` | `edge` (vía `gateway`) | — |
 | `n8n` | n8n + Agentes IA | 5678 | — (webhooks internos) | `backend`, `mcp_internal` | base propia `n8n` |
 | `mcp-tools` | FastMCP (`streamable-http`) | 8000 (`/mcp`, `/router/*`) | **No pasa por Nginx** | `mcp_internal` (**directo con `n8n`**) + `backend` | — |
+| `postgres` | PostgreSQL 17 | 5432 | — | `backend` | un schema por servicio + base `n8n` |
+| `mail` | Mailpit | 1025 (SMTP) · 8025 (UI) | — | `backend` | — |
+| IA externa | NVIDIA NIM (API gratuita) | HTTPS | — | Sale desde `n8n` | — |
 
 ### Decisiones clave de arquitectura (IA y MCP)
 1. **Sin `ai-service` intermedio**: toda la orquestación y ejecución de agentes de IA (estructuración de CVs, recomendaciones para estudiantes y empresas, selección de modelos en NVIDIA NIM y verificación anti-alucinación) se ejecuta directamente en **`n8n`**.
@@ -168,10 +248,13 @@ El script corre sólo cuando el volumen `bolsa_pg_data` está vacío. Si lo camb
 ├── docker-compose.yml            # stack completo
 ├── docker-compose.override.yml   # dev: hot reload, Postgres expuesto
 ├── .env.example                  # todas las variables (copiar a .env)
+├── requirements.txt              # dependencias Python de todos los servicios
 ├── AGENTS.md                     # reglas de arquitectura y de agentes
 ├── PROMPTS.md                    # historial de prompts y decisiones (separado)
+├── docs/                         # arquitectura, bitácora de IA, responsabilidades, entrega, manuales
 ├── gateway/nginx.conf            # API Gateway (solo frontend + microservicios REST)
 ├── infra/postgres/init/          # roles + schemas por microservicio
+├── infra/datos-prueba/           # dump de datos ficticios + planilla de usuarios
 ├── services/
 │   ├── auth-service/             # NestJS
 │   ├── profile-service/          # FastAPI por capas (api, application, domain, infrastructure)
@@ -189,6 +272,17 @@ El script corre sólo cuando el volumen `bolsa_pg_data` está vacío. Si lo camb
 └── .github/                      # CI + plantilla de PR
 ```
 
+## Dependencias
+
+Cada servicio Python declara sus dependencias en `pyproject.toml` (las usan los Dockerfiles) y en un `requirements.txt` equivalente. El `requirements.txt` de la raíz los incluye a todos para trabajar sin Docker:
+
+```bash
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Los servicios Node (`auth-service`, `frontend`) usan `package.json` / `package-lock.json` (`npm ci`).
+
 ## Calidad (lo mismo que corre el CI)
 
 Python (desde la carpeta del servicio):
@@ -205,6 +299,12 @@ npm ci && npm run format:check && npm run typecheck && npm test
 ```
 
 El CI (`.github/workflows/ci.yml`) corre sólo los servicios cuyas carpetas cambiaron.
+
+Estado al 12/11/2026: 131 tests en `matching-service`, 116 en `jobs-service`, 120 en `profile-service` y 30 en `mcp-tools`, todos en verde, con cobertura de 91 % a 98 %.
+
+## Seguridad
+
+No se suben contraseñas, tokens ni claves: `.env`, `secrets/` y `*.pem` están en `.gitignore`. Los workflows exportados no llevan credenciales; la de NVIDIA la crea `bootstrap.sh` desde `.env`. Las cuentas de `usuarios_prueba.xlsx` son ficticias y sólo sirven para el entorno local.
 
 ## Flujo Git
 
