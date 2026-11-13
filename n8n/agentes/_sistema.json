@@ -9,9 +9,9 @@
     ],
     "rol_router": "default",
     "modelos": [
-      "nvidia/nemotron-3-ultra-550b-a55b",
-      "deepseek-ai/deepseek-v4.1-flash",
       "minimaxai/minimax-m3.1-flash",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "nvidia/nemotron-3-ultra-550b-a55b",
       "mistralai/mistral-large-4-1t-a52b"
     ]
   },
@@ -25,10 +25,10 @@
     ],
     "rol_router": "default",
     "modelos": [
-      "nvidia/nemotron-3-ultra-550b-a55b",
+      "nvidia/nemotron-3.5-lightning-30b-a3b",
       "deepseek-ai/deepseek-v4.1-flash",
-      "mistralai/mistral-large-4-1t-a52b",
-      "nvidia/nemotron-3.5-lightning-30b-a3b"
+      "nvidia/nemotron-3-ultra-550b-a55b",
+      "mistralai/mistral-large-4-1t-a52b"
     ]
   },
   "verificador": {
@@ -42,9 +42,9 @@
     ],
     "rol_router": "verifier",
     "modelos": [
+      "minimaxai/minimax-m3.1-flash",
       "nvidia/nemotron-3.5-lightning-30b-a3b",
       "deepseek-ai/deepseek-v4.1-flash",
-      "minimaxai/minimax-m3.1-flash",
       "nvidia/nemotron-3-ultra-550b-a55b"
     ]
   }

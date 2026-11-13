@@ -989,7 +989,7 @@ if (r.tried.length < maxAttempts) {
       tried: r.tried,
     });
   } catch (e) {
-    const fallbackList = (cfg.models && (cfg.models[j.role] || cfg.models.default)) || ['nvidia/nemotron-3-ultra-550b-a55b'];
+    const fallbackList = (cfg.models && (cfg.models[j.role] || cfg.models.default)) || ['minimaxai/minimax-m3.1-flash'];
     const nextModel = fallbackList.find(m => !r.tried.includes(m));
     if (nextModel) reserve = { action: 'call', model: nextModel };
   }

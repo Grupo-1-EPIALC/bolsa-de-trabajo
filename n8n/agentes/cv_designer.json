@@ -33,9 +33,9 @@
   },
   "modelos": {
     "nvidia": [
+      "minimaxai/minimax-m3.1-flash",
       "nvidia/nemotron-3.5-lightning-30b-a3b",
       "deepseek-ai/deepseek-v4.1-flash",
-      "minimaxai/minimax-m3.1-flash",
       "mistralai/mistral-large-4-1t-a52b"
     ]
   }

@@ -28,9 +28,9 @@
   },
   "modelos": {
     "nvidia": [
-      "nvidia/nemotron-3-ultra-550b-a55b",
-      "deepseek-ai/deepseek-v4.1-flash",
       "minimaxai/minimax-m3.1-flash",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "nvidia/nemotron-3-ultra-550b-a55b",
       "mistralai/mistral-large-4-1t-a52b"
     ]
   }

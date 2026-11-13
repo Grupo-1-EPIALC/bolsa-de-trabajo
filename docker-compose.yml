@@ -101,9 +101,11 @@ services:
       # Comunicación directa n8n -> mcp-tools por red interna (nunca pasa por Nginx)
       MCP_URL: http://mcp-tools:8000/mcp
       N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN}
-      # Sólo los usa bootstrap.sh para crear la credencial "OpenAI account" (NVIDIA NIM)
+      # Sólo los usa bootstrap.sh para crear la credencial "OpenAI account" (NVIDIA NIM).
+      # La credencial apunta al proxy de mcp-tools, que reenvía a NVIDIA_BASE_URL y corta a
+      # los AGENT_LLM_TIMEOUT_SECONDS (el timeout del nodo LLM de n8n no corta).
       NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
-      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://mcp-tools:8000/llm/v1}
     networks: [backend, mcp_internal]
     volumes:
       - n8n_data:/home/node/.n8n
