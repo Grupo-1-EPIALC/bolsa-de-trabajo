@@ -1,11 +1,14 @@
 // jobs-service · ofertas y búsquedas de empresas (contracts/jobs.md, parte A).
 import { apiFetch } from './api';
 import type {
+  Applicant,
+  ApplicantList,
   JobCreateInput,
   JobList,
   JobOpportunity,
   JobStatusFilter,
   JobUpdateInput,
+  MyApplicationList,
 } from '../types/jobs';
 
 export const PAGE_SIZE = 10;
@@ -45,6 +48,30 @@ export const jobsService = {
   /** DELETE /jobs/{id} · cierra la búsqueda (no la borra). Idempotente. */
   close(jobId: string): Promise<void> {
     return apiFetch<void>(`/jobs/${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+  },
+
+  /** POST /jobs/{id}/applications · postula al estudiante (idempotente). 409 PROFILE_REQUIRED sin perfil. */
+  apply(jobId: string): Promise<Applicant> {
+    return apiFetch<Applicant>(`/jobs/${encodeURIComponent(jobId)}/applications`, {
+      method: 'POST',
+    });
+  },
+
+  /** DELETE /jobs/{id}/applications/me · retira la postulación (idempotente). */
+  withdraw(jobId: string): Promise<void> {
+    return apiFetch<void>(`/jobs/${encodeURIComponent(jobId)}/applications/me`, {
+      method: 'DELETE',
+    });
+  },
+
+  /** GET /jobs/applications/me · ofertas a las que se postuló el estudiante. */
+  myApplications(): Promise<MyApplicationList> {
+    return apiFetch<MyApplicationList>('/jobs/applications/me');
+  },
+
+  /** GET /jobs/{id}/applications · postulados con su contacto (sólo la empresa dueña). */
+  applicants(jobId: string): Promise<ApplicantList> {
+    return apiFetch<ApplicantList>(`/jobs/${encodeURIComponent(jobId)}/applications`);
   },
 
   /** PATCH /jobs/{id} con {"status":"active"} · reabre una búsqueda cerrada. */

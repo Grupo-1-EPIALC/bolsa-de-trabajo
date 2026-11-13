@@ -193,3 +193,42 @@ export interface JobCreateInput {
 }
 
 export type JobUpdateInput = Partial<JobCreateInput> & { status?: 'active' };
+
+// Postulaciones (contracts/jobs.md, parte A §12).
+
+export interface ApplicantContact {
+  name: string;
+  email: string;
+  phone?: string | null;
+}
+
+/** Lo que ve la empresa de quien se postuló: el estudiante lo compartió al postularse. */
+export interface Applicant {
+  id: string;
+  job_id: string;
+  /** Mismo id que `candidate.profile_id` del ranking de matching. */
+  profile_id: string;
+  headline?: string | null;
+  contact: ApplicantContact;
+  applied_at: string;
+  updated_at: string;
+}
+
+export interface ApplicantList {
+  job_id: string;
+  items: Applicant[];
+  total: number;
+}
+
+export interface MyApplication {
+  id: string;
+  job_id: string;
+  applied_at: string;
+  /** `null` si la empresa se dio de baja. */
+  job: { title: string; company_id: string; company_name: string; status: JobStatus } | null;
+}
+
+export interface MyApplicationList {
+  items: MyApplication[];
+  total: number;
+}

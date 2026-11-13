@@ -48,6 +48,7 @@ flowchart LR
     AUTH -->|"eventos de cuenta"| PROF
     AUTH --> JOBS
     PROF -.->|"JWKS · /auth/me"| AUTH
+    JOBS -->|"contacto del postulante (/profiles/me)"| PROF
     JOBS -.-> AUTH
     MATCH -.->|JWKS| AUTH
 
@@ -77,7 +78,7 @@ Líneas llenas: pedidos de negocio. Punteadas: validación del JWT (cada servici
 | `gateway` | Todo el tráfico del host en `:8080` | Lo reparte por ruta; en `/api/v1/auth/login` limita la tasa de pedidos | — |
 | `auth-service` | Registro, login, cambios de clave/correo, admin | JWT RS256 (15 min) + refresh token (7 días), mails, eventos `account.deleted`/`account.updated` | Schema `auth` (usuarios, empresas, sesiones, outbox de eventos) |
 | `profile-service` | Perfil, CV (PDF/DOCX/DOC/MD ≤ 5 MB), logo de empresa | Perfil con completitud, borrador de la IA, CV generado en PDF/DOCX/HTML | Schema `profile` + volumen `bolsa_cv_storage` |
-| `jobs-service` | Ofertas de empresas | Ofertas paginadas, detalle, evento `job.created` | Schema `jobs` |
+| `jobs-service` | Ofertas de empresas y postulaciones de estudiantes | Ofertas paginadas, detalle, evento `job.created`; postulados de cada oferta con su contacto (sólo la empresa dueña) y "Mis postulaciones" | Schema `jobs` (`jobs`, `applications`) |
 | `matching-service` | `profile_id` + `job_id` | Puntaje por reglas con desglose, faltantes, rankings, pedidos a la IA y vistas reglas + IA | Schema `matching` (PostgreSQL): tablas `recommendations`, `recommendation_requests` y `recommendation_settings`, creadas al iniciar el servicio; los puntajes por reglas se recalculan |
 | `n8n` | Webhooks de los servicios | Respuestas de la IA verificadas, mails, avisos de error | Base `n8n` (workflows, ejecuciones) y tabla `bolsa.notifications_sent` |
 | `mcp-tools` | Llamadas MCP de n8n (`X-Service-Token`) | Texto del CV, rankings, validación de schema, grounding, modelo a usar | — |
@@ -199,6 +200,39 @@ sequenceDiagram
         W4->>ML: Aviso a la empresa (sin datos personales del candidato)
     end
     Note over W2,W4: Si algo falla, WF-05 avisa al admin por mail
+```
+
+### 4.4 Postulación a una oferta
+
+El estudiante comparte sus datos de contacto sólo con la empresa de la oferta a la que se postula. jobs-service los copia del perfil con el token del propio estudiante: nunca lee la base de profile-service.
+
+```mermaid
+sequenceDiagram
+    actor E as Estudiante
+    actor C as Empresa
+    participant FE as frontend
+    participant J as jobs-service
+    participant P as profile-service
+    participant MA as matching-service
+
+    E->>FE: Postularme
+    FE->>J: POST /api/v1/jobs/{job_id}/applications
+    J->>P: GET /api/v1/profiles/me (Bearer del estudiante)
+    alt Sin perfil, o sin nombre o email
+        J-->>FE: 409 PROFILE_REQUIRED
+    else Perfil con contacto
+        J->>J: Guarda nombre, email, teléfono, título y profile_id
+        J-->>FE: 201 (200 si ya estaba: refresca el contacto)
+    end
+    C->>FE: Candidatos de la búsqueda
+    par
+        FE->>J: GET /api/v1/jobs/{job_id}/applications (sólo la empresa dueña)
+    and
+        FE->>MA: GET /api/v1/matches/recommendations/jobs/{job_id}
+    end
+    FE-->>C: Postulados con su contacto · recomendados por reglas, con "Se postuló" si coincide el profile_id
+    E->>FE: Retirar postulación
+    FE->>J: DELETE /api/v1/jobs/{job_id}/applications/me
 ```
 
 ## 5. Workflows de n8n

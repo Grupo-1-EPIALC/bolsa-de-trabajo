@@ -155,8 +155,9 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Sólo la empresa dueña edita/cierra (403 si no). Validar que haya ≥ 1 requisito obligatorio.
 - `GET /companies/me/searches` = ofertas activas de la empresa.
 - Emitir `job.created` a n8n.
+- Postulaciones (`/api/v1/jobs/{job_id}/applications`): el `student` se postula a una oferta activa (idempotente) o se retira, y ve las suyas en `GET /jobs/applications/me`; la empresa dueña ve a todos los postulados con su contacto (nombre, email, teléfono, título), copiado de `GET /profiles/me` de profile-service con el Bearer del estudiante. Contrato: `contracts/jobs.md` (parte A) §12.
 - Recibir los eventos de cuenta de auth-service (`POST /api/v1/jobs/internal/account-events`, sólo `X-Service-Token`, idempotente): `account.deleted` archiva todas las ofertas de la empresa (salen de listados, detalle, búsquedas y matching; el JWT vigente recibe `401 ACCOUNT_DELETED`). Contrato: `contracts/jobs.md` (parte C) §11.
-**Tests mínimos:** UT-JOBS-01, UT-JOBS-02 y UT-JOBS-03 (eventos de cuenta).
+**Tests mínimos:** UT-JOBS-01, UT-JOBS-02, UT-JOBS-03 (eventos de cuenta) y UT-JOBS-04 (postulaciones).
 
 ### 4.4 Agente `matching-agent` — matching-service (FastAPI)
 **Debe:**
@@ -204,6 +205,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Rutas protegidas por rol (`student`, `company`, `admin`). El `admin` tiene su área (`pages/AdminArea.tsx`): cuentas (`contracts/auth.md` (parte A) §7) y configuración de matching (`contracts/matching.md` (parte A) §4.5).
 - Componentes `ScoreCard` (badge “Calculado por reglas”) y `AIRecommendations` (badge “Sugerido por IA” + disclaimer), separados.
 - Flujo CV: subir → ver sugerencias → aceptar/editar/descartar cada ítem → guardar.
+- Postulaciones (`contracts/jobs.md` (parte A) §12): botón Postularme/Retirar en cada oferta con el aviso de qué datos ve la empresa, sección "Mis postulaciones" del estudiante y, en los candidatos de la empresa, todos los postulados con su contacto y la marca "Se postuló" en los recomendados (cruce por `profile_id`).
 - Accesibilidad: labels, contraste AA, foco visible. Textos en español.
 **Tests mínimos:** UT-FE-01 a UT-FE-04.
 

@@ -201,28 +201,34 @@ export const CompanyPublicProfileModal: React.FC<CompanyPublicProfileModalProps>
                 )}
 
                 {/* Contacto de Selección */}
-                {company.contact && company.contact.public && (
-                  <section className="border-top pt-3">
-                    <h3 className="h6 fw-bold mb-2">Contacto de Selección / RR. HH.</h3>
-                    <div className="small text-body-secondary">
-                      {company.contact.name && (
-                        <span className="d-block">
-                          <strong>Contacto:</strong> {company.contact.name}
-                        </span>
-                      )}
-                      {company.contact.email && (
-                        <span className="d-block">
-                          <strong>Email:</strong> {company.contact.email}
-                        </span>
-                      )}
-                      {company.contact.phone && (
-                        <span className="d-block">
-                          <strong>Teléfono:</strong> {company.contact.phone}
-                        </span>
-                      )}
-                    </div>
-                  </section>
-                )}
+                {/* profile-service sólo manda `contact` si la empresa lo hizo público (y sin el flag). */}
+                {company.contact &&
+                  (company.contact.email || company.contact.phone || company.contact.name) && (
+                    <section className="border-top pt-3">
+                      <h3 className="h6 fw-bold mb-2">Contacto de Selección / RR. HH.</h3>
+                      <div className="small text-body-secondary">
+                        {company.contact.name && (
+                          <span className="d-block">
+                            <strong>Contacto:</strong> {company.contact.name}
+                          </span>
+                        )}
+                        {company.contact.email && (
+                          <span className="d-block">
+                            <strong>Email:</strong>{' '}
+                            <a href={`mailto:${company.contact.email}`}>{company.contact.email}</a>
+                          </span>
+                        )}
+                        {company.contact.phone && (
+                          <span className="d-block">
+                            <strong>Teléfono:</strong>{' '}
+                            <a href={`tel:${company.contact.phone.replace(/[^\d+]/g, '')}`}>
+                              {company.contact.phone}
+                            </a>
+                          </span>
+                        )}
+                      </div>
+                    </section>
+                  )}
               </div>
             )}
           </div>

@@ -6,6 +6,7 @@ import { ProfileWizard } from '../components/profile/ProfileWizard';
 import { ProfileDashboard } from '../components/profile/ProfileDashboard';
 import { JobRecommendations } from '../components/matching/JobRecommendations';
 import { JobBoard } from '../components/jobs/JobBoard';
+import { MyApplications } from '../components/jobs/MyApplications';
 import { profileService } from '../services/profileService';
 import { ApiError, errorMessage } from '../services/api';
 import { firstIncompleteStep } from '../profile/draft';
@@ -38,6 +39,11 @@ const HEADERS: Record<StudentOnlySection, Header> = {
     title: 'Todas las ofertas',
     subtitle: 'Las búsquedas activas de todas las empresas.',
     icon: 'bi-briefcase',
+  },
+  applications: {
+    title: 'Mis postulaciones',
+    subtitle: 'Las ofertas a las que te postulaste y su estado.',
+    icon: 'bi-send-check',
   },
   profile: {
     title: 'Mi perfil',
@@ -150,8 +156,8 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
   const current: StudentOnlySection =
     section in HEADERS ? (section as StudentOnlySection) : 'panel';
   const header =
-    section === 'jobs'
-      ? HEADERS.jobs
+    section === 'jobs' || section === 'applications'
+      ? HEADERS[section]
       : onboarding
         ? {
             title: 'Alta de perfil',
@@ -176,6 +182,9 @@ export const StudentArea: React.FC<StudentAreaProps> = ({ section, onSection }) 
   } else if (section === 'jobs') {
     // El listado no depende del perfil: se ve aunque todavía no lo haya cargado.
     content = <JobBoard />;
+  } else if (section === 'applications') {
+    // Tampoco depende del perfil: sólo lista lo que ya está en jobs-service.
+    content = <MyApplications onBrowseJobs={() => onSection('jobs')} />;
   } else if (profile === undefined) {
     content = (
       <div className="text-center py-5">

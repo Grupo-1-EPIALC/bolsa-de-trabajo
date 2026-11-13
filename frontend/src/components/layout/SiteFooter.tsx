@@ -47,6 +47,7 @@ export const SiteFooter: React.FC<SiteFooterProps> = ({ user, onNavigate, onSect
                   Ofertas para vos
                 </FooterLink>
                 <FooterLink onClick={() => onSection('jobs')}>Todas las ofertas</FooterLink>
+                <FooterLink onClick={() => onSection('applications')}>Mis postulaciones</FooterLink>
                 <FooterLink onClick={() => onSection('profile')}>Mi perfil</FooterLink>
               </>
             )}

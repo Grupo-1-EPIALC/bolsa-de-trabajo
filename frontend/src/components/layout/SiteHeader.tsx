@@ -24,6 +24,7 @@ const STUDENT_NAV: Array<{ section: StudentSection; label: string; icon: string 
   { section: 'panel', label: 'Mi panel', icon: 'bi-grid' },
   { section: 'recommendations', label: 'Ofertas para vos', icon: 'bi-briefcase' },
   { section: 'jobs', label: 'Todas las ofertas', icon: 'bi-search' },
+  { section: 'applications', label: 'Mis postulaciones', icon: 'bi-send-check' },
   { section: 'profile', label: 'Mi perfil', icon: 'bi-person-vcard' },
 ];
 
@@ -79,7 +80,7 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
         </div>
       </div>
 
-      <nav className="navbar navbar-expand-lg site-navbar py-2" aria-label="Navegación principal">
+      <nav className="navbar navbar-expand-xl site-navbar py-2" aria-label="Navegación principal">
         <div className="container">
           <button
             type="button"
@@ -110,7 +111,7 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
           </button>
 
           <div className={`collapse navbar-collapse ${open ? 'show' : ''}`} id="mainNav">
-            <ul className="navbar-nav ms-auto align-items-lg-center gap-lg-2 py-3 py-lg-0">
+            <ul className="navbar-nav ms-auto align-items-xl-center gap-xl-0 py-3 py-xl-0">
               {user ? (
                 <>
                   {(user.role === 'student'
@@ -131,10 +132,10 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
                       </button>
                     </li>
                   ))}
-                  <li className="nav-item ms-lg-2">
+                  <li className="nav-item ms-xl-2">
                     <button
                       type="button"
-                      className="btn btn-outline-danger btn-pill btn-sm"
+                      className="btn btn-outline-danger btn-pill btn-sm text-nowrap"
                       onClick={go(onLogout)}
                     >
                       <i className="bi bi-box-arrow-right me-1" aria-hidden="true" />
@@ -153,7 +154,7 @@ export const SiteHeader: React.FC<SiteHeaderProps> = ({
                       Inicio
                     </button>
                   </li>
-                  <li className="nav-item ms-lg-2">
+                  <li className="nav-item ms-xl-2">
                     <button
                       type="button"
                       className="btn btn-outline-primary btn-pill btn-sm"

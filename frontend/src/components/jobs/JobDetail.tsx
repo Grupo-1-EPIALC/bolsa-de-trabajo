@@ -73,7 +73,15 @@ export const JobDetail: React.FC<JobDetailProps> = ({
           <div>
             <h2 className="section-title h3 mb-1">{job.title}</h2>
             <p className="mb-1">
-              <strong>{job.company_snapshot.name}</strong>
+              <button
+                type="button"
+                className="btn btn-link p-0 fw-bold text-decoration-none align-baseline"
+                onClick={() => setShowCompanyModal(true)}
+                title="Ver perfil de la empresa"
+              >
+                <i className="bi bi-building me-1" aria-hidden="true" />
+                {job.company_snapshot.name}
+              </button>
               {job.company_snapshot.industry && ` · ${job.company_snapshot.industry}`}
             </p>
             <p className="small mb-0">{jobFacts(job).join(' · ')}</p>

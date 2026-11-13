@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Any, Protocol
 
+from app.domain.applications import ApplicantSnapshot, Application
 from app.domain.auth import Principal
 from app.domain.enums import JobStatus
 from app.domain.models import CompanySnapshot, JobOpportunity
@@ -37,6 +38,47 @@ class JobRepository(Protocol):
 
     def archive_company(self, company_id: str, deleted_at: datetime) -> int:
         """Mueve todas las ofertas de la empresa al archivo. Devuelve cuántas movió."""
+        ...
+
+
+class ApplicationRepository(Protocol):
+    """Postulaciones: una por estudiante y oferta (`job_id`, `student_id` únicos)."""
+
+    def add(self, application: Application) -> bool:
+        """Guarda una postulación nueva. False si el estudiante ya estaba postulado."""
+        ...
+
+    def update(self, application: Application) -> None: ...
+
+    def get(self, job_id: str, student_id: str) -> Application | None: ...
+
+    def remove(self, job_id: str, student_id: str) -> bool:
+        """Borra la postulación. False si no existía."""
+        ...
+
+    def list_for_job(self, job_id: str) -> list[Application]:
+        """Postulaciones de la oferta, de la más reciente a la más vieja."""
+        ...
+
+    def list_for_student(self, student_id: str) -> list[Application]:
+        """Postulaciones del estudiante, de la más reciente a la más vieja."""
+        ...
+
+    def remove_student(self, student_id: str) -> int:
+        """Borra todas las postulaciones del estudiante. Devuelve cuántas borró."""
+        ...
+
+    def remove_company(self, company_id: str) -> int:
+        """Borra las postulaciones a ofertas de la empresa. Devuelve cuántas borró."""
+        ...
+
+
+class ApplicantDirectory(Protocol):
+    def applicant_for(self, access_token: str) -> ApplicantSnapshot:
+        """Contacto y título del estudiante autenticado (perfil de profile-service).
+
+        Lanza `ProfileRequiredError` si no tiene perfil o le falta nombre o email.
+        """
         ...
 
 

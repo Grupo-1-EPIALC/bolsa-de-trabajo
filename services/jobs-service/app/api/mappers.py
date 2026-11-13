@@ -20,8 +20,10 @@ from app.api.schemas import (
     SkillRequirementIn,
     WorkConditionsIn,
 )
+from app.application.application_service import StudentApplication
 from app.application.commands import JobDraft
 from app.application.job_service import JobPage
+from app.domain.applications import Application
 from app.domain.enums import (
     AvailabilityStart,
     ContractDuration,
@@ -123,6 +125,49 @@ def page_to_dict(page: JobPage) -> dict[str, Any]:
         "size": page.size,
         "pages": page.pages,
     }
+
+
+def applicant_to_dict(application: Application) -> dict[str, Any]:
+    """Vista de la empresa: quién se postuló y cómo contactarlo."""
+    return cast(
+        dict[str, Any],
+        jsonable_encoder(
+            {
+                "id": application.id,
+                "job_id": application.job_id,
+                "profile_id": application.applicant.profile_id,
+                "headline": application.applicant.headline,
+                "contact": asdict(application.applicant.contact),
+                "applied_at": application.applied_at,
+                "updated_at": application.updated_at,
+            }
+        ),
+    )
+
+
+def student_application_to_dict(item: StudentApplication) -> dict[str, Any]:
+    """Vista del estudiante: a qué ofertas se postuló (sin repetir su propio contacto)."""
+    job = item.job
+    return cast(
+        dict[str, Any],
+        jsonable_encoder(
+            {
+                "id": item.application.id,
+                "job_id": item.application.job_id,
+                "applied_at": item.application.applied_at,
+                "job": (
+                    {
+                        "title": job.title,
+                        "company_id": job.company_id,
+                        "company_name": job.company_snapshot.name,
+                        "status": job.status.value,
+                    }
+                    if job is not None
+                    else None
+                ),
+            }
+        ),
+    )
 
 
 def _required(value: Any) -> Any:

@@ -164,7 +164,7 @@ h6,
 }
 
 /* Menú hamburguesa flotante en dispositivos móviles (alineado a la derecha) */
-@media (max-width: 991.98px) {
+@media (max-width: 1199.98px) {
   .site-navbar .navbar-collapse.show,
   .site-navbar .navbar-collapse.collapsing {
     position: absolute;
@@ -212,6 +212,8 @@ h6,
   color: var(--app-violet);
   font-weight: 400;
   font-size: 0.95rem;
+  /* Con 5 secciones del estudiante, el menú se colapsa debajo de xl en vez de partir los textos. */
+  white-space: nowrap;
 }
 .site-navbar .nav-link:hover,
 .site-navbar .nav-link.active {
