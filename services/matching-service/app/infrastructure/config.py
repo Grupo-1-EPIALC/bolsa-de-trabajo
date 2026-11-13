@@ -17,6 +17,8 @@ def _bool_env(name: str, default: bool) -> bool:
 @dataclass(frozen=True)
 class MatchingSettings:
     service_token: str = ""
+    database_url: str = ""
+    database_schema: str = "matching"
     profile_service_url: str = "http://profile-service:8000"
     jobs_service_url: str = "http://jobs-service:8000"
     n8n_webhook_base_url: str = "http://n8n:5678/webhook"
@@ -35,6 +37,8 @@ class MatchingSettings:
     def from_env(cls) -> "MatchingSettings":
         return cls(
             service_token=os.getenv("SERVICE_TOKEN", ""),
+            database_url=os.getenv("DATABASE_URL", ""),
+            database_schema=os.getenv("MATCHING_DB_SCHEMA", "matching"),
             profile_service_url=os.getenv("PROFILE_SERVICE_URL", "http://profile-service:8000"),
             jobs_service_url=os.getenv("JOBS_SERVICE_URL", "http://jobs-service:8000"),
             n8n_webhook_base_url=os.getenv("N8N_WEBHOOK_BASE_URL", "http://n8n:5678/webhook"),

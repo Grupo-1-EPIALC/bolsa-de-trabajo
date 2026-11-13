@@ -64,6 +64,7 @@
 | P-048 | 2026-11-04 a 2026-11-12 (registro retrospectivo) | Luciano | Copilot SDK en VS Code (`auth-agent`, Docker y Git) | `feature/create-auth-service` → `feature/auth/v0.1.0-auth-service` | Explicar el contrato de carga de CV; revisar e implementar `auth-service` en NestJS; resolver Docker/PostgreSQL, `.env`, login `/login`, pruebas y preparación del MR, incluida la convención de ramas | `auth-service` implementado con TypeORM, JWT RS256, registro/login, refresh, recuperación y cambio de credenciales, JWKS y migraciones; integración local con PostgreSQL/Docker verificada. Se reportaron 10 tests Jest exitosos y typecheck/build/Prettier correctos; cobertura global aproximada de 37 %. Se explicó el renombrado remoto y la sincronización de la rama | implementación realizada; revisión y pendientes del MR por confirmar |
 | P-049 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`auth-agent`) | — | Documentar las respuestas de `/register` y `/login` dentro de `services/auth-service`, usando los ejemplos compartidos | Se agregó `services/auth-service/AUTH-RESPONSES.md` con ejemplos, campos de respuesta, estados HTTP y errores; los tokens de los ejemplos se reemplazaron por placeholders | aceptado |
 | P-050 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`devops-agent`) | — | Revisar `docker-compose.yml`, reemplazar las etiquetas `latest` por versiones estables y comprobar si hay Makefile o `requirements.txt` | Se fijaron n8n en `1.123.95` y Mailpit en `v1.33.1` (también `n8n-init`); no se encontró Makefile y se identificó un requirements agregador y cuatro archivos por servicio | aceptado |
+| P-051 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`matching-agent`) | `chore/matching-service/fix-persistence` | Agregar persistencia para configuraciones y recomendaciones de `matching-service`, y registrar el prompt en `PROMPTS.md` | Configuración, recomendaciones de IA y estados de pedidos almacenados en PostgreSQL, schema `matching`; valores iniciales tomados de `scoring_rules.yaml`; se incorporaron pruebas de persistencia entre reinicios | aceptado |
 
 ---
 
@@ -729,3 +730,51 @@
   - Pasaron `docker compose config -q`, la verificación de existencia de ambos tags de imagen y `git diff --check`.
 - **Archivos afectados:** `docker-compose.yml`, `docs/ARQUITECTURA.md`, `PROMPTS.md`.
 - **Decisión:** aceptado.
+
+### P-051 — Persistencia para matching-service
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > Le podes agregar persistencia al servicio de matching (`services/matching-service`) para que guarde las configuraciones y las recomendaciones que realiza, ademas agrega el prompt al archivo `PROMPTS.md`
+- **Resumen de la respuesta:**
+  - Se agregó persistencia SQLAlchemy en PostgreSQL, schema `matching`, para recomendaciones de IA, estados de pedidos y configuración administrable. La configuración actual se inicializa desde `scoring_rules.yaml` sólo cuando todavía no existe.
+  - El ranking y los puntajes `RULES` se siguen calculando al consultar. Se agregó una prueba que reconstruye el servicio y verifica que configuración, pedidos y recomendaciones sobrevivan el reinicio.
+- **Archivos afectados:** `services/matching-service/`, `docker-compose.yml`, `docs/ARQUITECTURA.md`, `docs/frontend/pendientes.md`, `PROMPTS.md`.
+- **Decisión:** aceptado.
+
+### P-052 — Crear las tablas de matching al iniciar el servicio
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > creaste un nuevo schema para matching en postgres, pero no creaste la tabla o las tablas
+- **Resumen de la respuesta:**
+  - Se comprobó que el schema `matching` existía pero no tenía tablas. La creación SQLAlchemy estaba diferida hasta la primera solicitud que dependía del contenedor.
+  - Se inicializó el contenedor en el `lifespan` de FastAPI para que `metadata.create_all` cree `recommendations`, `recommendation_requests` y `recommendation_settings` al arrancar. Se cierra el engine al apagar el servicio.
+  - Se reconstruyó `matching-service`; PostgreSQL confirmó las tres tablas y el servicio quedó saludable. También se documentaron el schema y las tablas en `docs/ARQUITECTURA.md`.
+- **Archivos afectados:** `services/matching-service/app/main.py`, `services/matching-service/tests/test_persistence.py`, `docs/ARQUITECTURA.md`, `PROMPTS.md`.
+- **Decisión:** aceptado.
+
+### P-053 — Identificar las tablas de matching
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > cules son las tablas?
+- **Resumen de la respuesta:**
+  - Se enumeraron `recommendations` (recomendaciones IA), `recommendation_requests` (solicitudes y estados) y `recommendation_settings` (límites configurables), todas dentro de `matching`.
+- **Archivos afectados:** `PROMPTS.md`.
+- **Decisión:** respondido.
+
+### P-054 — Mostrar las tablas de matching en consola
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > Hace u show tables y mostrame el resultado por consola
+- **Resumen de la respuesta:**
+  - Se ejecutó `\dt matching.*` en PostgreSQL. El resultado mostró las tres tablas del schema `matching`, con propietario `matching_svc`.
+- **Archivos afectados:** `PROMPTS.md`.
+- **Decisión:** respondido.
+
+### P-055 — Compartir configuración de conexión a PostgreSQL
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > Me pasas la config para conectarme a la base
+- **Resumen de la respuesta:**
+  - Se indicaron host `localhost`, puerto `5432`, base `bolsa`, usuario `matching_svc` y schema `matching`, usando en la contraseña el valor local de `MATCHING_DB_PASSWORD` en `.env` sin registrarlo en el documento.
+- **Archivos afectados:** `PROMPTS.md`.
+- **Decisión:** respondido.

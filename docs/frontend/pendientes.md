@@ -85,7 +85,7 @@
 
 - Se lee con `GET /api/v1/matches/settings` y se guarda con `PATCH /api/v1/matches/settings`.
 - Edita `student_jobs_limit` (por defecto 5) y `company_candidates_limit` (por defecto 10), cada uno de 1 a 20.
-- Hay que aclarar en la pantalla que hoy se guarda **en memoria**: se pierde al reiniciar matching (§8).
+- La configuración se guarda en PostgreSQL, schema `matching`, y sobrevive al reinicio del servicio.
 
 ## 6. Modal "¿Por qué este puntaje?"
 
@@ -147,5 +147,4 @@
 - **Postulaciones:** fase 5. Todavía no hay backend; cuando exista, falta el botón "Postularme" y las vistas "Mis postulaciones" y "Postulantes".
 - **Panel de salud, eventos y alertas:** espera a `core-service` (fase 3).
 - **Pesos y score mínimo del matching:** fase 4. Hoy viven en `scoring_rules.yaml` y no tienen endpoint.
-- **Persistencia de matching:** las recomendaciones de IA, los pedidos y la configuración se guardan en memoria.
 - **Skills duplicadas:** una skill puede aparecer a la vez como "tiene" y como "le falta". Es un problema de matching, pero se nota en `RuleMatch`.

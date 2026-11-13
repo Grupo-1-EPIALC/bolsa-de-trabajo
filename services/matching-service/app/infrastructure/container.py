@@ -8,7 +8,15 @@ from app.application.matching_service import MatchingService
 from app.application.recommendation_service import RecommendationService
 from app.application.settings_service import SettingsService
 from app.domain.engine import build_engine
-from app.domain.ports import AnalysisTrigger, JobSource, ProfileSource, TokenVerifier
+from app.domain.ports import (
+    AnalysisTrigger,
+    JobSource,
+    ProfileSource,
+    RecommendationRepository,
+    RecommendationRequestRepository,
+    SettingsRepository,
+    TokenVerifier,
+)
 from app.domain.rules import ScoringRules
 from app.domain.settings import RecommendationSettings
 from app.domain.skill_dictionary import EXACT_ONLY, SkillDictionary
@@ -21,6 +29,12 @@ from app.infrastructure.repositories_memory import (
     InMemoryRecommendationRepository,
     InMemoryRecommendationRequestRepository,
     InMemorySettingsRepository,
+)
+from app.infrastructure.repositories_sqlalchemy import (
+    SqlAlchemyMatchingDatabase,
+    SqlAlchemyRecommendationRepository,
+    SqlAlchemyRecommendationRequestRepository,
+    SqlAlchemySettingsRepository,
 )
 from app.infrastructure.rules_loader import load_rules, load_skill_dictionary
 from app.infrastructure.sources_http import HttpJobSource, HttpProfileSource
@@ -38,6 +52,7 @@ class Container:
     tokens: TokenVerifier
     settings_admin: SettingsService
     skills: SkillDictionary = EXACT_ONLY
+    persistence: SqlAlchemyMatchingDatabase | None = None
 
 
 def build_container(
@@ -50,12 +65,27 @@ def build_container(
     rules = load_rules(settings.rules_path)
     skills = load_skill_dictionary(settings.skills_path)
     clock = UtcClock()
-    limits = InMemorySettingsRepository(
-        RecommendationSettings(
-            student_jobs_limit=rules.ranking.student_jobs_limit,
-            company_candidates_limit=rules.ranking.company_candidates_limit,
-        )
+    initial_settings = RecommendationSettings(
+        student_jobs_limit=rules.ranking.student_jobs_limit,
+        company_candidates_limit=rules.ranking.company_candidates_limit,
     )
+    persistence: SqlAlchemyMatchingDatabase | None = None
+    limits: SettingsRepository
+    recommendation_repository: RecommendationRepository
+    request_repository: RecommendationRequestRepository
+    if settings.database_url:
+        persistence = SqlAlchemyMatchingDatabase(
+            settings.database_url, schema=settings.database_schema
+        )
+        limits = SqlAlchemySettingsRepository(persistence, initial_settings)
+        recommendation_repository = SqlAlchemyRecommendationRepository(persistence)
+        request_repository = SqlAlchemyRecommendationRequestRepository(persistence)
+    else:
+        if not settings.use_mocks:
+            raise ValueError("DATABASE_URL es obligatorio cuando MATCHING_USE_MOCKS=false")
+        limits = InMemorySettingsRepository(initial_settings)
+        recommendation_repository = InMemoryRecommendationRepository()
+        request_repository = InMemoryRecommendationRequestRepository()
 
     if profiles is None:
         profiles = (
@@ -101,8 +131,8 @@ def build_container(
     )
     recommendations = RecommendationService(
         matching=matching,
-        repository=InMemoryRecommendationRepository(),
-        requests=InMemoryRecommendationRequestRepository(),
+        repository=recommendation_repository,
+        requests=request_repository,
         trigger=trigger,
         clock=clock,
         ids=UuidIdGenerator(),
@@ -122,4 +152,5 @@ def build_container(
         tokens,
         SettingsService(limits, clock),
         skills,
+        persistence,
     )
