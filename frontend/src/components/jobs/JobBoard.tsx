@@ -2,12 +2,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { JobSummary } from './JobSummary';
 import { JobDetail } from './JobDetail';
 import { Pagination } from './Pagination';
+import { ApplyButton } from './ApplyButton';
+import { useApplications } from './useApplications';
 import { jobsService } from '../../services/jobsService';
 import { ApiError, errorMessage } from '../../services/api';
 import type { JobList, JobOpportunity } from '../../types/jobs';
 
-/** "Todas las ofertas" (GET /jobs, sólo activas): listado paginado y detalle. */
+/** "Todas las ofertas" del estudiante (GET /jobs, sólo activas): listado, detalle y postulación. */
 export const JobBoard: React.FC = () => {
+  const applications = useApplications();
   const [page, setPage] = useState(1);
   const [data, setData] = useState<JobList | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +46,14 @@ export const JobBoard: React.FC = () => {
 
   if (selected) {
     return (
-      <JobDetail job={selected} onBack={() => setSelected(null)} backLabel="Volver a las ofertas" />
+      <JobDetail
+        job={selected}
+        onBack={() => setSelected(null)}
+        backLabel="Volver a las ofertas"
+        actions={
+          <ApplyButton jobId={selected.id} jobTitle={selected.title} controls={applications} />
+        }
+      />
     );
   }
 
@@ -78,7 +88,20 @@ export const JobBoard: React.FC = () => {
         </div>
       )}
       {data?.items.map((job) => (
-        <JobSummary key={job.id} job={job} showCompany onOpen={() => open(job)} />
+        <JobSummary
+          key={job.id}
+          job={job}
+          showCompany
+          onOpen={() => open(job)}
+          actions={
+            <ApplyButton
+              jobId={job.id}
+              jobTitle={job.title}
+              controls={applications}
+              showNote={false}
+            />
+          }
+        />
       ))}
       {data && (
         <Pagination

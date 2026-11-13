@@ -8,6 +8,8 @@ import { useAiAnalysis } from './useAiAnalysis';
 import { AiProgress } from './AiProgress';
 import { TrainingAdvice } from './TrainingAdvice';
 import { CompanyPublicProfileModal } from '../company/CompanyPublicProfileModal';
+import { ApplyButton } from '../jobs/ApplyButton';
+import { useApplications, type ApplicationControls } from '../jobs/useApplications';
 import type {
   StudentAIItem,
   StudentRecommendationsView,
@@ -75,7 +77,11 @@ const AiAdvice: React.FC<{ item?: StudentAIItem }> = ({ item }) => {
   );
 };
 
-const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem }> = ({ item, ai }) => {
+const JobCard: React.FC<{
+  item: StudentRuleItem;
+  ai?: StudentAIItem;
+  applications: ApplicationControls;
+}> = ({ item, ai, applications }) => {
   const { job } = item;
   const place = [job.location?.city, job.location?.province].filter(Boolean).join(', ');
   const modality = job.work_conditions?.work_modality ?? [];
@@ -87,11 +93,11 @@ const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem }> = ({ item
   return (
     <article className="card card-elevated">
       <div className="card-body p-4">
-        <div className="d-flex gap-3 align-items-start mb-3">
+        <div className="d-flex flex-wrap gap-3 align-items-start mb-3">
           <span className="step-number" aria-label={`Puesto ${item.rank} del ranking`}>
             {item.rank}
           </span>
-          <div>
+          <div className="flex-grow-1" style={{ minWidth: '14rem' }}>
             <h3 className="h5 fw-bold mb-1">{job.title}</h3>
             <p className="small mb-0">
               {job.company_name && companyId ? (
@@ -123,6 +129,7 @@ const JobCard: React.FC<{ item: StudentRuleItem; ai?: StudentAIItem }> = ({ item
               ))}
             </p>
           </div>
+          <ApplyButton jobId={job.job_id} jobTitle={job.title} controls={applications} />
         </div>
 
         <div className="row g-3">
@@ -157,6 +164,7 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
   const [view, setView] = useState<StudentRecommendationsView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | Error | null>(null);
+  const applications = useApplications();
 
   const load = useCallback(async () => {
     setError(null);
@@ -299,7 +307,12 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
         </div>
       ) : (
         rules.items.map((item) => (
-          <JobCard key={item.job.job_id} item={item} ai={aiByJob.get(item.job.job_id)} />
+          <JobCard
+            key={item.job.job_id}
+            item={item}
+            ai={aiByJob.get(item.job.job_id)}
+            applications={applications}
+          />
         ))
       )}
     </div>
