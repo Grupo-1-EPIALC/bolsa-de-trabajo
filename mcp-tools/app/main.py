@@ -250,6 +250,13 @@ def main() -> None:
         host = os.getenv("MCP_HOST", "0.0.0.0")  # noqa: S104
         port = int(os.getenv("MCP_PORT", "8000"))
         logging.getLogger("uvicorn.access").addFilter(MaskKeyLogFilter())
+        # Logs del proxy del modelo (qué modelo respondió, en cuánto, o si se cortó).
+        proxy_log = logging.getLogger("app.infrastructure.llm_proxy")
+        proxy_log.setLevel(logging.INFO)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(message)s"))
+        proxy_log.addHandler(handler)
+        proxy_log.propagate = False
         uvicorn.run(create_http_app(), host=host, port=port)
     else:
         mcp.run(transport=transport)
