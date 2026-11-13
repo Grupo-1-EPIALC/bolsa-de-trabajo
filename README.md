@@ -22,6 +22,7 @@ El front **siempre muestra separados** el resultado por reglas (badge verde) y l
 | Documento | Contenido |
 |---|---|
 | [docs/manuales/](docs/manuales/) | Manuales de instalación y de uso (estudiante, empresa y admin) |
+| [docs/manuales/arquitectura.pdf](docs/manuales/arquitectura.pdf) | Arquitectura en PDF: vista general, capas, flujo de trabajo y tecnologías con el porqué de cada una |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Diagrama de arquitectura, redes, puertos y recorrido de los datos |
 | [docs/BITACORA_IA.md](docs/BITACORA_IA.md) | Bitácora de uso de IA: herramientas, decisiones, modelo elegido y sus límites, dificultades y correcciones |
 | [docs/RESPONSABILIDADES.md](docs/RESPONSABILIDADES.md) | Responsabilidades de cada integrante |
