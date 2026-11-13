@@ -180,6 +180,8 @@ services:
       JOBS_SEED_DEMO: ${JOBS_SEED_DEMO:-true}
       # company_snapshot de cada oferta nueva: GET /api/v1/auth/me con el Bearer de la empresa
       AUTH_SERVICE_URL: http://auth-service:3000
+      # contacto del estudiante que se postula: GET /api/v1/profiles/me con su Bearer
+      PROFILE_SERVICE_URL: http://profile-service:8000
 
   matching-service:
     <<: *common

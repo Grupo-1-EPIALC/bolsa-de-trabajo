@@ -10,7 +10,13 @@ from app.infrastructure.config import JobsSettings
 from app.infrastructure.container import Container, build_container
 from app.infrastructure.repositories.memory_jobs import InMemoryJobRepository
 from app.main import app
-from tests.fakes import FakeCompanyDirectory, FixedClock, RecordingPublisher, SequentialIds
+from tests.fakes import (
+    FakeApplicantDirectory,
+    FakeCompanyDirectory,
+    FixedClock,
+    RecordingPublisher,
+    SequentialIds,
+)
 from tests.jwt_helpers import verifier
 
 
@@ -22,6 +28,11 @@ def repository() -> InMemoryJobRepository:
 @pytest.fixture
 def directory() -> FakeCompanyDirectory:
     return FakeCompanyDirectory()
+
+
+@pytest.fixture
+def applicants() -> FakeApplicantDirectory:
+    return FakeApplicantDirectory()
 
 
 @pytest.fixture
@@ -43,6 +54,7 @@ def ids() -> SequentialIds:
 def container(
     repository: InMemoryJobRepository,
     directory: FakeCompanyDirectory,
+    applicants: FakeApplicantDirectory,
     publisher: RecordingPublisher,
     clock: FixedClock,
     ids: SequentialIds,
@@ -52,6 +64,7 @@ def container(
         settings,
         repository=repository,
         directory=directory,
+        applicants=applicants,
         publisher=publisher,
         clock=clock,
         ids=ids,

@@ -2,8 +2,9 @@
 
 from datetime import UTC, datetime, timedelta
 
+from app.domain.applications import ApplicantContact, ApplicantSnapshot
 from app.domain.enums import JobStatus
-from app.domain.errors import UpstreamError
+from app.domain.errors import ProfileRequiredError, UpstreamError
 from app.domain.models import CompanySnapshot, JobOpportunity
 
 
@@ -22,6 +23,27 @@ class FakeCompanyDirectory:
         if access_token == "bad-token":  # noqa: S105 - valor ficticio de prueba
             raise UpstreamError("auth-service no disponible")
         return self.snapshot
+
+
+class FakeApplicantDirectory:
+    """profile-service ficticio: el contacto depende del token (datos ficticios)."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+        self.phone: str | None = "+54 11 5555-0000"
+        self.missing_profile = False
+
+    def applicant_for(self, access_token: str) -> ApplicantSnapshot:
+        self.calls.append(access_token)
+        if self.missing_profile:
+            raise ProfileRequiredError("Completá tu perfil antes de postularte")
+        return ApplicantSnapshot(
+            profile_id="prof-test-001",
+            headline="Estudiante de Sistemas",
+            contact=ApplicantContact(
+                name="Persona Ficticia", email="persona@example.test", phone=self.phone
+            ),
+        )
 
 
 class RecordingPublisher:

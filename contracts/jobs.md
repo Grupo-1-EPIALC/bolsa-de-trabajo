@@ -24,6 +24,10 @@
 | "Editar búsqueda" | `PATCH /api/v1/jobs/{job_id}` | `200` + `JobOpportunity` |
 | "Cerrar búsqueda" | `DELETE /api/v1/jobs/{job_id}` | `204` sin body |
 | "Reabrir búsqueda" | `PATCH /api/v1/jobs/{job_id}` con `{"status":"active"}` | `200` + `JobOpportunity` |
+| "Postularme" (estudiante) | `POST /api/v1/jobs/{job_id}/applications` | `201` (o `200` si ya estaba) + `Applicant` (§12) |
+| "Retirar postulación" (estudiante) | `DELETE /api/v1/jobs/{job_id}/applications/me` | `204` sin body |
+| "Mis postulaciones" (estudiante) | `GET /api/v1/jobs/applications/me` | `{items, total}` (§12) |
+| "Postulados" de una búsqueda (empresa dueña) | `GET /api/v1/jobs/{job_id}/applications` | `{job_id, items: Applicant[], total}` (§12) |
 | Health (infra) | `GET /health` | `{"status":"ok","service":"jobs-service","version":"0.1.0"}` |
 
 - **Base:** same-origin detrás del gateway: `/api/v1/jobs` y `/api/v1/companies/me/searches`. En desarrollo se puede pegar directo a `http://localhost:8000`.
@@ -336,8 +340,9 @@ Formato común:
 | 404 | `NOT_FOUND` | Oferta inexistente, o cerrada y el usuario no es dueño/admin/service | Tratarla como inexistente |
 | 405 | `METHOD_NOT_ALLOWED` | Método no soportado en la ruta | — |
 | 409 | `CONFLICT` | La oferta cambió mientras la editabas/cerrabas (lock optimista) | Releer la oferta y reintentar |
+| 409 | `PROFILE_REQUIRED` | El estudiante se quiere postular sin perfil (o sin nombre o email) | Mandarlo a completar el perfil |
 | 422 | `INVALID_INPUT` | Body/query inválido o regla de negocio violada (incluye UT-JOBS-01) | Mapear `details` a los campos del formulario |
-| 502 | `UPSTREAM_ERROR` | auth-service no respondió o el usuario no tiene perfil de empresa | Reintentar más tarde |
+| 502 | `UPSTREAM_ERROR` | auth-service o profile-service no respondieron, o el usuario no tiene perfil de empresa | Reintentar más tarde |
 
 - Para `422` de Pydantic, `details.errors` trae `loc`/`msg`/`type` por campo.
 - **No existen respuestas `400`**: las reglas de negocio y Pydantic comparten el `422 INVALID_INPUT`.
@@ -370,7 +375,39 @@ Formato común:
    `JOBS_SEED_DEMO`. matching-service usa los datos reales por defecto (`MATCHING_USE_MOCKS=false`).
 5. **`company_snapshot`:** se arma desde `GET /api/v1/auth/me`. El `snapshot` de empresa que expone
    profile-service todavía no se consume; evaluarlo cuando se cierre la integración de perfiles.
-6. No hay borradores, postulaciones, pasantías ni analíticas en esta entrega.
+6. No hay borradores, pasantías ni analíticas en esta entrega. Las postulaciones llegan en v0.3.0 (§12).
+
+---
+
+### 12. Postulaciones (desde v0.3.0)
+
+El estudiante se postula a una oferta activa y, al hacerlo, **comparte con la empresa dueña** su nombre, email, teléfono y título. jobs-service guarda una copia tomada de `GET /api/v1/profiles/me` (profile-service, con el Bearer del estudiante): nunca lee la base de profile-service. Volver a postularse refresca esa copia; retirarse la borra y la empresa deja de ver el contacto.
+
+| Endpoint | Quién | Respuesta / reglas |
+|---|---|---|
+| `POST /api/v1/jobs/{job_id}/applications` (sin body) | `student` | `201` + `Applicant` la primera vez; `200` con el mismo `id` y `applied_at` si ya estaba (refresca el contacto). Oferta cerrada o inexistente → `404`. Sin perfil, o sin nombre o email → `409 PROFILE_REQUIRED`. Otro rol → `403` |
+| `DELETE /api/v1/jobs/{job_id}/applications/me` | `student` | `204` siempre (idempotente) |
+| `GET /api/v1/jobs/applications/me` | `student` | `{ "items": [{ "id", "job_id", "applied_at", "job": { "title", "company_id", "company_name", "status" } \| null }], "total" }`, de la más reciente a la más vieja. `job` es `null` si la empresa se dio de baja. No repite el contacto propio |
+| `GET /api/v1/jobs/{job_id}/applications` | empresa dueña, `admin`, `X-Service-Token` | `{ "job_id", "items": Applicant[], "total" }`, de la más reciente a la más vieja. También para ofertas cerradas. Otra empresa o un estudiante → `403`; oferta inexistente → `404` |
+
+`Applicant`:
+
+```json
+{
+  "id": "5b0c…",
+  "job_id": "job-001",
+  "profile_id": "prof-ef0b380e927d",
+  "headline": "Estudiante de Sistemas · Backend Python",
+  "contact": { "name": "Lucía Fernández", "email": "lucia.ficticia@example.com", "phone": "+54 11 5555-0000" },
+  "applied_at": "2026-11-13T15:02:11Z",
+  "updated_at": "2026-11-13T15:02:11Z"
+}
+```
+
+- `headline` y `contact.phone` pueden venir `null` si el perfil no los tiene.
+- `profile_id` es el `id` de profile-service: el mismo que `candidate.profile_id` del ranking de matching (`contracts/matching.md`), así el front marca qué recomendados se postularon.
+- Se guardan en `jobs.applications` (único por `job_id` + `student_id`).
+- La baja de la cuenta (`account.deleted`, §11 de la parte C) borra las postulaciones del estudiante, o las recibidas en las ofertas de la empresa.
 
 ## B. Guía para el frontend
 
@@ -666,10 +703,10 @@ Formato común:
 
 ### 11. Eventos de cuenta (auth-service → jobs-service)
 
-`POST http://jobs-service:8000/api/v1/jobs/internal/account-events` · sólo `X-Service-Token` (un usuario recibe `403`; por el gateway no llega porque se borra el header). Cuerpo y entrega en [`auth.md`](auth.md). Responde `200` con `{ "event", "user_id", "result", "archived_jobs" }`.
+`POST http://jobs-service:8000/api/v1/jobs/internal/account-events` · sólo `X-Service-Token` (un usuario recibe `403`; por el gateway no llega porque se borra el header). Cuerpo y entrega en [`auth.md`](auth.md). Responde `200` con `{ "event", "user_id", "result", "archived_jobs", "removed_applications" }`.
 
 | Evento | Qué hace jobs-service | `result` |
 |---|---|---|
-| `account.deleted` | Anota la baja en `jobs.deleted_accounts` y mueve **todas** las ofertas de la empresa (activas y cerradas) a `jobs.jobs_deleted` (auditoría). Desde ahí no salen en `GET /jobs`, en el detalle, en `/companies/me/searches` ni en el matching, y el JWT que todavía no venció recibe `401 ACCOUNT_DELETED`. El seed de demo no las vuelve a cargar | `archived` (o `registered` si no tenía ofertas, p. ej. un estudiante) |
+| `account.deleted` | Anota la baja en `jobs.deleted_accounts` y mueve **todas** las ofertas de la empresa (activas y cerradas) a `jobs.jobs_deleted` (auditoría). Desde ahí no salen en `GET /jobs`, en el detalle, en `/companies/me/searches` ni en el matching, y el JWT que todavía no venció recibe `401 ACCOUNT_DELETED`. El seed de demo no las vuelve a cargar. Borra las postulaciones del estudiante o las recibidas por la empresa (parte A §12) | `archived` (o `registered` si no tenía ofertas ni postulaciones) |
 | `account.updated` | Nada: el `company_snapshot` se arma al crear o editar una oferta | `ignored` |
 | Repetido o de un tipo desconocido | Nada (idempotente) | `ignored` |

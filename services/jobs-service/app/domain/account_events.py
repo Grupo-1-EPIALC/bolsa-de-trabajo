@@ -14,7 +14,7 @@ class AccountEventType(StrEnum):
 
 
 class AccountEventResult(StrEnum):
-    ARCHIVED = "archived"  # las ofertas de la empresa pasaron al archivo
+    ARCHIVED = "archived"  # se archivaron ofertas o se borraron postulaciones de la cuenta
     REGISTERED = "registered"  # se registró la baja (la cuenta no tenía ofertas)
     IGNORED = "ignored"  # nada que hacer (repetido, edición o tipo desconocido)
 

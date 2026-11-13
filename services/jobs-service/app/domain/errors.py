@@ -57,3 +57,10 @@ class UnauthorizedError(JobsError):
 class UpstreamError(JobsError):
     code = "UPSTREAM_ERROR"
     status_code = 502
+
+
+class ProfileRequiredError(JobsError):
+    """El estudiante todavía no tiene un perfil con nombre y email para compartir."""
+
+    code = "PROFILE_REQUIRED"
+    status_code = 409

@@ -3,6 +3,8 @@
 - `account.deleted`: la baja se registra (rechaza el JWT que todavía no venció) y, si es una
   empresa, todas sus ofertas pasan al archivo: dejan de verse en `GET /jobs`, en el detalle,
   en `/companies/me/searches` y en el matching.
+  Las postulaciones a esas ofertas se borran. Si es un estudiante, se borran sus
+  postulaciones: las empresas dejan de ver su contacto.
 - `account.updated`: se ignora. El `company_snapshot` sale del perfil de empresa
   (profile-service) y se refresca cuando la empresa crea o edita una oferta.
 
@@ -15,14 +17,21 @@ import threading
 from app.domain.account_events import AccountEvent, AccountEventResult, AccountEventType
 from app.domain.auth import Principal, Role
 from app.domain.errors import ForbiddenError
-from app.domain.ports import DeletedAccounts, JobRepository, JsonDict
+from app.domain.ports import ApplicationRepository, DeletedAccounts, JobRepository, JsonDict
 
 logger = logging.getLogger(__name__)
 
 
 class AccountEventsService:
-    def __init__(self, *, repository: JobRepository, deleted_accounts: DeletedAccounts) -> None:
+    def __init__(
+        self,
+        *,
+        repository: JobRepository,
+        deleted_accounts: DeletedAccounts,
+        applications: ApplicationRepository,
+    ) -> None:
         self._repository = repository
+        self._applications = applications
         self._deleted = deleted_accounts
         self._lock = threading.Lock()
 
@@ -30,11 +39,15 @@ class AccountEventsService:
         if principal.role is not Role.SERVICE:
             raise ForbiddenError("Los eventos de cuenta son internos (X-Service-Token)")
         archived = 0
+        removed = 0
         with self._lock:
             if event.event == AccountEventType.DELETED or event.deleted:
                 newly_marked = self._deleted.mark(event.user_id, event.role, event.occurred_at)
                 archived = self._repository.archive_company(event.user_id, event.occurred_at)
-                if archived:
+                removed = self._applications.remove_company(
+                    event.user_id
+                ) + self._applications.remove_student(event.user_id)
+                if archived or removed:
                     result = AccountEventResult.ARCHIVED
                 elif newly_marked:
                     result = AccountEventResult.REGISTERED
@@ -48,4 +61,5 @@ class AccountEventsService:
             "user_id": event.user_id,
             "result": result.value,
             "archived_jobs": archived,
+            "removed_applications": removed,
         }

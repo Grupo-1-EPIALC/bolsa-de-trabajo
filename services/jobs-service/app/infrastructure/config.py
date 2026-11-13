@@ -27,6 +27,7 @@ class JobsSettings:
     database_url: str = ""
     database_schema: str = "jobs"
     auth_service_url: str = "http://auth-service:3000"
+    profile_service_url: str = "http://profile-service:8000"
     n8n_webhook_base_url: str = "http://n8n:5678/webhook"
     seed_demo: bool = True
     seed_path: str = field(default_factory=lambda: str(DATA_DIR / "jobs_seed.json"))
@@ -43,6 +44,7 @@ class JobsSettings:
             database_url=os.getenv("DATABASE_URL", ""),
             database_schema=os.getenv("JOBS_DB_SCHEMA", "jobs"),
             auth_service_url=os.getenv("AUTH_SERVICE_URL", "http://auth-service:3000"),
+            profile_service_url=os.getenv("PROFILE_SERVICE_URL", "http://profile-service:8000"),
             n8n_webhook_base_url=os.getenv("N8N_WEBHOOK_BASE_URL", "http://n8n:5678/webhook"),
             seed_demo=_bool_env("JOBS_SEED_DEMO", True),
             seed_path=os.getenv("JOBS_SEED_PATH", str(DATA_DIR / "jobs_seed.json")),

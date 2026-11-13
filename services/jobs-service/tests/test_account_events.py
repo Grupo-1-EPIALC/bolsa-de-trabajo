@@ -57,6 +57,7 @@ def test_ut_jobs_03_borrar_empresa_archiva_sus_ofertas(
         "user_id": COMPANY_001,
         "result": "archived",
         "archived_jobs": 2,
+        "removed_applications": 0,
     }
 
     listed = client.get("/api/v1/jobs?status=all", headers=SERVICE).json()
