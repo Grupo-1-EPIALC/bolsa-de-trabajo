@@ -1,6 +1,6 @@
 // Lógica de postulaciones sin React (contracts/jobs.md, parte A §12).
 import { ApiError, errorMessage } from '../services/api';
-import type { Applicant, MyApplicationList } from '../types/jobs';
+import type { Applicant, MyApplication, MyApplicationList } from '../types/jobs';
 import type { CompanyRuleItem } from '../types/matching';
 
 /** Qué ve la empresa cuando el estudiante se postula (se avisa antes del botón). */
@@ -28,3 +28,19 @@ export const applicantsByProfile = (applicants: Applicant[]): Map<string, Applic
 /** Puesto en el ranking por reglas de cada perfil recomendado. */
 export const rankByProfile = (items: CompanyRuleItem[]): Map<string, CompanyRuleItem> =>
   new Map(items.map((item) => [item.candidate.profile_id, item]));
+
+export interface ApplicationState {
+  label: string;
+  badge: string;
+  /** Se puede abrir el detalle: un estudiante sólo ve ofertas activas. */
+  canOpen: boolean;
+}
+
+/** Estado de una postulación propia según la oferta (`job` es null si la empresa se dio de baja). */
+export function applicationState(item: MyApplication): ApplicationState {
+  if (!item.job) return { label: 'No disponible', badge: 'text-bg-secondary', canOpen: false };
+  if (item.job.status === 'closed') {
+    return { label: 'Búsqueda cerrada', badge: 'text-bg-secondary', canOpen: false };
+  }
+  return { label: 'Búsqueda activa', badge: 'text-bg-success', canOpen: true };
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from '../services/api';
 import {
   applicantsByProfile,
+  applicationState,
   appliedJobIds,
   applicationErrorMessage,
   rankByProfile,
@@ -69,5 +70,16 @@ describe('postulaciones', () => {
     ]);
     expect(ranking.get('prof-2')?.rank).toBe(1);
     expect(ranking.has('prof-1')).toBe(false);
+  });
+
+  it('da el estado de cada postulación propia', () => {
+    const base = { id: 'a1', job_id: 'job-001', applied_at: '2026-11-13T15:00:00Z' };
+    const job = { title: 'Backend', company_id: 'c1', company_name: 'Empresa Ficticia' };
+    expect(applicationState({ ...base, job: { ...job, status: 'active' } })).toMatchObject({
+      label: 'Búsqueda activa',
+      canOpen: true,
+    });
+    expect(applicationState({ ...base, job: { ...job, status: 'closed' } }).canOpen).toBe(false);
+    expect(applicationState({ ...base, job: null }).label).toBe('No disponible');
   });
 });

@@ -3,11 +3,19 @@ export type View = 'home' | 'auth' | 'app';
 export type AuthMode = 'login' | 'register';
 
 /**
- * Secciones del área privada. Estudiante: panel, recomendaciones, todas las ofertas y perfil.
+ * Secciones del área privada. Estudiante: panel, recomendaciones, todas las ofertas,
+ * postulaciones y perfil.
  * Empresa: panel, búsquedas y perfil. Admin: panel, cuentas y configuración de matching.
  */
 export type StudentSection =
-  'panel' | 'recommendations' | 'jobs' | 'searches' | 'profile' | 'users' | 'settings';
+  | 'panel'
+  | 'recommendations'
+  | 'jobs'
+  | 'applications'
+  | 'searches'
+  | 'profile'
+  | 'users'
+  | 'settings';
 
 /** Vista a mostrar según la sesión: sin sesión nunca se muestra el área privada. */
 export function resolveView(requested: View, isAuthenticated: boolean): View {

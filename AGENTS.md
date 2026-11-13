@@ -205,6 +205,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Rutas protegidas por rol (`student`, `company`, `admin`). El `admin` tiene su área (`pages/AdminArea.tsx`): cuentas (`contracts/auth.md` (parte A) §7) y configuración de matching (`contracts/matching.md` (parte A) §4.5).
 - Componentes `ScoreCard` (badge “Calculado por reglas”) y `AIRecommendations` (badge “Sugerido por IA” + disclaimer), separados.
 - Flujo CV: subir → ver sugerencias → aceptar/editar/descartar cada ítem → guardar.
+- Postulaciones (`contracts/jobs.md` (parte A) §12): botón Postularme/Retirar en cada oferta con el aviso de qué datos ve la empresa, sección "Mis postulaciones" del estudiante y, en los candidatos de la empresa, todos los postulados con su contacto y la marca "Se postuló" en los recomendados (cruce por `profile_id`).
 - Accesibilidad: labels, contraste AA, foco visible. Textos en español.
 **Tests mínimos:** UT-FE-01 a UT-FE-04.
 

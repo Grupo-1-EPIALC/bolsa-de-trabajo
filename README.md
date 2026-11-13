@@ -12,8 +12,9 @@ Vincular estudiantes y graduados con las ofertas laborales de empresas. El siste
 1. Registra perfiles de estudiantes, a mano o **importando el CV en PDF/DOCX, que la IA interpreta** y el estudiante revisa antes de guardar.
 2. Registra empresas y sus búsquedas con requisitos (competencias obligatorias, deseables y excluyentes, experiencia, idiomas, condiciones).
 3. Compara perfil ↔ oferta y calcula un **puntaje de compatibilidad por reglas explícitas** (`origin: "RULES"`), con el desglose por criterio y las **competencias faltantes**.
-4. Pide a **agentes de IA en n8n** recomendaciones de formación, de mejora del perfil y de candidatos (`origin: "AI"`), verificadas antes de mostrarse.
-5. Automatiza con n8n la lectura de CVs, las recomendaciones y los avisos por mail (oferta nueva, candidato nuevo, errores).
+4. Permite que el estudiante **se postule** a una oferta: la empresa ve a todos los postulados con su contacto y, entre los recomendados por reglas, cuáles se postularon.
+5. Pide a **agentes de IA en n8n** recomendaciones de formación, de mejora del perfil y de candidatos (`origin: "AI"`), verificadas antes de mostrarse.
+6. Automatiza con n8n la lectura de CVs, las recomendaciones y los avisos por mail (oferta nueva, candidato nuevo, errores).
 
 El front **siempre muestra separados** el resultado por reglas (badge verde) y la sugerencia de la IA (badge ámbar, con aviso de que es orientativa). La IA nunca calcula ni cambia el puntaje.
 
@@ -133,9 +134,9 @@ Todos los datos del repositorio son **ficticios**.
 
 ## Funcionalidades principales
 
-**Estudiante:** registro e inicio de sesión · alta del perfil importando el CV (la IA propone los datos y el estudiante los revisa y confirma) o a mano · "Ofertas para vos" con el puntaje por reglas, el desglose "¿Por qué este puntaje?" y las competencias faltantes · recomendaciones de formación y de mejora del perfil generadas por IA · descarga del CV en PDF o Word con el diseño sugerido por la IA o elegido por el estudiante · cambio y recuperación de clave y de correo.
+**Estudiante:** registro e inicio de sesión · alta del perfil importando el CV (la IA propone los datos y el estudiante los revisa y confirma) o a mano · "Ofertas para vos" con el puntaje por reglas, el desglose "¿Por qué este puntaje?" y las competencias faltantes · recomendaciones de formación y de mejora del perfil generadas por IA · descarga del CV en PDF o Word con el diseño sugerido por la IA o elegido por el estudiante · postularse a una oferta (la empresa ve su nombre, email, teléfono y título) y ver o retirar sus postulaciones en "Mis postulaciones" · contacto de selección de la empresa, si la empresa lo hace público · cambio y recuperación de clave y de correo.
 
-**Empresa:** registro con razón social y CUIT validado · perfil público (logo, rubro, sedes, beneficios) · alta, edición, cierre y reapertura de búsquedas · candidatos ordenados por reglas con el análisis de la IA.
+**Empresa:** registro con razón social y CUIT validado · perfil público (logo, rubro, sedes, beneficios) · alta, edición, cierre y reapertura de búsquedas · postulados de cada búsqueda con sus datos de contacto · candidatos ordenados por reglas con el análisis de la IA, marcando los que se postularon.
 
 **Administrador:** cuentas de estudiantes y empresas (buscar, editar, forzar cambio de clave, borrar) · cantidad de ofertas y candidatos que se recomiendan · enlaces a la documentación de las APIs.
 
@@ -145,8 +146,8 @@ Todos los datos del repositorio son **ficticios**.
 
 1. **Empresa:** publicar una búsqueda con competencias obligatorias y ver en Mailpit el aviso a los estudiantes compatibles.
 2. **Estudiante:** crear el perfil subiendo un CV en PDF; la IA completa los campos y marca los que hay que revisar.
-3. En "Ofertas para vos", abrir una oferta: puntaje por reglas, "¿Por qué este puntaje?", faltantes y luego las recomendaciones de la IA.
-4. **Empresa:** ver los candidatos de la búsqueda (reglas + IA) y el aviso de candidato nuevo en Mailpit.
+3. En "Ofertas para vos", abrir una oferta: puntaje por reglas, "¿Por qué este puntaje?", faltantes y luego las recomendaciones de la IA. Tocar **Postularme** y verla en "Mis postulaciones".
+4. **Empresa:** ver los candidatos de la búsqueda: el estudiante aparece en "Postulados" con su contacto y, en el ranking, marcado con "Se postuló"; después, el análisis de la IA y el aviso de candidato nuevo en Mailpit.
 5. **Errores:** subir un archivo que no es un CV o pesa más de 5 MB, crear una búsqueda sin competencias obligatorias (422), detener un servicio con `docker compose stop matching-service` y mostrar el mensaje del front y el mail de error al admin.
 6. Mostrar las ejecuciones en n8n y los endpoints en Swagger.
 
@@ -301,7 +302,7 @@ npm ci && npm run format:check && npm run typecheck && npm test
 
 El CI (`.github/workflows/ci.yml`) corre sólo los servicios cuyas carpetas cambiaron.
 
-Estado al 12/11/2026: 131 tests en `matching-service`, 116 en `jobs-service`, 120 en `profile-service` y 30 en `mcp-tools`, todos en verde, con cobertura de 91 % a 98 %.
+Estado al 13/11/2026: 131 tests en `matching-service`, 125 en `jobs-service`, 124 en `profile-service` y 31 en `mcp-tools`, todos en verde, con cobertura de 91 % a 98 %.
 
 ## Seguridad
 
