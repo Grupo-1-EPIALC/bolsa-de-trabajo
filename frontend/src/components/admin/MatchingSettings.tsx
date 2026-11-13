@@ -144,8 +144,9 @@ export const MatchingSettings: React.FC<MatchingSettingsProps> = ({ onNotice }) 
         {error && <div className="alert alert-danger small mb-0">{error}</div>}
         <div className="alert alert-info small mb-0">
           <i className="bi bi-info-circle me-1" aria-hidden="true" />
-          Por ahora matching-service guarda esta configuración en memoria: si se reinicia, vuelve a
-          los valores de <code>scoring_rules.yaml</code>.
+          La configuración queda guardada y se mantiene aunque se reinicie el servicio. Los valores
+          de <code>scoring_rules.yaml</code> sólo se usan la primera vez, hasta que un admin los
+          cambia.
         </div>
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span className="small text-body-secondary">

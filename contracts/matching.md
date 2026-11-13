@@ -310,7 +310,7 @@ Igual que §4.1, pero:
 - Campos desconocidos, body vacío o valores fuera de rango → **422 `INVALID_INPUT`**.
 - El cambio rige enseguida: para las vistas, para los rankings que usa n8n y para los pedidos de IA nuevos. Los pedidos que ya estaban en curso siguen con el número que tenían.
 - `updated_by` es el `sub` del admin que hizo el cambio.
-- **Limitación v0.1.0:** se guarda en memoria. Si se reinicia el contenedor, vuelve a los valores de `scoring_rules.yaml`.
+- Se guarda en PostgreSQL (schema `matching`, tabla `recommendation_settings`) y sobrevive a los reinicios. Los valores de `scoring_rules.yaml` sólo se cargan la primera vez, cuando todavía no hay configuración guardada. Sin `DATABASE_URL` (modo mock) queda en memoria.
 
 Sugerencia de UI: un formulario con dos campos numéricos (`min`/`max` tomados de `limits`) y la leyenda "Última modificación: {updated_at}". Mostralo sólo si `role === 'admin'`.
 
@@ -644,7 +644,7 @@ Los ítems de `ai_recommendations.items` traen además metadatos (`id`, `model`,
 
 | Tema | Estado | Impacto en el front |
 |---|---|---|
-| Persistencia | Las recomendaciones de IA, los pedidos y la configuración del admin están **en memoria** | Se pierden si se reinicia el contenedor; el bloque por reglas no se ve afectado |
+| Persistencia | Las recomendaciones de IA, los pedidos y la configuración del admin se guardan en PostgreSQL (schema `matching`); sólo en modo mock (sin `DATABASE_URL`) quedan en memoria | Sobreviven a los reinicios del contenedor |
 | Datos | Perfiles y ofertas reales de profile-service y jobs-service (`MATCHING_USE_MOCKS=false`, default). El seed de demo suma `stu-001`…`stu-015` y `job-001`…`job-012`, con dueños ficticios | Un estudiante con perfil **completo** y buscable entra al ranking; una empresa ve los candidatos de sus búsquedas por `job_id`. Los perfiles en borrador no aparecen como candidatos de las empresas |
 | Dueño del perfil | Los perfiles tienen que traer `user_id` y las ofertas, `company_id` (ver [`historico/estructura_comun_perfil_oferta_match.md`](historico/estructura_comun_perfil_oferta_match.md) §5 y §6) | Si un perfil no trae `user_id`, sólo lo ven `admin` y los servicios |
 | Idiomas deseables | El criterio de idiomas cuenta un idioma `desired` igual que uno obligatorio | Un candidato sin un idioma deseable pierde puntos en "Idiomas" |

@@ -65,6 +65,7 @@
 | P-049 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`auth-agent`) | — | Documentar las respuestas de `/register` y `/login` dentro de `services/auth-service`, usando los ejemplos compartidos | Se agregó `services/auth-service/AUTH-RESPONSES.md` con ejemplos, campos de respuesta, estados HTTP y errores; los tokens de los ejemplos se reemplazaron por placeholders | aceptado |
 | P-050 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`devops-agent`) | — | Revisar `docker-compose.yml`, reemplazar las etiquetas `latest` por versiones estables y comprobar si hay Makefile o `requirements.txt` | Se fijaron n8n en `1.123.95` y Mailpit en `v1.33.1` (también `n8n-init`); no se encontró Makefile y se identificó un requirements agregador y cuatro archivos por servicio | aceptado |
 | P-051 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`matching-agent`) | `chore/matching-service/fix-persistence` | Agregar persistencia para configuraciones y recomendaciones de `matching-service`, y registrar el prompt en `PROMPTS.md` | Configuración, recomendaciones de IA y estados de pedidos almacenados en PostgreSQL, schema `matching`; valores iniciales tomados de `scoring_rules.yaml`; se incorporaron pruebas de persistencia entre reinicios | aceptado |
+| P-057 | 2026-11-12 | Andres | Claude Code (`frontend-agent`) | `fix/frontend/v0.11.2-leyenda-config-matching` | Revisar la leyenda del admin que dice que matching guarda la configuración en memoria, y si pasa lo mismo con las recomendaciones | La leyenda y `contracts/matching.md` dicen ahora que la configuración y las recomendaciones se guardan en PostgreSQL; verificado con un reinicio de matching-service | aceptado |
 
 ---
 
@@ -778,3 +779,16 @@
   - Se indicaron host `localhost`, puerto `5432`, base `bolsa`, usuario `matching_svc` y schema `matching`, usando en la contraseña el valor local de `MATCHING_DB_PASSWORD` en `.env` sin registrarlo en el documento.
 - **Archivos afectados:** `PROMPTS.md`.
 - **Decisión:** respondido.
+
+### P-057 — Leyenda de la configuración de matching
+- **Fecha:** 2026-11-12 · **Autor:** Andres · **Agente:** Claude Code (`frontend-agent`) · **Rama:** `fix/frontend/v0.11.2-leyenda-config-matching`
+- **Prompt (textual):**
+  > revisa esta leyenda en el front Por ahora matching-service guarda esta configuración en memoria: si se reinicia, vuelve a los valores de scoring_rules.yaml.
+  > revisa si pasa algo parecido con las recomendaciones
+- **Resumen de la respuesta:**
+  - La leyenda quedó vieja desde P-051: con `DATABASE_URL`, matching-service guarda la configuración en `matching.recommendation_settings` y `scoring_rules.yaml` sólo da los valores la primera vez. Sólo el modo mock (sin base) queda en memoria.
+  - `MatchingSettings.tsx` dice ahora que la configuración se mantiene aunque se reinicie el servicio. `contracts/matching.md` §4.5 y §8 (Persistencia) también decían "en memoria" para la configuración, las recomendaciones de IA y los pedidos: se corrigen.
+  - **Recomendaciones:** se guardan en `matching.recommendations` y los pedidos en `matching.recommendation_requests`. Verificado: tras reiniciar matching-service, `GET /recommendations/students/{id}` sigue devolviendo las 5 recomendaciones de IA (`status: ready`). En el front no había textos que dijeran lo contrario.
+  - Frontend 0.11.2. `tsc`, prettier y vitest (63 tests) en verde.
+- **Archivos afectados:** `frontend/src/components/admin/MatchingSettings.tsx`, `frontend/package.json`, `frontend/package-lock.json`, `contracts/matching.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
