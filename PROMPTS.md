@@ -740,3 +740,41 @@
   - El ranking y los puntajes `RULES` se siguen calculando al consultar. Se agregó una prueba que reconstruye el servicio y verifica que configuración, pedidos y recomendaciones sobrevivan el reinicio.
 - **Archivos afectados:** `services/matching-service/`, `docker-compose.yml`, `docs/ARQUITECTURA.md`, `docs/frontend/pendientes.md`, `PROMPTS.md`.
 - **Decisión:** aceptado.
+
+### P-052 — Crear las tablas de matching al iniciar el servicio
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > creaste un nuevo schema para matching en postgres, pero no creaste la tabla o las tablas
+- **Resumen de la respuesta:**
+  - Se comprobó que el schema `matching` existía pero no tenía tablas. La creación SQLAlchemy estaba diferida hasta la primera solicitud que dependía del contenedor.
+  - Se inicializó el contenedor en el `lifespan` de FastAPI para que `metadata.create_all` cree `recommendations`, `recommendation_requests` y `recommendation_settings` al arrancar. Se cierra el engine al apagar el servicio.
+  - Se reconstruyó `matching-service`; PostgreSQL confirmó las tres tablas y el servicio quedó saludable. También se documentaron el schema y las tablas en `docs/ARQUITECTURA.md`.
+- **Archivos afectados:** `services/matching-service/app/main.py`, `services/matching-service/tests/test_persistence.py`, `docs/ARQUITECTURA.md`, `PROMPTS.md`.
+- **Decisión:** aceptado.
+
+### P-053 — Identificar las tablas de matching
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > cules son las tablas?
+- **Resumen de la respuesta:**
+  - Se enumeraron `recommendations` (recomendaciones IA), `recommendation_requests` (solicitudes y estados) y `recommendation_settings` (límites configurables), todas dentro de `matching`.
+- **Archivos afectados:** `PROMPTS.md`.
+- **Decisión:** respondido.
+
+### P-054 — Mostrar las tablas de matching en consola
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > Hace u show tables y mostrame el resultado por consola
+- **Resumen de la respuesta:**
+  - Se ejecutó `\dt matching.*` en PostgreSQL. El resultado mostró las tres tablas del schema `matching`, con propietario `matching_svc`.
+- **Archivos afectados:** `PROMPTS.md`.
+- **Decisión:** respondido.
+
+### P-055 — Compartir configuración de conexión a PostgreSQL
+- **Fecha:** 2026-11-12 · **Autor:** Luciano · **Agente:** Copilot SDK en VS Code (`matching-agent`) · **Rama:** `chore/matching-service/fix-persistence`
+- **Prompt (textual):**
+  > Me pasas la config para conectarme a la base
+- **Resumen de la respuesta:**
+  - Se indicaron host `localhost`, puerto `5432`, base `bolsa`, usuario `matching_svc` y schema `matching`, usando en la contraseña el valor local de `MATCHING_DB_PASSWORD` en `.env` sin registrarlo en el documento.
+- **Archivos afectados:** `PROMPTS.md`.
+- **Decisión:** respondido.

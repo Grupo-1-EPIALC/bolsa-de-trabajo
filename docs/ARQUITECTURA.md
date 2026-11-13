@@ -22,7 +22,7 @@ flowchart LR
         JOBS["jobs-service<br/>FastAPI :8000"]
         MATCH["matching-service<br/>FastAPI :8000<br/>motor de reglas"]
         N8N["n8n :5678<br/>10 workflows<br/>agentes de IA"]
-        PG[("PostgreSQL 17<br/>schemas auth · profile · jobs<br/>base n8n")]
+        PG[("PostgreSQL 17<br/>schemas auth · profile · jobs · matching<br/>matching: recommendations · recommendation_requests · recommendation_settings<br/>base n8n")]
         MAIL["Mailpit<br/>SMTP :1025 · UI :8025"]
     end
 
@@ -78,7 +78,7 @@ Líneas llenas: pedidos de negocio. Punteadas: validación del JWT (cada servici
 | `auth-service` | Registro, login, cambios de clave/correo, admin | JWT RS256 (15 min) + refresh token (7 días), mails, eventos `account.deleted`/`account.updated` | Schema `auth` (usuarios, empresas, sesiones, outbox de eventos) |
 | `profile-service` | Perfil, CV (PDF/DOCX/DOC/MD ≤ 5 MB), logo de empresa | Perfil con completitud, borrador de la IA, CV generado en PDF/DOCX/HTML | Schema `profile` + volumen `bolsa_cv_storage` |
 | `jobs-service` | Ofertas de empresas | Ofertas paginadas, detalle, evento `job.created` | Schema `jobs` |
-| `matching-service` | `profile_id` + `job_id` | Puntaje por reglas con desglose, faltantes, rankings, pedidos a la IA y vistas reglas + IA | Schema `matching` (PostgreSQL): pedidos, recomendaciones de IA y configuración; los puntajes por reglas se recalculan |
+| `matching-service` | `profile_id` + `job_id` | Puntaje por reglas con desglose, faltantes, rankings, pedidos a la IA y vistas reglas + IA | Schema `matching` (PostgreSQL): tablas `recommendations`, `recommendation_requests` y `recommendation_settings`, creadas al iniciar el servicio; los puntajes por reglas se recalculan |
 | `n8n` | Webhooks de los servicios | Respuestas de la IA verificadas, mails, avisos de error | Base `n8n` (workflows, ejecuciones) y tabla `bolsa.notifications_sent` |
 | `mcp-tools` | Llamadas MCP de n8n (`X-Service-Token`) | Texto del CV, rankings, validación de schema, grounding, modelo a usar | — |
 

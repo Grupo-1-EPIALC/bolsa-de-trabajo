@@ -5,16 +5,36 @@ genera n8n (`origin = "AI"`). No llama a ningún LLM (AGENTS.md §4.4).
 Capas: api/ -> application/ -> domain/ <- infrastructure/ (AGENTS.md §2.1).
 """
 
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.dependencies import get_container
 from app.api.routes import router as matches_router
 from app.domain.errors import MatchingError
 
 SERVICE_NAME = "matching-service"
 SERVICE_VERSION = "0.5.0"
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
+    """Inicializa las tablas persistentes al arrancar el servicio."""
+    container = None
+    try:
+        if get_container not in application.dependency_overrides:
+            container = get_container()
+        yield
+    finally:
+        if container is not None:
+            if container.persistence is not None:
+                container.persistence.dispose()
+            get_container.cache_clear()
+
 
 # Docs bajo el prefijo del servicio: pasan por el gateway (/api/v1/matches/) sin rutas nuevas.
 app = FastAPI(
@@ -23,6 +43,7 @@ app = FastAPI(
     docs_url="/api/v1/matches/docs",
     redoc_url="/api/v1/matches/redoc",
     openapi_url="/api/v1/matches/openapi.json",
+    lifespan=lifespan,
 )
 app.include_router(matches_router)
 

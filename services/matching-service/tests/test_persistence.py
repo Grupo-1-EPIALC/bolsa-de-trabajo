@@ -3,10 +3,14 @@
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import inspect
 
+from app.api.dependencies import get_container
 from app.domain.auth import Principal, Role
 from app.infrastructure.config import MatchingSettings
 from app.infrastructure.container import Container, build_container
+from app.main import app
 from tests.fakes import FakeTrigger, ai_batch, fixture_sources
 from tests.jwt_helpers import verifier
 
@@ -102,3 +106,23 @@ def test_settings_requests_and_recommendations_survive_restart(tmp_path: Path) -
 def test_real_sources_require_database_url() -> None:
     with pytest.raises(ValueError, match="DATABASE_URL es obligatorio"):
         build_container(MatchingSettings(use_mocks=False))
+
+
+def test_app_startup_creates_persistence_tables(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'startup.sqlite'}")
+    monkeypatch.setenv("MATCHING_DB_SCHEMA", "")
+    monkeypatch.setenv("MATCHING_USE_MOCKS", "true")
+    get_container.cache_clear()
+
+    with TestClient(app):
+        container = get_container()
+        assert container.persistence is not None
+        tables = set(inspect(container.persistence.engine).get_table_names())
+
+    assert {
+        "recommendations",
+        "recommendation_requests",
+        "recommendation_settings",
+    } <= tables
