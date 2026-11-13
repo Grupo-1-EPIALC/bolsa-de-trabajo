@@ -97,6 +97,28 @@ def normalize_cv_suggestions(raw_input: dict[str, Any]) -> dict[str, Any]:
         ),
     }
 
+    # Título del perfil: el del CV ("cv") o uno que la IA sugirió con su contenido ("suggested").
+    headline = str_or_manual(
+        _pick_analogous(
+            raw,
+            (
+                "headline",
+                "titular",
+                "titulo_perfil",
+                "titulo",
+                "title",
+                "puesto_buscado",
+                "objetivo_laboral",
+            ),
+        ),
+        "headline",
+    )
+    headline_source = (
+        "cv"
+        if str(_pick_analogous(raw, ("headline_source",)) or "").lower() == "cv"
+        else "suggested"
+    )
+
     summary = str_or_manual(
         _pick_analogous(
             raw,
@@ -283,6 +305,8 @@ def normalize_cv_suggestions(raw_input: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "personal": personal,
+        "headline": headline,
+        "headline_source": headline_source,
         "summary": summary,
         "skills": skills,
         "experience": experience,
