@@ -233,6 +233,10 @@ class LlmProxy:
                     yield chunk
             except httpx.TimeoutException:
                 logger.warning("LLM %s: el stream se cortó por inactividad", model)
+            else:
+                logger.info(
+                    "LLM %s: respondió en streaming en %.1f s", model, time.monotonic() - started
+                )
             finally:
                 await upstream.aclose()
                 await client.aclose()
