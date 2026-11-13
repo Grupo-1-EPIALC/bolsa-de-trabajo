@@ -44,6 +44,7 @@ También se acepta `X-Webhook-Token` con `N8N_WEBHOOK_TOKEN`. Sin token válido:
 ```
 
 - El agente lee el adjunto con mcp-tools (`perfil=adjuntos`: `parse_cv_file`) y devuelve `cv_suggestions` con la forma de `cv_standard`. **Sin `null`:** `"COMPLETAR_MANUALMENTE"` en los escalares que faltan y `[]` en las listas vacías. No inventa competencias que no estén en el CV.
+- **Título del perfil** (`cv_structurer` 1.2.0): `headline` es el título del CV (`headline_source: "cv"`) o, si el CV no tiene, uno corto que la IA arma sólo con la carrera, los puestos y las competencias del CV (`headline_source: "suggested"`). El verificador (1.1.0) acepta el sugerido mientras no nombre nada que no esté en el CV. WF-00 lo recorta a 140 caracteres en un separador.
 - Lo extraído es una **sugerencia**: profile-service la guarda en `cv_suggestions` y le agrega `profile_draft` + `review_fields` para el front ([`profile.md`](profile.md), parte A §6 y parte D).
 
 ## 4. Recomendaciones (WF-06)
@@ -66,7 +67,7 @@ También se acepta `X-Webhook-Token` con `N8N_WEBHOOK_TOKEN`. Sin token válido:
 - Los agentes responden **sólo JSON** que cumpla su schema: `cv_standard`, `cv_design`, `match_student_recommendations`, `match_company_recommendations`, `company_recommendations`, `student_recommendations` y `verifier_verdict`. Los schemas vigentes son los de `mcp-tools/app/data/schemas/` (los usa `validate_json_schema`); las copias anteriores quedaron en [`historico/`](historico/).
 - Antes de verificar, `WF-00` recorta la salida a los topes del schema (`maxItems`, `maxLength`, tomados de `mcp-tools/app/data/schemas/` al generar los workflows): un ítem de más no provoca un reintento. Los textos se cortan en una palabra con `…`.
 - `WF-0V` rechaza una salida si no cumple el schema, si menciona competencias que no están en la fuente (`check_grounding`) o si el score reportado no es el del motor. El orquestador reintenta con la instrucción del verificador.
-- Catálogo de agentes en `n8n/agentes/*.json` y prompts versionados en `n8n/prompts/*.md`.
+- Catálogo de agentes en `n8n/agentes/*.json` y prompts versionados en `n8n/prompts/*.md`. El `prompt_version` que se guarda con cada salida (WF-01, WF-06 y WF-07) sale del frontmatter del prompt al generar los workflows: no se escribe a mano.
 
 ### 5.1 Herramientas y reglas por agente
 

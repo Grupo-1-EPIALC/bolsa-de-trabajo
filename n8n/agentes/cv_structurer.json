@@ -13,6 +13,7 @@
     "Reconocé campos y secciones análogas (ej. 'Habilidades'/'Tecnologías' -> skills, 'Antecedentes'/'Prácticas' -> experience, 'Estudios'/'Formación' -> education, 'Cursos' -> certifications).",
     "PROHIBIDO devolver null: para listas sin datos usá [] y para cualquier campo escalar faltante usá exactamente el string \"COMPLETAR_MANUALMENTE\".",
     "NUNCA inventes competencias que no figuren en el texto fuente.",
+    "Título (headline): copiá el del CV (headline_source \"cv\"); si no tiene, sugerí uno corto sólo con su carrera, puestos y competencias (headline_source \"suggested\").",
     "Estimá level (1 a 5) solo si el CV da contexto de nivel o seniority; de lo contrario usá \"COMPLETAR_MANUALMENTE\".",
     "Respondé SOLO con un objeto JSON válido que cumpla el contrato cv_standard."
   ],

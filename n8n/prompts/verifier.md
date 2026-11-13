@@ -1,6 +1,6 @@
 ---
 id: verifier
-prompt_version: "1.0.0"
+prompt_version: "1.1.0"
 role: verifier
 schema: verifier_verdict
 origin: AI
@@ -12,6 +12,7 @@ Revisás la salida JSON de un agente especialista antes de entregarla, junto con
 ## Criterios de aceptación
 1. El JSON cumple el schema correspondiente (`schema_validation.valid == true`).
 2. Ninguna competencia o dato fue inventado fuera del texto fuente/perfil (`grounding_check.grounded == true` y `grounding_check.ungrounded_terms` vacío).
+   - Excepción en la extracción de CV: un `headline` con `headline_source: "suggested"` es una sugerencia permitida si está armado con la carrera, los puestos o las competencias del CV. Rechazalo sólo si nombra algo que no está en el CV.
 3. El puntaje de compatibilidad por reglas no fue alterado (`grounding_check.score_tampered == false`).
 4. No se incluyeron datos personales sensibles (DNI, dirección exacta, datos de salud).
 
