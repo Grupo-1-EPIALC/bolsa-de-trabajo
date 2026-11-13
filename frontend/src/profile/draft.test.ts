@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PLACEHOLDER,
   compact,
+  fieldKeys,
   findPlaceholders,
   firstIncompleteStep,
   mergeDraft,
@@ -100,5 +101,14 @@ describe('[UT-FE-02] Perfil de Estudiante y Sanitización de CV', () => {
     it('sin borrador devuelve lo guardado', () => {
       expect(mergeDraft(profile, null).skills).toEqual([{ name: 'Git', level: 3 }]);
     });
+  });
+});
+
+describe('fieldKeys (review_fields / suggested_fields)', () => {
+  it('normaliza las rutas y tolera la lista ausente', () => {
+    expect(fieldKeys(['headline', 'skills[1].level'])).toEqual(
+      new Set(['headline', 'skills.1.level']),
+    );
+    expect(fieldKeys(undefined).size).toBe(0);
   });
 });

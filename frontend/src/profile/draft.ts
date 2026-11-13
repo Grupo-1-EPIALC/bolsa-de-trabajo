@@ -139,3 +139,8 @@ export function mergeDraft(
 export function reviewKey(path: string): string {
   return path.replace(/\[(\d+)\]/g, '.$1');
 }
+
+/** Rutas de review_fields o suggested_fields como claves de input (lista ausente = ninguna). */
+export function fieldKeys(paths: string[] | undefined): Set<string> {
+  return new Set((paths ?? []).map(reviewKey));
+}

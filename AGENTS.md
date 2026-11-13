@@ -261,10 +261,12 @@ Devolvé JSON: {"summary":str,"items":[{"type":"course|skill|profile_tip","skill
 "text":str,"priority":"alta|media|baja"}]} con máximo 5 ítems.
 ```
 
-### 6.3 Prompt de runtime — CV Structurer (`n8n/prompts/cv_structurer.md`, v1.1.0)
+### 6.3 Prompt de runtime — CV Structurer (`n8n/prompts/cv_structurer.md`, v1.2.0)
 ```
 Extraé del texto del CV sólo información presente o análoga. Devolvé JSON sin valores null:
 usá "COMPLETAR_MANUALMENTE" para campos escalares ausentes y [] para listas vacías. No inventes.
+Título (headline): el del CV (headline_source "cv") o, si no tiene, uno corto armado sólo con su
+carrera, puestos y competencias (headline_source "suggested").
 ```
 
 ---

@@ -9,7 +9,7 @@ import {
   SKILL_CATEGORY,
   SKILL_LEVEL,
 } from '../../profile/labels';
-import { compact, findPlaceholders, reviewKey } from '../../profile/draft';
+import { compact, fieldKeys, findPlaceholders } from '../../profile/draft';
 import type {
   AcademicStatus,
   CertificationItem,
@@ -26,6 +26,8 @@ import type {
 interface StepCvDataProps {
   initial: ProfileSections;
   reviewFields: string[];
+  /** Rutas que la IA sugirió con el contenido del CV (p. ej. `headline`). */
+  suggestedFields?: string[];
   saving: boolean;
   onSave: (sections: ProfileSections) => void;
 }
@@ -80,6 +82,7 @@ function validate(form: ProfileSections): string[] {
 export const StepCvData: React.FC<StepCvDataProps> = ({
   initial,
   reviewFields,
+  suggestedFields = [],
   saving,
   onSave,
 }) => {
@@ -100,8 +103,9 @@ export const StepCvData: React.FC<StepCvDataProps> = ({
     links: initial.links ?? [],
   }));
   const [errors, setErrors] = useState<string[]>([]);
-  const review = new Set(reviewFields.map(reviewKey));
+  const review = fieldKeys(reviewFields);
   const isReview = (key: string) => review.has(key);
+  const suggested = fieldKeys(suggestedFields);
 
   const personal = form.personal as Personal;
   const location = personal.location!;
@@ -237,8 +241,9 @@ export const StepCvData: React.FC<StepCvDataProps> = ({
             label="Título del perfil"
             value={form.headline}
             maxLength={140}
-            placeholder="Estudiante de Sistemas · Backend Python"
+            placeholder="Ej.: tu carrera y el puesto que buscás"
             review={isReview('headline')}
+            suggested={suggested.has('headline')}
             onChange={(v) => setForm((f) => ({ ...f, headline: v }))}
           />
           <TextField

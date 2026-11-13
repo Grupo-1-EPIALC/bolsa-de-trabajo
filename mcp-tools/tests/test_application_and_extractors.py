@@ -112,6 +112,38 @@ async def test_cv_parser_rejects_invalid_inputs() -> None:
         await parser2.parse_base64(md_b64, "cv.md")
 
 
+def test_cv_standard_headline_from_cv_or_suggested() -> None:
+    verifier = VerificationService(JsonSchemaValidator())
+    base = {
+        "personal": {
+            "name": "Ana Ficticia",
+            "email": "COMPLETAR_MANUALMENTE",
+            "phone": "COMPLETAR_MANUALMENTE",
+            "location": "Córdoba",
+        },
+        "summary": "Estudiante de Contador Público",
+        "skills": [],
+        "experience": [],
+        "education": [],
+        "languages": [],
+        "certifications": [],
+        "links": [],
+    }
+    suggested = {
+        **base,
+        "headline": "Estudiante de Contador Público · Administración",
+        "headline_source": "suggested",
+    }
+    assert verifier.validate_json("cv_standard", json.dumps(suggested))["valid"] is True
+    # Sigue siendo opcional: una respuesta sin título también es válida.
+    assert verifier.validate_json("cv_standard", json.dumps(base))["valid"] is True
+
+    bad_source = {**suggested, "headline_source": "inventado"}
+    assert verifier.validate_json("cv_standard", json.dumps(bad_source))["valid"] is False
+    too_long = {**suggested, "headline": "x" * 141}
+    assert verifier.validate_json("cv_standard", json.dumps(too_long))["valid"] is False
+
+
 def test_verification_service_schemas_and_grounding() -> None:
     verifier = VerificationService(JsonSchemaValidator())
 

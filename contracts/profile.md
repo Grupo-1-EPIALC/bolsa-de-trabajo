@@ -1,7 +1,7 @@
 # Contrato · profile-service
 
 > **Para:** el frontend (perfil de estudiante y de empresa), matching-service, mcp-tools y n8n, y jobs-service (snapshot de empresa).
-> **Servicio:** `profile-service` 0.4.1 (FastAPI) · base `/api/v1/profiles`.
+> **Servicio:** `profile-service` 0.6.0 (FastAPI) · base `/api/v1/profiles`.
 > **Fuente de verdad viva:** [Swagger UI](/api/v1/profiles/docs) · [ReDoc](/api/v1/profiles/redoc) · [OpenAPI](/api/v1/profiles/openapi.json) (por el gateway, en dev `http://localhost:8080`).
 > **Partes:** A. Perfil del estudiante y CV (front) · B. Perfil de empresa (front) · C. Servicios: pool, vistas y eventos · D. Extracción de CV con n8n (WF-01) y endpoints de compatibilidad · E. Snapshot de empresa para jobs-service (propuesta) · Anexo · Estructura común perfil ↔ oferta ↔ match. Los `§` de cada parte se refieren a esa parte.
 > Los documentos de los que sale este contrato están en [`historico/`](historico/). Todos los ejemplos usan datos ficticios.
@@ -245,7 +245,7 @@ const job = await fetch('/api/v1/profiles/me/cv', {
       "phone": "COMPLETAR_MANUALMENTE",
       "location": { "country": "AR", "province": "Buenos Aires", "city": "San Isidro" }
     },
-    "headline": "COMPLETAR_MANUALMENTE",
+    "headline": "Desarrolladora backend · Python y FastAPI",
     "summary": "Desarrolladora backend con Python, FastAPI y Docker.",
     "skills": [
       { "name": "Python", "normalized": "python", "level": 4, "category": "hard", "source": "cv_ai", "confirmed": false },
@@ -262,7 +262,8 @@ const job = await fetch('/api/v1/profiles/me/cv', {
     "links": [{ "type": "github", "url": "https://github.com/lucia-ficticia" }],
     "academic_status": { "institution": "Universidad Tecnológica Nacional", "career": "Ingeniería en Sistemas de Información" }
   },
-  "review_fields": ["personal.phone", "headline", "skills[1].level"],
+  "review_fields": ["personal.phone", "skills[1].level"],
+  "suggested_fields": ["headline"],
   "received_at": "2026-11-06T03:32:31+00:00"
 }
 ```
@@ -271,6 +272,7 @@ Cómo usarlo:
 
 1. **Precargar el formulario del paso 1 con `profile_draft`**, que ya tiene la forma del PATCH: país ISO, enums válidos, fechas `YYYY-MM` y skills normalizadas.
 2. **`"COMPLETAR_MANUALMENTE"`** marca un dato que la IA no encontró. Mostrar el campo vacío y resaltado; `review_fields` lista esas rutas.
+   **`suggested_fields`** (desde 0.6.0) lista lo que la IA no copió del CV sino que sugirió con su contenido: hoy sólo `headline`, cuando el CV no tiene un título y la IA arma uno con la carrera, los puestos y las competencias del CV. Viene precargado; mostrarlo con un aviso de "sugerido por la IA, revisalo". Si el CV tiene título, `headline` viene precargado y no está en ninguna de las dos listas.
 3. Cada ítem sugerido (skill, experiencia, idioma…) se puede **aceptar, editar o descartar**. Al aceptar una skill, mandar `source: "cv_ai"`; las que agrega el usuario van con `source: "manual"`.
 4. Guardar con `PATCH /profiles/me`. **Si queda algún `"COMPLETAR_MANUALMENTE"` en lo enviado, el servicio responde `422`** con las rutas en `details.fields`.
 5. La extracción **nunca pisa** el perfil: sólo se guarda lo que el usuario confirma con PATCH.
@@ -819,7 +821,7 @@ Después de cada alta o `PATCH`, profile-service hace un **POST best-effort** a 
 ### 7. Extracción de CV (sin cambios para n8n)
 
 - profile-service sigue llamando a `POST http://n8n:5678/webhook/cv-extract` (WF-01) con el mismo body, documentado en [`profile.md`](profile.md) §2.2.
-- La respuesta de WF-01 (`cv_suggestions` con forma `cv_standard`) **no cambia**. profile-service le agrega `profile_draft` y `review_fields` para el front.
+- La respuesta de WF-01 (`cv_suggestions` con forma `cv_standard`) **no cambia**. profile-service le agrega `profile_draft`, `review_fields` y `suggested_fields` para el front.
 - **Para probarlo de punta a punta, WF-01 tiene que estar importado y activo en n8n.** Si no, el job termina en `failed` con `CV_WEBHOOK_ERROR` ("webhook not registered").
 
 ---

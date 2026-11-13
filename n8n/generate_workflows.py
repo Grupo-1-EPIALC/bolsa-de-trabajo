@@ -187,6 +187,15 @@ def _reglas_para(
     return "\n".join([intro, "", table_head, *filas, "", pie])
 
 
+def _prompt_version(agente: str) -> str:
+    """`prompt_version` del frontmatter de n8n/prompts/<agente>.md: la que se guarda con la salida."""
+    md = (PROMPTS_DIR / f"{agente}.md").read_text(encoding="utf-8")
+    m = re.search(r'^prompt_version:\s*"?([0-9]+\.[0-9]+\.[0-9]+)"?\s*$', md, re.MULTILINE)
+    if not m:
+        raise ValueError(f"{agente}.md: falta prompt_version en el frontmatter")
+    return m.group(1)
+
+
 def _schemas_del_prompt(prompt_md: str) -> list[str]:
     """Schemas de salida declarados en el frontmatter del prompt (`schema: a | b`)."""
     m = re.search(r"^schema:\s*(.+)$", prompt_md, re.MULTILINE)
@@ -597,6 +606,22 @@ const normalizeCvCandidate = (rawInput, sourceText = '') => {
     ),
   };
 
+  // Título del perfil: el del CV (headline_source "cv") o uno sugerido con su contenido ("suggested").
+  let headline = strOrManual(
+    pickAnalogous(raw, ['headline', 'titular', 'titulo_perfil', 'titulo', 'title', 'puesto_buscado', 'objetivo_laboral']),
+    'headline'
+  );
+  if (headline !== MANUAL_INDICATOR && headline.length > 140) {
+    // Corta en el último separador (' · ', ', ') antes del tope; si no hay, en un espacio.
+    const cut = headline.slice(0, 141);
+    const sep = Math.max(cut.lastIndexOf(' · '), cut.lastIndexOf(', '));
+    const at = sep > 40 ? sep : cut.lastIndexOf(' ');
+    headline = (at > 40 ? cut.slice(0, at) : cut.slice(0, 140)).replace(/[\s·,]+$/, '').trim();
+  }
+  const headlineSource = String(pickAnalogous(raw, ['headline_source', 'origen_titulo']) || '').trim().toLowerCase() === 'cv'
+    ? 'cv'
+    : 'suggested';
+
   const summary = strOrManual(
     pickAnalogous(raw, ['summary', 'resumen', 'perfil', 'perfil_profesional', 'objetivo', 'sobre_mi', 'about', 'bio', 'extracto', 'presentacion']),
     'summary'
@@ -723,6 +748,8 @@ const normalizeCvCandidate = (rawInput, sourceText = '') => {
 
   return {
     personal,
+    headline,
+    headline_source: headlineSource,
     summary,
     skills,
     experience,
@@ -2083,7 +2110,7 @@ return [{
     cv_suggestions: orq.data,
     origin: 'AI',
     model: orq.model,
-    prompt_version: '1.0.0',
+    prompt_version: '__PV_CV_STRUCTURER__',
     generated_at: new Date().toISOString(),
     verified: orq.verified,
     disclaimer: 'Sugerencias extraídas automáticamente por IA del CV subido. Revisá, editá o descartá cada ítem antes de guardar tu perfil.',
@@ -2347,7 +2374,7 @@ if (mode === 'student') {
       source_text: sourceText,
       expected_score: topScore,
       reported_score: topScore,
-      prompt_version: '1.4.0',
+      prompt_version: '__PV_MATCH_ADVISOR__',
       user_prompt: `mode=student. Recomendá al estudiante ${profileId} las ofertas del ranking por reglas, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","jobs":[...]}. En next_steps usá sólo type apply o profile_tip: no propongas cursos, proyectos ni portfolios (la formación es general y va aparte):\n\n${sourceText}`,
     },
   }];
@@ -2436,7 +2463,7 @@ if (mode === 'company') {
       source_text: sourceText,
       expected_score: topScore,
       reported_score: topScore,
-      prompt_version: '1.4.0',
+      prompt_version: '__PV_MATCH_ADVISOR__',
       user_prompt: `mode=company. Recomendá los candidatos del ranking por reglas para la oferta ${jobId}, en el mismo orden de rank y sin devolver score, en JSON {"summary":"...","candidates":[...]}:\n\n${sourceText}`,
     },
   }];
@@ -2505,7 +2532,7 @@ if (mode === 'training') {
       source_text: sourceText,
       expected_score: null,
       reported_score: null,
-      prompt_version: '2.2.0',
+      prompt_version: '__PV_TRAINING_ADVISOR__',
       user_prompt: `Recomendá al estudiante ${profileId}, en general y no para una oferta, hasta ${maxItems} competencias para sumar o mejorar, a partir de las brechas calculadas por reglas sobre las ofertas más parecidas a su perfil. type: course | skill | profile_tip. No pidas portfolios, proyectos personales ni nada similar. Respondé en JSON {"summary":"...","items":[...]}:\n\n${sourceText}`,
     },
   }];
@@ -3033,7 +3060,7 @@ def _if_node(seed: str, name: str, expression: str, pos: list[int]) -> dict[str,
 
 
 def _send_email_node(seed: str, name: str, pos: list[int]) -> dict[str, Any]:
-    """Un mail por ítem ({to, subject, html, text}) con la credencial SMTP que crea n8n-init."""
+    """Un mail por ítem ({to, subject, html, text}) con la credencial SMTP que crea n8n/init/bootstrap.sh."""
     return _node(
         seed,
         name,
@@ -3671,7 +3698,7 @@ return [{
     },
     origin: 'AI',
     model: orq.model,
-    prompt_version: '1.0.0',
+    prompt_version: '__PV_CV_DESIGNER__',
     generated_at: new Date().toISOString(),
     verified: Boolean(orq.verified),
     disclaimer: 'Diseño sugerido por IA a partir de un resumen de tu perfil, sin datos personales. Sólo cambia el orden de las secciones: el contenido es el que confirmaste.',
@@ -3741,6 +3768,20 @@ return [{
     return _wf(WF_IDS["cv_design"], "WF-07 · Diseño del CV · CV Designer", nodes, connections)
 
 
+PROMPT_VERSION_MARKERS = {
+    "__PV_CV_STRUCTURER__": "cv_structurer",
+    "__PV_MATCH_ADVISOR__": "match_advisor",
+    "__PV_TRAINING_ADVISOR__": "training_advisor",
+    "__PV_CV_DESIGNER__": "cv_designer",
+}
+
+
+def _with_prompt_versions(text: str) -> str:
+    for marker, agente in PROMPT_VERSION_MARKERS.items():
+        text = text.replace(marker, _prompt_version(agente))
+    return text
+
+
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     catalog, sistema, prompts_md = _load_catalog()
@@ -3759,9 +3800,10 @@ def main() -> None:
     for filename, wf in workflows.items():
         target = OUT_DIR / filename
         # newline="\n": mismo resultado en Windows y Linux (el repo usa LF)
-        target.write_text(
-            json.dumps(wf, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
-        )
+        text = _with_prompt_versions(json.dumps(wf, ensure_ascii=False, indent=2))
+        if "__PV_" in text:
+            raise ValueError(f"{filename}: quedó un marcador de prompt_version sin reemplazar")
+        target.write_text(text + "\n", encoding="utf-8", newline="\n")
         print(f"Generado: {target.relative_to(ROOT)} ({len(wf['nodes'])} nodos)")
 
 

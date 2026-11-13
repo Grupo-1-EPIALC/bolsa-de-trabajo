@@ -5,6 +5,8 @@ interface BaseProps {
   label: string;
   /** Resalta el campo: la IA no encontró el dato o falta un obligatorio. */
   review?: boolean;
+  /** La IA no copió el dato del CV: lo sugirió con su contenido y hay que revisarlo. */
+  suggested?: boolean;
   hint?: string;
   required?: boolean;
   className?: string;
@@ -15,6 +17,14 @@ const ReviewHint: React.FC<{ show?: boolean }> = ({ show }) =>
     <div className="form-text text-warning-emphasis">
       <i className="bi bi-pencil-square me-1" aria-hidden="true" />
       Completalo: no lo encontramos en tu CV.
+    </div>
+  ) : null;
+
+const SuggestedHint: React.FC<{ show?: boolean }> = ({ show }) =>
+  show ? (
+    <div className="form-text text-warning-emphasis">
+      <i className="bi bi-stars me-1" aria-hidden="true" />
+      Sugerido por la IA con el contenido de tu CV: revisalo antes de guardar.
     </div>
   ) : null;
 
@@ -33,6 +43,7 @@ interface TextFieldProps extends BaseProps {
 export const TextField: React.FC<TextFieldProps> = ({
   label,
   review,
+  suggested,
   hint,
   required,
   className,
@@ -47,8 +58,12 @@ export const TextField: React.FC<TextFieldProps> = ({
   autoComplete,
 }) => {
   const id = useId();
-  const highlight = review && (value === '' || value === undefined);
-  const inputClass = `form-control ${highlight ? 'border-warning bg-warning-subtle' : ''}`;
+  const empty = value === '' || value === undefined;
+  const highlight = review && empty;
+  const showSuggested = Boolean(suggested) && !empty;
+  const inputClass = `form-control ${highlight ? 'border-warning bg-warning-subtle' : ''} ${
+    showSuggested ? 'border-warning' : ''
+  }`;
   return (
     <div className={className}>
       <label htmlFor={id} className="form-label">
@@ -81,6 +96,7 @@ export const TextField: React.FC<TextFieldProps> = ({
       )}
       {hint && <div className="form-text">{hint}</div>}
       <ReviewHint show={highlight} />
+      <SuggestedHint show={showSuggested} />
     </div>
   );
 };

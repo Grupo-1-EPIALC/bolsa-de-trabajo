@@ -3,6 +3,8 @@ con la estructura del perfil, listo para que el frontend lo muestre en el formul
 
 - Lo reconocido se precarga; lo que no se pudo reconocer queda en `"COMPLETAR_MANUALMENTE"`.
 - `review_fields` lista esas rutas para que el usuario las complete antes de guardar.
+- `suggested_fields` lista lo que la IA no copió del CV sino que sugirió con su contenido
+  (hoy, el título `headline` cuando el CV no tiene uno): se precarga, pero hay que revisarlo.
 - Nada se guarda en el perfil acá: el usuario confirma con `PATCH /profiles/me`.
 - Las skills detectadas en el texto (catálogo + sinónimos) se agregan sólo si aparecen en
   el CV; nunca se inventan (AGENTS.md §5.2).
@@ -52,6 +54,12 @@ def _is_todo(value: Any) -> bool:
 
 def _text(value: Any) -> str:
     return TODO if _is_todo(value) else str(value).strip()
+
+
+def _headline(value: Any) -> str:
+    """Título del perfil (máx. 140, como `PATCH /profiles/me`); vacío o sin dato = completar."""
+    text = _text(value)
+    return text if text == TODO else text[:140].strip()
 
 
 def _optional(value: Any) -> str | None:
@@ -187,7 +195,7 @@ class CvSuggestionMapper:
     def to_profile_draft(
         self, suggestions: Mapping[str, Any], *, account_email: str | None = None
     ) -> dict[str, Any]:
-        """Devuelve `{"profile_draft": {...}, "review_fields": [...]}`."""
+        """Devuelve `{"profile_draft", "review_fields", "suggested_fields"}`."""
         personal = suggestions.get("personal") or {}
         email = _optional(personal.get("email")) or account_email
         draft: dict[str, Any] = {
@@ -197,7 +205,7 @@ class CvSuggestionMapper:
                 "phone": _text(personal.get("phone")),
                 "location": parse_location(personal.get("location")),
             },
-            "headline": TODO,
+            "headline": _headline(suggestions.get("headline")),
             "summary": _text(suggestions.get("summary")),
         }
 
@@ -228,7 +236,16 @@ class CvSuggestionMapper:
         academic = self._academic(education)
         if academic:
             draft["academic_status"] = academic
-        return {"profile_draft": draft, "review_fields": _review_paths(draft)}
+        suggested = (
+            ["headline"]
+            if draft["headline"] != TODO and suggestions.get("headline_source") != "cv"
+            else []
+        )
+        return {
+            "profile_draft": draft,
+            "review_fields": _review_paths(draft),
+            "suggested_fields": suggested,
+        }
 
     def _experience(self, item: Mapping[str, Any]) -> dict[str, Any]:
         description = _optional(item.get("description")) or ""

@@ -159,6 +159,35 @@ def test_ut_prof_02_borrador_con_campos_a_completar(extractor: SkillExtractor) -
     assert any(path.startswith("skills[") and path.endswith(".level") for path in review)
 
 
+def test_ut_prof_02_headline_del_cv_se_precarga_sin_revision(extractor: SkillExtractor) -> None:
+    mapped = CvSuggestionMapper(extractor).to_profile_draft(
+        {"headline": "Estudiante de Contador Público · Facturación", "headline_source": "cv"}
+    )
+    assert mapped["profile_draft"]["headline"] == "Estudiante de Contador Público · Facturación"
+    assert "headline" not in mapped["review_fields"]
+    assert mapped["suggested_fields"] == []
+
+
+def test_ut_prof_02_headline_sugerido_se_marca_para_revisar(extractor: SkillExtractor) -> None:
+    mapped = CvSuggestionMapper(extractor).to_profile_draft(
+        {"headline": "Profesorado de Primaria · " + "x" * 200, "headline_source": "suggested"}
+    )
+    headline = mapped["profile_draft"]["headline"]
+    assert headline.startswith("Profesorado de Primaria") and len(headline) <= 140
+    assert mapped["suggested_fields"] == ["headline"]
+    assert "headline" not in mapped["review_fields"]  # tiene valor: se revisa, no se completa
+
+
+def test_ut_prof_02_headline_sin_dato_queda_para_completar(extractor: SkillExtractor) -> None:
+    for value in (None, "", TODO):
+        mapped = CvSuggestionMapper(extractor).to_profile_draft(
+            {"headline": value, "headline_source": "suggested"}
+        )
+        assert mapped["profile_draft"]["headline"] == TODO
+        assert "headline" in mapped["review_fields"]
+        assert mapped["suggested_fields"] == []
+
+
 def test_ut_prof_02_cv_vacio_no_inventa(extractor: SkillExtractor) -> None:
     mapped = CvSuggestionMapper(extractor).to_profile_draft({})
     draft = mapped["profile_draft"]

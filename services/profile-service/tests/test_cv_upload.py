@@ -196,3 +196,20 @@ def test_normalize_analogous_fields_and_no_nulls() -> None:
     assert norm["links"] == []
     assert "personal.email" in norm["pending_manual_fields"]
     assert "null" not in json.dumps(norm)
+    assert norm["headline"] == MANUAL_COMPLETION_INDICATOR
+    assert "headline" in norm["pending_manual_fields"]
+
+
+def test_normalize_keeps_headline_and_its_source() -> None:
+    from_cv = normalize_cv_suggestions({"headline": "Docente de Primaria", "headline_source": "cv"})
+    assert (from_cv["headline"], from_cv["headline_source"]) == ("Docente de Primaria", "cv")
+
+    suggested = normalize_cv_suggestions(
+        {"titular": "Profesorado de Primaria · Tutorías", "headline_source": "suggested"}
+    )
+    assert suggested["headline"] == "Profesorado de Primaria · Tutorías"
+    assert suggested["headline_source"] == "suggested"
+    # Un origen desconocido no se trata como "del CV": se revisa como sugerido.
+    assert normalize_cv_suggestions({"headline": "X", "headline_source": "?"})[
+        "headline_source"
+    ] == ("suggested")

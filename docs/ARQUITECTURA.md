@@ -216,7 +216,7 @@ sequenceDiagram
 | `WF-06` Recomendador | `POST /webhook/recommendations` | `student`, `company` y `training` | 2 |
 | `WF-07` Diseño del CV | `POST /webhook/cv-design` | Agente CV Designer elige el diseño | 1 |
 
-Los JSON están en `n8n/workflows/`, se generan con `python n8n/generate_workflows.py` desde `n8n/agentes/` y `n8n/prompts/`, y `n8n-init` los importa y activa en cada arranque.
+Los JSON están en `n8n/workflows/`, se generan con `python n8n/generate_workflows.py` desde `n8n/agentes/` y `n8n/prompts/`, y n8n los importa y activa en cada arranque (`n8n/init/bootstrap.sh`).
 
 ## 6. Reglas frente a IA
 
@@ -236,4 +236,4 @@ Los JSON están en `n8n/workflows/`, se generan con `python n8n/generate_workflo
 - **JWT RS256 con JWKS:** sólo `auth-service` tiene la clave privada; los demás validan con la pública.
 - **Volúmenes externos:** los datos sobreviven a `docker compose down -v`.
 - **Persistencia de matching:** las recomendaciones de IA, los estados de sus pedidos y la configuración del admin se guardan en PostgreSQL, schema `matching`. Los rankings y puntajes por reglas se recalculan al consultar.
-- **Versiones de imágenes:** `n8n` está fijado en `1.123.95` y Mailpit en `v1.33.1` para evitar cambios inesperados al reconstruir el entorno.
+- **Versiones de imágenes:** `n8n` está fijado en `2.45.7` (los workflows usan nodos de n8n 2.x y en 1.x no se publican) y Mailpit en `v1.33.1` para evitar cambios inesperados al reconstruir el entorno.
