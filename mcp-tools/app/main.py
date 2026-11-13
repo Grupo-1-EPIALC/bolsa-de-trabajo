@@ -226,6 +226,8 @@ async def http_router_status(_: Request) -> JSONResponse:
 llm_proxy = LlmProxy(
     os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
     float(os.getenv("AGENT_LLM_TIMEOUT_SECONDS", "60")),
+    max_seconds=float(os.getenv("AGENT_LLM_MAX_SECONDS", "120")),
+    thinking=os.getenv("AGENT_LLM_THINKING", "false").strip().lower() in ("1", "true", "yes"),
 )
 
 

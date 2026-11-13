@@ -4,12 +4,15 @@ El nodo `lmChatOpenAi` de n8n no respeta su opción `timeout`: si NVIDIA tarda, 
 colgada y WF-0R nunca pasa al modelo siguiente. La credencial de n8n apunta a este proxy
 (`http://mcp-tools:8000/llm/v1`).
 
-"No contesta" = no llega nada de NVIDIA durante `AGENT_LLM_TIMEOUT_SECONDS`: ni el primer
-fragmento ni ninguno de los siguientes. Para medirlo, el proxy pide la respuesta a NVIDIA en
-streaming aunque n8n la haya pedido entera, y la arma antes de devolverla. Un modelo que va
-contestando despacio no se corta (salvo el tope de `max_seconds`). Al cortar responde `504` con
-formato de error de OpenAI: el agente de n8n falla y el bucle de WF-0R reporta el fallo al router
-y elige otro modelo.
+"No contesta" = no llega nada de NVIDIA durante `AGENT_LLM_TIMEOUT_SECONDS` (ni el primer
+fragmento ni ninguno de los siguientes) o la respuesta no termina dentro de
+`AGENT_LLM_MAX_SECONDS`. Para medirlo, el proxy pide la respuesta a NVIDIA en streaming y la junta
+entera antes de devolverla: armada si n8n la pidió entera, o como eventos SSE si la pidió en
+streaming. Al cortar responde `504` con formato de error de OpenAI: el agente de n8n falla y el
+bucle de WF-0R reporta el fallo al router y elige otro modelo.
+
+Además le pide a NVIDIA que no razone (`chat_template_kwargs`), salvo `AGENT_LLM_THINKING=true`:
+los modelos "piensan" miles de tokens antes de contestar y eso es lo que más tarda.
 
 El proxy no agrega credenciales: reenvía el `Authorization` que manda n8n (la clave de NVIDIA).
 """
@@ -18,11 +21,11 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import AsyncIterator, Callable
+from collections.abc import Callable
 from typing import Any
 
 import httpx
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.responses import JSONResponse, Response
 
 logger = logging.getLogger(__name__)
 
@@ -113,11 +116,15 @@ class LlmProxy:
         timeout_seconds: float,
         client_factory: Callable[[], httpx.AsyncClient] | None = None,
         max_seconds: float | None = None,
+        thinking: bool = False,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = float(timeout_seconds)
-        # Tope total por si un modelo manda fragmentos sueltos sin terminar nunca.
-        self._max = float(max_seconds) if max_seconds else self._timeout * 4
+        # Tope total por modelo: un modelo que contesta pero no termina nunca también se corta.
+        self._max = float(max_seconds) if max_seconds else self._timeout * 2
+        # Sin razonamiento por defecto: los modelos de NVIDIA "piensan" miles de tokens antes de
+        # contestar y eso es lo que más tarda. Para extraer o recomendar no hace falta.
+        self._thinking = thinking
         self._client_factory = client_factory or (
             lambda: httpx.AsyncClient(timeout=httpx.Timeout(self._timeout, connect=10.0))
         )
@@ -129,27 +136,31 @@ class LlmProxy:
     def _headers(self, headers: dict[str, str]) -> dict[str, str]:
         return {k: v for k, v in headers.items() if k.lower() in _FORWARDED_HEADERS}
 
+    def _payload(self, data: dict[str, Any]) -> bytes:
+        """Siempre en streaming hacia NVIDIA (para medir si contesta) y sin razonamiento."""
+        payload = {**data, "stream": True}
+        if not self._thinking:
+            kwargs = dict(payload.get("chat_template_kwargs") or {})
+            kwargs.setdefault("enable_thinking", False)  # nemotron, minimax, qwen
+            kwargs.setdefault("thinking", False)  # deepseek
+            payload["chat_template_kwargs"] = kwargs
+        return json.dumps(payload).encode()
+
     async def chat_completions(self, body: bytes, headers: dict[str, str]) -> Response:
+        """Junta toda la respuesta de NVIDIA antes de devolverla: así, si el modelo no contesta
+        o se pasa del tope, puede responder un error limpio (`504`) en lugar de un stream cortado.
+        Si n8n pidió streaming, recibe los mismos eventos SSE, todos juntos al final."""
         data = _parse(body)
         if data is None:
             return _error(400, "INVALID_REQUEST", "El cuerpo tiene que ser un objeto JSON")
         model = str(data.get("model") or "?")
-        if data.get("stream"):
-            return await self._passthrough_stream(body, headers, model)
-        return await self._collected(data, headers, model)
-
-    async def _collected(
-        self, data: dict[str, Any], headers: dict[str, str], model: str
-    ) -> Response:
-        """Pedido sin streaming: se pide en streaming a NVIDIA y se devuelve armado."""
         started = time.monotonic()
-        payload = json.dumps({**data, "stream": True}).encode()
         try:
             async with self._client_factory() as client:
                 request = client.build_request(
                     "POST",
                     f"{self._base_url}/chat/completions",
-                    content=payload,
+                    content=self._payload(data),
                     headers=self._headers(headers),
                 )
                 upstream = await self._wait(client.send(request, stream=True), started)
@@ -162,7 +173,7 @@ class LlmProxy:
                             status_code=upstream.status_code,
                             media_type=upstream.headers.get("content-type", "application/json"),
                         )
-                    chunks = await self._read_events(upstream, started)
+                    lines, chunks = await self._read_events(upstream, started)
                 finally:
                     await upstream.aclose()
         except (LlmTimeoutError, TimeoutError, httpx.TimeoutException):
@@ -171,15 +182,22 @@ class LlmProxy:
             logger.warning("LLM %s: error de red con NVIDIA (%s)", model, type(exc).__name__)
             return _error(502, "LLM_UPSTREAM_ERROR", f"No se pudo conectar con NVIDIA: {exc}")
         logger.info("LLM %s: respondió en %.1f s", model, time.monotonic() - started)
+        if data.get("stream"):
+            sse = "".join(f"{line}\n\n" for line in lines) + "data: [DONE]\n\n"
+            return Response(content=sse.encode(), media_type="text/event-stream")
         return JSONResponse(merge_chunks(chunks))
 
-    async def _read_events(self, upstream: httpx.Response, started: float) -> list[dict[str, Any]]:
-        """Lee los eventos SSE; corta si pasa el tiempo máximo sin recibir ninguna línea."""
+    async def _read_events(
+        self, upstream: httpx.Response, started: float
+    ) -> tuple[list[str], list[dict[str, Any]]]:
+        """Lee los eventos SSE; corta si pasa el tiempo máximo sin recibir ninguna línea o si se
+        supera el tope total."""
+        lines: list[str] = []
         chunks: list[dict[str, Any]] = []
-        lines = upstream.aiter_lines()
+        source = upstream.aiter_lines()
         while True:
             try:
-                line = await self._wait(anext(lines), started)
+                line = await self._wait(anext(source), started)
             except StopAsyncIteration:
                 break
             if not line.startswith("data:"):
@@ -189,8 +207,9 @@ class LlmProxy:
                 break
             parsed = _parse(raw.encode())
             if parsed is not None:
+                lines.append(f"data: {raw}")
                 chunks.append(parsed)
-        return chunks
+        return lines, chunks
 
     async def _wait(self, awaitable: Any, started: float) -> Any:
         """Espera hasta el tiempo máximo sin respuesta, sin pasarse del tope total."""
@@ -201,51 +220,6 @@ class LlmProxy:
             return await asyncio.wait_for(awaitable, min(self._timeout, remaining))
         except TimeoutError as exc:
             raise LlmTimeoutError from exc
-
-    async def _passthrough_stream(
-        self, body: bytes, headers: dict[str, str], model: str
-    ) -> Response:
-        """n8n pidió streaming: se reenvía tal cual con los mismos cortes."""
-        started = time.monotonic()
-        client = self._client_factory()
-        request = client.build_request(
-            "POST",
-            f"{self._base_url}/chat/completions",
-            content=body,
-            headers=self._headers(headers),
-        )
-        try:
-            upstream = await self._wait(client.send(request, stream=True), started)
-            chunks = upstream.aiter_raw()
-            first = await self._wait(anext(chunks, b""), started)
-        except (LlmTimeoutError, httpx.TimeoutException):
-            await client.aclose()
-            return self._timeout_response(model, started)
-        except httpx.HTTPError as exc:
-            await client.aclose()
-            return _error(502, "LLM_UPSTREAM_ERROR", f"No se pudo conectar con NVIDIA: {exc}")
-
-        async def relay() -> AsyncIterator[bytes]:
-            try:
-                if first:
-                    yield first
-                async for chunk in chunks:  # el `read` del cliente corta las pausas largas
-                    yield chunk
-            except httpx.TimeoutException:
-                logger.warning("LLM %s: el stream se cortó por inactividad", model)
-            else:
-                logger.info(
-                    "LLM %s: respondió en streaming en %.1f s", model, time.monotonic() - started
-                )
-            finally:
-                await upstream.aclose()
-                await client.aclose()
-
-        return StreamingResponse(
-            relay(),
-            status_code=upstream.status_code,
-            media_type=upstream.headers.get("content-type", "text/event-stream"),
-        )
 
     async def models(self, headers: dict[str, str]) -> Response:
         """`GET /models`: lo usa n8n para probar la credencial."""
@@ -268,5 +242,5 @@ class LlmProxy:
         return _error(
             504,
             "LLM_TIMEOUT",
-            f"timeout: el modelo {model} no respondió en {self._timeout:.0f} s",
+            f"timeout: el modelo {model} no respondió a tiempo ({elapsed:.0f} s)",
         )

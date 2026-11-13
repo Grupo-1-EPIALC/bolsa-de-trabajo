@@ -87,7 +87,7 @@ async def test_ut_mcp_06_un_modelo_que_contesta_despacio_no_se_corta() -> None:
     """Cada fragmento llega antes del tiempo máximo aunque el total lo supere."""
     parts = [f"data: {json.dumps(delta(content=str(i)))}\n\n".encode() for i in range(5)]
     parts.append(b"data: [DONE]\n\n")
-    proxy = LlmProxy(BASE, timeout_seconds=0.2)
+    proxy = LlmProxy(BASE, timeout_seconds=0.2, max_seconds=5)
     with respx.mock() as mock:
         mock.post(URL).respond(200, stream=Trickle(parts, pause=0.06), headers=SSE)
         res = await proxy.chat_completions(body(), AUTH)
@@ -125,28 +125,38 @@ async def test_ut_mcp_06_errores_de_nvidia_y_de_red() -> None:
     assert (await proxy.chat_completions(b"[1]", AUTH)).status_code == 400
 
 
-async def test_ut_mcp_06_stream_pedido_por_n8n_pasa_tal_cual() -> None:
+async def test_ut_mcp_06_stream_pedido_por_n8n_llega_entero_al_final() -> None:
     proxy = LlmProxy(BASE, timeout_seconds=5)
     with respx.mock() as mock:
-        mock.post(URL).respond(200, content=b"data: hola\n\n", headers=SSE)
+        mock.post(URL).respond(200, content=sse(delta(content="hola")), headers=SSE)
         res = await proxy.chat_completions(body(stream=True), AUTH)
-        assert res.status_code == 200
-        received = b"".join([chunk async for chunk in _iterate(res)])
-    assert received == b"data: hola\n\n"
+    assert res.status_code == 200
+    assert res.media_type == "text/event-stream"
+    text = bytes(res.body).decode()
+    assert '"content": "hola"' in text
+    assert text.endswith("data: [DONE]\n\n")
 
-    async def slow(_request: httpx.Request) -> httpx.Response:
-        await asyncio.sleep(1)
-        return httpx.Response(200, content=b"")
-
-    proxy = LlmProxy(BASE, timeout_seconds=0.05)
-    with respx.mock(assert_all_called=False) as mock:
-        mock.post(URL).mock(side_effect=slow)
+    many = [f"data: {json.dumps(delta(content='x'))}\n\n".encode() for _ in range(20)]
+    proxy = LlmProxy(BASE, timeout_seconds=0.1, max_seconds=0.3)
+    with respx.mock() as mock:
+        mock.post(URL).respond(200, stream=Trickle(many, pause=0.05), headers=SSE)
+        # Contesta sin parar pero no termina: con streaming también se corta limpio.
         assert (await proxy.chat_completions(body(stream=True), AUTH)).status_code == 504
 
 
-async def _iterate(response: object) -> AsyncIterator[bytes]:
-    async for chunk in response.body_iterator:  # type: ignore[attr-defined]
-        yield chunk if isinstance(chunk, bytes) else chunk.encode()
+async def test_ut_mcp_06_pide_que_no_razone_salvo_que_se_active() -> None:
+    def sent_kwargs(proxy: LlmProxy, extra: dict[str, object]) -> object:
+        return json.loads(proxy._payload({"model": "m", **extra}))["chat_template_kwargs"]
+
+    proxy = LlmProxy(BASE, timeout_seconds=5)
+    assert sent_kwargs(proxy, {}) == {"enable_thinking": False, "thinking": False}
+    assert sent_kwargs(proxy, {"chat_template_kwargs": {"enable_thinking": True, "x": 1}}) == {
+        "enable_thinking": True,
+        "thinking": False,
+        "x": 1,
+    }
+    thinking = LlmProxy(BASE, timeout_seconds=5, thinking=True)
+    assert "chat_template_kwargs" not in json.loads(thinking._payload({"model": "m"}))
 
 
 def test_ut_mcp_06_arma_razonamiento_herramientas_y_uso() -> None:
