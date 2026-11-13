@@ -219,6 +219,8 @@ export interface CvResult {
   file?: { filename: string; format: string; size_bytes: number };
   profile_draft: Record<string, unknown>;
   review_fields: string[];
+  /** Datos que la IA sugirió con el contenido del CV (hoy, `headline`): revisar antes de guardar. */
+  suggested_fields?: string[];
   received_at?: string;
 }
 

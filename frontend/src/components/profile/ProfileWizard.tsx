@@ -198,6 +198,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
             key={draft ? 'draft' : 'profile'}
             initial={mergeDraft(profile, draft)}
             reviewFields={draft ? (cvResult?.review_fields ?? []) : []}
+            suggestedFields={draft ? (cvResult?.suggested_fields ?? []) : []}
             saving={saving}
             onSave={save}
           />
