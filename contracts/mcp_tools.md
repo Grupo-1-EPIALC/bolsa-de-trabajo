@@ -92,6 +92,17 @@ La descripción de cada herramienta es lo que lee el LLM (docstring en `mcp-tool
 | `POST /router/failure` · `/router/fallo` | Registra el fallo de un modelo (cooldown exponencial) |
 | `POST /router/success` · `/router/exito` | Limpia los fallos de un modelo |
 | `GET /router/status` · `/router/estado` | Usos por minuto/día y cooldowns |
+| `POST /llm/v1/chat/completions` · `GET /llm/v1/models` | Proxy compatible con OpenAI hacia `NVIDIA_BASE_URL` con tiempo máximo (desde 0.10.0, §4.1) |
+
+### 4.1 Proxy del modelo con tiempo máximo (desde 0.10.0)
+
+El nodo `lmChatOpenAi` de n8n no respeta su opción `timeout`: cuando NVIDIA está cargado, la llamada queda colgada minutos y WF-0R nunca pasa al modelo siguiente. Por eso la credencial "OpenAI account" de n8n apunta a `http://mcp-tools:8000/llm/v1` y mcp-tools reenvía cada pedido a NVIDIA:
+
+- Si el modelo no termina de responder en `AGENT_LLM_TIMEOUT_SECONDS` (60 por defecto), corta y responde `504` con un error con forma de OpenAI: `{"error": {"code": "LLM_TIMEOUT", "message": "timeout: el modelo <id> no respondió en 60 s"}}`. El agente de n8n falla, WF-0R lo reporta a `/router/failure` (que lo clasifica como transitorio y le da cooldown) y pide otro modelo a `/router/reserve`.
+- Con `stream: true`, el primer fragmento tiene que llegar dentro de ese tiempo y ninguna pausa posterior puede superarlo.
+- Error de red con NVIDIA → `502 LLM_UPSTREAM_ERROR`. Las demás respuestas de NVIDIA (incluidos `429` y `4xx`) pasan tal cual.
+- **No agrega credenciales:** reenvía sólo `Authorization` (la clave de NVIDIA que manda n8n), `Content-Type` y `Accept`. Por eso queda fuera del `SERVICE_TOKEN`. No se publica en el host ni pasa por el gateway.
+- Orden de modelos por defecto, de los rápidos a los grandes: `minimax-m3.1-flash`, `nemotron-3.5-lightning-30b-a3b`, `deepseek-v4.1-flash`, `nemotron-3-ultra-550b-a55b` (el verificador empieza por `nemotron-3.5-lightning`).
 
 ## 5. Configuración (`get_agent_settings`)
 

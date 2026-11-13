@@ -17,9 +17,10 @@ import uvicorn
 from mcp.server.fastmcp import FastMCP
 from mcp.types import Tool
 from starlette.requests import Request
-from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.responses import JSONResponse, PlainTextResponse, Response
 
 from app.domain.errors import DomainError
+from app.infrastructure.llm_proxy import LlmProxy
 from app.infrastructure.security import MaskKeyLogFilter, ServiceTokenMiddleware
 from app.tools.registry import build_container, register_tools
 
@@ -148,7 +149,7 @@ async def health(_: Request) -> JSONResponse:
         {
             "status": "ok",
             "service": "mcp-tools",
-            "version": "0.9.0",
+            "version": "0.10.0",
             "tools": sorted(REGISTERED_TOOLS.keys()),
             "profiles": sorted(TOOL_PROFILES.keys()),
         }
@@ -218,6 +219,24 @@ async def http_router_success(req: Request) -> JSONResponse:
 @mcp.custom_route("/router/estado", methods=["GET"])  # type: ignore[untyped-decorator]
 async def http_router_status(_: Request) -> JSONResponse:
     return JSONResponse({"ok": True, **container.router.status()})
+
+
+# Proxy hacia NVIDIA con tiempo máximo (la credencial de n8n apunta a /llm/v1). Fuera de
+# /mcp y /router: n8n manda la clave de NVIDIA como Bearer y el proxy la reenvía tal cual.
+llm_proxy = LlmProxy(
+    os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+    float(os.getenv("AGENT_LLM_TIMEOUT_SECONDS", "60")),
+)
+
+
+@mcp.custom_route("/llm/v1/chat/completions", methods=["POST"])  # type: ignore[untyped-decorator]
+async def http_llm_chat(req: Request) -> Response:
+    return await llm_proxy.chat_completions(await req.body(), dict(req.headers))
+
+
+@mcp.custom_route("/llm/v1/models", methods=["GET"])  # type: ignore[untyped-decorator]
+async def http_llm_models(req: Request) -> Response:
+    return await llm_proxy.models(dict(req.headers))
 
 
 def create_http_app() -> ServiceTokenMiddleware:

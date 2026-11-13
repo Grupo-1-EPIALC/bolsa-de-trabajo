@@ -15,17 +15,18 @@ from app.domain.settings import (
     RecommendationSettings,
 )
 
+# Primero los modelos rápidos: los grandes (nemotron-3-ultra, deepseek) pueden tardar minutos
+# cuando NVIDIA está cargado. Si uno no responde en AGENT_LLM_TIMEOUT_SECONDS, se pasa al siguiente.
 DEFAULT_MODELS = (
-    "nvidia/nemotron-3-ultra-550b-a55b",
-    "deepseek-ai/deepseek-v4.1-flash",
     "minimaxai/minimax-m3.1-flash",
-)
-DEFAULT_MODELS_CV = (
+    "nvidia/nemotron-3.5-lightning-30b-a3b",
     "deepseek-ai/deepseek-v4.1-flash",
-    "minimaxai/minimax-m3.1-flash",
     "nvidia/nemotron-3-ultra-550b-a55b",
 )
+DEFAULT_MODELS_CV = DEFAULT_MODELS
 DEFAULT_MODELS_VERIFIER = (
+    "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "minimaxai/minimax-m3.1-flash",
     "deepseek-ai/deepseek-v4.1-flash",
     "nvidia/nemotron-3-ultra-550b-a55b",
 )

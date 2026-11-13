@@ -186,6 +186,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Cada herramienta: docstring clara (es lo que lee el LLM), tipos de entrada/salida, manejo de errores con mensaje legible.
 - Autenticarse ante los servicios y proteger `/mcp` y `/router` con `X-Service-Token`, `X-API-Key`, `Bearer` o `?key=` (enmascarando `key=***` en logs).
 - Herramientas **de solo lectura** salvo `save_recommendation`.
+- Proxy del modelo `/llm/v1` (la credencial de NVIDIA de n8n apunta ahí): reenvía a `NVIDIA_BASE_URL` y corta a los `AGENT_LLM_TIMEOUT_SECONDS` con `504 LLM_TIMEOUT` para que WF-0R pase al modelo siguiente. No agrega credenciales. Contrato: `contracts/mcp_tools.md` §4.1.
 **Tests mínimos:** UT-MCP-01, UT-MCP-02 (cobertura ≥ 70 % en `domain/` y `application/`).
 
 ### 4.6 Agente `n8n-agent` — workflows y ejecución de IA
