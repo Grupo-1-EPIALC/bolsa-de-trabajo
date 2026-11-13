@@ -201,6 +201,7 @@ services:
     environment:
       <<: *python-env
       DATABASE_URL: postgresql://matching_svc:${MATCHING_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      MATCHING_DB_SCHEMA: matching
       PROFILE_SERVICE_URL: http://profile-service:8000
       JOBS_SERVICE_URL: http://jobs-service:8000
       # false = perfiles y ofertas reales de profile-service y jobs-service (por X-Service-Token).

@@ -136,7 +136,7 @@ class RecommendationService:
         metadata = self._metadata(payload)
         request_id = str(payload.get("request_id") or "")
         summary = str(payload.get("summary") or "")
-        saved: list[AiRecommendation] = []
+        recommendations: list[AiRecommendation] = []
         for entry in entries:
             if not isinstance(entry, Mapping):
                 continue
@@ -150,22 +150,21 @@ class RecommendationService:
             content = _clean_content(entry.get("content", entry))
             content.pop("job_id", None)
             content.pop("profile_id", None)
-            saved.append(
-                self._repo.save(
-                    AiRecommendation(
-                        id=self._ids.new_id("rec"),
-                        mode=mode,
-                        profile_id=profile_id,
-                        job_id=job_id,
-                        content=content,
-                        items=_items(entry.get("items"), self._max_items),
-                        summary=summary,
-                        request_id=request_id,
-                        metadata=metadata,
-                        created_at=self._clock.iso_now(),
-                    )
+            recommendations.append(
+                AiRecommendation(
+                    id=self._ids.new_id("rec"),
+                    mode=mode,
+                    profile_id=profile_id,
+                    job_id=job_id,
+                    content=content,
+                    items=_items(entry.get("items"), self._max_items),
+                    summary=summary,
+                    request_id=request_id,
+                    metadata=metadata,
+                    created_at=self._clock.iso_now(),
                 )
             )
+        saved = self._repo.save_many(recommendations)
         # Si WF-06 se disparó desde otro lado (sin pedido registrado), sólo se guarda.
         if request_id and self._requests.get(request_id) is not None:
             self._update_request(request_id, RequestStatus.COMPLETED)

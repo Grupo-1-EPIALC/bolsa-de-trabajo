@@ -1,8 +1,7 @@
-"""Repositorios en memoria (MVP).
+"""Repositorios en memoria para pruebas y modo mock sin `DATABASE_URL`.
 
 Detrás de los puertos `RecommendationRepository` / `RecommendationRequestRepository`; se
-reemplazan por la implementación en el schema `matching` de Postgres cuando se acuerde el ORM.
-Los datos se pierden al reiniciar el contenedor.
+usan sólo cuando no está configurada la persistencia SQLAlchemy del schema `matching`.
 """
 
 import threading
@@ -22,9 +21,13 @@ class InMemoryRecommendationRepository:
         self._lock = threading.Lock()
 
     def save(self, recommendation: AiRecommendation) -> AiRecommendation:
-        with self._lock:
-            self._items.append(recommendation)
+        self.save_many([recommendation])
         return recommendation
+
+    def save_many(self, recommendations: list[AiRecommendation]) -> list[AiRecommendation]:
+        with self._lock:
+            self._items.extend(recommendations)
+        return list(recommendations)
 
     def _latest(
         self, mode: RecommendationMode, key_attr: str, key: str, group_attr: str
