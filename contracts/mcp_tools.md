@@ -1,7 +1,7 @@
 # Contrato · mcp-tools
 
 > **Para:** quien mantiene los workflows de n8n y mcp-tools.
-> **Servicio:** `mcp-tools` 0.8.0 (Python, SDK oficial MCP · `ProfiledFastMCP`). **Interno:** sólo lo consume n8n por la red `mcp_internal`; nunca pasa por el gateway.
+> **Servicio:** `mcp-tools` 0.9.0 (Python, SDK oficial MCP · `ProfiledFastMCP`). **Interno:** sólo lo consume n8n por la red `mcp_internal`; nunca pasa por el gateway.
 > **Partes:** 1. Conexión y seguridad · 2. Perfiles de herramientas · 3. Herramientas · 4. Endpoints HTTP · 5. Configuración (`get_agent_settings`) · 6. Datos reales o mocks · 7. Errores. Los `§` de cada parte se refieren a esa parte.
 > Los documentos de los que sale este contrato están en [`historico/`](historico/). Todos los ejemplos usan datos ficticios.
 
@@ -61,6 +61,13 @@ La descripción de cada herramienta es lo que lee el LLM (docstring en `mcp-tool
 | `router_status` | — | Devuelve el estado actual de usos por minuto/día y cooldowns del router NVIDIA. |
 
 `validate_json_schema` valida contra los schemas registrados en `mcp-tools/app/data/schemas/`: `company_recommendations`, `cv_design`, `cv_standard`, `match_company_recommendations`, `match_student_recommendations`, `student_recommendations`, `verifier_verdict`.
+
+### `cv_standard`: título del perfil (desde 0.9.0)
+
+`cv_standard` suma dos campos opcionales: `headline` (1–140 caracteres) y `headline_source`.
+- `headline_source: "cv"`: el título está en el CV (una línea de título u objetivo).
+- `headline_source: "suggested"`: el CV no tiene título y la IA lo armó sólo con la carrera, los puestos y las competencias del CV. El estudiante lo revisa antes de guardar.
+- Sin contenido para armarlo: `"COMPLETAR_MANUALMENTE"`. Una respuesta sin `headline` sigue siendo válida.
 
 ### `cv_design` y la skill `diseno-cv` (desde 0.5.0)
 

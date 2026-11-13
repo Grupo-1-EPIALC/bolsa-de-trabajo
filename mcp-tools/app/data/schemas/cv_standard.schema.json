@@ -26,6 +26,17 @@
         "location": { "type": "string" }
       }
     },
+    "headline": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 140,
+      "description": "Título corto del perfil: el del CV o, si no tiene, uno sugerido con el contenido del CV (ver headline_source). COMPLETAR_MANUALMENTE si el CV no da para armarlo."
+    },
+    "headline_source": {
+      "type": "string",
+      "enum": ["cv", "suggested"],
+      "description": "cv = el título está en el CV · suggested = la IA lo armó con la carrera, los puestos y las competencias del CV."
+    },
     "summary": { "type": "string" },
     "skills": {
       "type": "array",
