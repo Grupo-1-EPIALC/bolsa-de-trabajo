@@ -3033,7 +3033,7 @@ def _if_node(seed: str, name: str, expression: str, pos: list[int]) -> dict[str,
 
 
 def _send_email_node(seed: str, name: str, pos: list[int]) -> dict[str, Any]:
-    """Un mail por ítem ({to, subject, html, text}) con la credencial SMTP que crea n8n-init."""
+    """Un mail por ítem ({to, subject, html, text}) con la credencial SMTP que crea n8n/init/bootstrap.sh."""
     return _node(
         seed,
         name,

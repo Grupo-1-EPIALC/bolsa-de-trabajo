@@ -6,7 +6,7 @@
 
 ### Andres Allievi
 - Plan inicial del MVP y reglas de desarrollo con IA (AGENTS.md).
-- Contenedores, `docker-compose.yml`, volúmenes externos, `n8n-init`, gateway y pipeline de CI.
+- Contenedores, `docker-compose.yml`, volúmenes externos, arranque de n8n (`bootstrap.sh`), gateway y pipeline de CI.
 - `profile-service`: perfil del estudiante y de la empresa, subida del CV a n8n, borrador de la IA, generación del CV en PDF/DOCX.
 - `matching-service`: puntaje por reglas, competencias faltantes, diccionario de competencias, pedidos de recomendaciones a la IA.
 - `mcp-tools` y los 10 workflows de n8n (agentes, verificador, router de modelos y notificaciones).

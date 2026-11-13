@@ -16,7 +16,7 @@ cp .env.example .env            # completar valores (en dev los de ejemplo sirve
 mkdir -p secrets                # claves JWT de auth-service (ver .env.example)
 sh infra/scripts/create-volumes.sh   # una sola vez: volúmenes externos con los datos
 docker compose up -d --build    # modo desarrollo (hot reload)
-docker compose ps               # todos deben quedar "healthy" (n8n-init queda "exited 0")
+docker compose ps               # todos deben quedar "healthy"
 ```
 
 Sin `sh` (PowerShell): `docker volume create bolsa_pg_data; docker volume create bolsa_n8n_data; docker volume create bolsa_cv_storage`.
@@ -95,7 +95,7 @@ El access token dura 15 minutos; el refresh token dura 7 días y se almacena com
   - `WF-06-recomendador.json`: webhook `POST /webhook/recommendations` (`Training Advisor` para postulantes y `Company Advisor` para empresas).
   - `WF-02-oferta-nueva.json` a `WF-05-errores.json`: notificaciones por mail (oferta nueva, resumen al estudiante, candidato nuevo a la empresa) y aviso de errores al admin. Se ven en Mailpit; ver [`contracts/n8n.md`](contracts/n8n.md) (§7).
 
-**Los workflows se cargan solos.** Antes de n8n corre `n8n-init` ([`n8n/init/bootstrap.sh`](n8n/init/bootstrap.sh)), que en cada `docker compose up`:
+**Los workflows se cargan solos.** El contenedor de n8n corre [`n8n/init/bootstrap.sh`](n8n/init/bootstrap.sh) antes de arrancar, en cada `docker compose up` y cada reinicio:
 
 1. crea o actualiza la credencial **"OpenAI account"** (NVIDIA NIM) si `NVIDIA_API_KEY` está en `.env`; si está vacía, deja la que se haya creado en la UI;
 2. importa `n8n/workflows/*.json` (ids fijos: actualiza, no duplica);
@@ -105,7 +105,15 @@ El repo es la fuente de verdad: lo que se cambie **sólo en la UI** de n8n se pi
 
 ```bash
 python n8n/generate_workflows.py
-docker compose up -d --force-recreate n8n   # vuelve a correr n8n-init
+docker compose up -d --force-recreate n8n   # vuelve a correr bootstrap.sh
+```
+
+Si n8n se reinicia en bucle con `You do not have permission to deactivate this workflow`, la base quedó con workflows activados por otra versión de n8n (por ejemplo 1.x). Se arregla una vez:
+
+```bash
+docker compose stop n8n
+docker compose run --rm --no-deps --entrypoint n8n n8n unpublish:workflow --all
+docker compose up -d n8n
 ```
 
 ### Base de datos

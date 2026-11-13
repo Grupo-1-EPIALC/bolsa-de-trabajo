@@ -62,15 +62,16 @@ services:
     ports:
       - "${MAIL_UI_PORT:-8025}:8025"
 
+  # Antes de arrancar, n8n corre n8n/init/bootstrap.sh en el mismo contenedor: importa
+  # las credenciales (NVIDIA desde .env, SMTP y Postgres) y los workflows de
+  # n8n/workflows, y los publica. Corre en cada arranque, así una base nueva nunca queda
+  # vacía. El repo es la fuente de verdad: los cambios hechos sólo en la UI se pisan.
   n8n:
     <<: *common
-    image: n8nio/n8n:1.123.95
-    depends_on:
-      postgres:
-        condition: service_healthy
-      n8n-init:
-        condition: service_completed_successfully
-    environment: &n8n-env
+    image: n8nio/n8n:2.45.7   # los workflows son de n8n 2.x (en 1.x no se publican)
+    depends_on: *depends-db
+    entrypoint: ["tini", "--", "/bin/sh", "-c", "/bin/sh /n8n-init/bootstrap.sh && exec /docker-entrypoint.sh"]
+    environment:
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
       DB_POSTGRESDB_PORT: "5432"
@@ -100,36 +101,22 @@ services:
       # Comunicación directa n8n -> mcp-tools por red interna (nunca pasa por Nginx)
       MCP_URL: http://mcp-tools:8000/mcp
       N8N_WEBHOOK_TOKEN: ${N8N_WEBHOOK_TOKEN}
+      # Sólo los usa bootstrap.sh para crear la credencial "OpenAI account" (NVIDIA NIM)
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
     networks: [backend, mcp_internal]
     volumes:
       - n8n_data:/home/node/.n8n
-      - ./n8n/workflows:/workflows
+      - ./n8n/workflows:/workflows:ro
+      - ./n8n/init:/n8n-init:ro
     ports:
       - "${N8N_PORT:-5678}:5678"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5678/healthz"]
       interval: 15s
       timeout: 3s
-      start_period: 60s
+      start_period: 120s   # incluye bootstrap.sh (~30 s) antes de que n8n escuche
       retries: 3
-
-  # Arranque de n8n: importa la credencial de NVIDIA (desde .env) y los workflows de
-  # n8n/workflows, y los publica. Corre en cada `up`, así una base nueva nunca queda vacía.
-  # El repo es la fuente de verdad: los cambios hechos sólo en la UI se pisan al reiniciar.
-  n8n-init:
-    image: n8nio/n8n:1.123.95
-    restart: "no"
-    depends_on: *depends-db
-    entrypoint: ["/bin/sh", "/n8n-init/bootstrap.sh"]
-    environment:
-      <<: *n8n-env
-      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
-      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
-    networks: [backend]
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - ./n8n/workflows:/workflows:ro
-      - ./n8n/init:/n8n-init:ro
 
   # ------------------------------------------------------------- servicios ---
   auth-service:

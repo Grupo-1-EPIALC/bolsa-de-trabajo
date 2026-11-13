@@ -65,6 +65,7 @@
 | P-049 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`auth-agent`) | — | Documentar las respuestas de `/register` y `/login` dentro de `services/auth-service`, usando los ejemplos compartidos | Se agregó `services/auth-service/AUTH-RESPONSES.md` con ejemplos, campos de respuesta, estados HTTP y errores; los tokens de los ejemplos se reemplazaron por placeholders | aceptado |
 | P-050 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`devops-agent`) | — | Revisar `docker-compose.yml`, reemplazar las etiquetas `latest` por versiones estables y comprobar si hay Makefile o `requirements.txt` | Se fijaron n8n en `1.123.95` y Mailpit en `v1.33.1` (también `n8n-init`); no se encontró Makefile y se identificó un requirements agregador y cuatro archivos por servicio | aceptado |
 | P-051 | 2026-11-12 | Luciano | Copilot SDK en VS Code (`matching-agent`) | `chore/matching-service/fix-persistence` | Agregar persistencia para configuraciones y recomendaciones de `matching-service`, y registrar el prompt en `PROMPTS.md` | Configuración, recomendaciones de IA y estados de pedidos almacenados en PostgreSQL, schema `matching`; valores iniciales tomados de `scoring_rules.yaml`; se incorporaron pruebas de persistencia entre reinicios | aceptado |
+| P-056 | 2026-11-12 | Andres | Claude Code (`devops-agent`, `n8n-agent`) | `chore/n8n/v0.8.1-arranque-en-un-contenedor` | Por qué hay 2 contenedores de n8n y eliminar el de más | El arranque (`bootstrap.sh`) pasa al entrypoint del contenedor `n8n` y se quita `n8n-init`; n8n se fija en `2.45.7` porque con `1.123.95` no se publicaba ningún workflow | aceptado |
 | P-057 | 2026-11-12 | Andres | Claude Code (`frontend-agent`) | `fix/frontend/v0.11.2-leyenda-config-matching` | Revisar la leyenda del admin que dice que matching guarda la configuración en memoria, y si pasa lo mismo con las recomendaciones | La leyenda y `contracts/matching.md` dicen ahora que la configuración y las recomendaciones se guardan en PostgreSQL; verificado con un reinicio de matching-service | aceptado |
 
 ---
@@ -779,6 +780,20 @@
   - Se indicaron host `localhost`, puerto `5432`, base `bolsa`, usuario `matching_svc` y schema `matching`, usando en la contraseña el valor local de `MATCHING_DB_PASSWORD` en `.env` sin registrarlo en el documento.
 - **Archivos afectados:** `PROMPTS.md`.
 - **Decisión:** respondido.
+
+### P-056 — Un solo contenedor de n8n
+- **Fecha:** 2026-11-12 · **Autor:** Andres · **Agente:** Claude Code (`devops-agent`, `n8n-agent`) · **Rama:** `chore/n8n/v0.8.1-arranque-en-un-contenedor`
+- **Prompt (textual):**
+  > revisa porque hay 2 contenedores de n8n
+  > ahora elimina el contenedor de mas
+- **Resumen de la respuesta:**
+  - El segundo contenedor era `n8n-init`, que corría `n8n/init/bootstrap.sh` (credenciales, tabla `bolsa.notifications_sent`, importar y publicar workflows) y quedaba en `exited 0`.
+  - Ahora el contenedor `n8n` corre `bootstrap.sh` como entrypoint y después arranca n8n con `exec` (`tini` sigue siendo el PID 1). Se quita el servicio `n8n-init`; `NVIDIA_API_KEY`/`NVIDIA_BASE_URL` pasan al servicio `n8n`, `/workflows` y `/n8n-init` se montan de sólo lectura y el `start_period` del healthcheck sube a 120 s por el arranque (~30 s).
+  - **n8n 1.123.95 rompía los workflows** (P-050): `publish:workflow` no existe en 1.x, así que no se publicaba ninguno y los webhooks no respondían. Activados a mano, WF-03/04/05 fallaban con `reading 'execute'` y WF-0V no tenía disparador. Los workflows son de n8n 2.x: se fija `n8nio/n8n:2.45.7`, la versión con la que se probaron (se mantiene la idea de no usar `latest`).
+  - Si una base quedó con workflows activados por n8n 1.x, 2.45.7 no los puede reimportar (`no permission to deactivate`): se arregla una vez con `docker compose run --rm --no-deps --entrypoint n8n n8n unpublish:workflow --all`.
+  - **Probado:** un solo contenedor `healthy`, los 10 workflows publicados sin errores de activación, recomendaciones para el estudiante en 37,7 s (5 ítems verificados y guardados) y extracción de CV en 19 s.
+- **Archivos afectados:** `docker-compose.yml`, `n8n/init/bootstrap.sh`, `n8n/generate_workflows.py` (comentario), `README.md`, `.env.example`, `contracts/n8n.md`, `docs/ARQUITECTURA.md`, `docs/RESPONSABILIDADES.md`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
 
 ### P-057 — Leyenda de la configuración de matching
 - **Fecha:** 2026-11-12 · **Autor:** Andres · **Agente:** Claude Code (`frontend-agent`) · **Rama:** `fix/frontend/v0.11.2-leyenda-config-matching`
