@@ -22,7 +22,7 @@ from starlette.responses import JSONResponse, PlainTextResponse, Response
 from app.domain.errors import DomainError
 from app.infrastructure.llm_proxy import GeminiProvider, LlmProxy
 from app.infrastructure.security import MaskKeyLogFilter, ServiceTokenMiddleware
-from app.infrastructure.settings_env import gemini_model
+from app.infrastructure.settings_env import gemini_models
 from app.tools.registry import build_container, register_tools
 
 Transport = Literal["stdio", "sse", "streamable-http"]
@@ -231,13 +231,13 @@ llm_proxy = LlmProxy(
     thinking=os.getenv("AGENT_LLM_THINKING", "false").strip().lower() in ("1", "true", "yes"),
     gemini=(
         GeminiProvider(
-            model=_gemini,
+            models=_gemini,
             api_key=os.environ["GEMINI_API_KEY"].strip(),
             base_url=os.getenv("GEMINI_BASE_URL")
             or "https://generativelanguage.googleapis.com/v1beta/openai",
             reasoning_effort=os.getenv("GEMINI_REASONING_EFFORT", "none").strip(),
         )
-        if (_gemini := gemini_model(os.environ))
+        if (_gemini := gemini_models(os.environ))
         else None
     ),
 )

@@ -213,7 +213,7 @@ async def test_ut_mcp_06_gemini_va_a_google_con_su_clave_y_sin_kwargs_de_nvidia(
     from app.infrastructure.llm_proxy import GeminiProvider
 
     gemini = GeminiProvider(
-        model="gemini-2.5-flash",
+        models=("gemini-2.5-flash", "gemini-lite"),
         api_key="clave-gemini-ficticia",
         base_url="https://gemini.example.test/v1beta/openai",
     )
@@ -234,15 +234,16 @@ async def test_ut_mcp_06_gemini_va_a_google_con_su_clave_y_sin_kwargs_de_nvidia(
 
 
 def test_ut_mcp_06_gemini_primero_solo_si_esta_activo() -> None:
-    from app.infrastructure.settings_env import EnvSettingsProvider, gemini_model
+    from app.infrastructure.settings_env import EnvSettingsProvider, gemini_models
 
-    assert gemini_model({"GEMINI_API_KEY": "k"}) is None
-    assert gemini_model({"GEMINI_ENABLED": "true"}) is None
-    env = {"GEMINI_ENABLED": "true", "GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x"}
-    assert gemini_model(env) == "gemini-x"
+    assert gemini_models({"GEMINI_API_KEY": "k"}) == ()
+    assert gemini_models({"GEMINI_ENABLED": "true"}) == ()
+    env = {"GEMINI_ENABLED": "true", "GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x, gemini-y"}
+    assert gemini_models(env) == ("gemini-x", "gemini-y")
+    assert gemini_models({"GEMINI_ENABLED": "true", "GEMINI_API_KEY": "k"})[0] == "gemini-3.5-flash"
     settings = asyncio.run(EnvSettingsProvider(env).get())
     for role in ("default", "cv", "verifier"):
-        assert settings.models[role][0] == "gemini-x"
+        assert settings.models[role][:2] == ("gemini-x", "gemini-y")
         assert settings.models[role].count("gemini-x") == 1
     off = asyncio.run(EnvSettingsProvider({"GEMINI_ENABLED": "false", "GEMINI_API_KEY": "k"}).get())
     assert "gemini" not in off.models["cv"][0]

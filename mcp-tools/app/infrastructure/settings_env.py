@@ -38,20 +38,23 @@ def _flag(raw: str | None, default: bool) -> bool:
     return raw.strip().lower() in ("1", "true", "yes", "si", "sí")
 
 
-def gemini_model(env: Mapping[str, str]) -> str | None:
-    """Modelo de Gemini (AI Studio) que va primero en todas las listas, o None si está apagado.
+DEFAULT_GEMINI_MODELS = "gemini-3.5-flash,gemini-3.1-flash-lite"
 
-    Se activa con `GEMINI_ENABLED=true` y una `GEMINI_API_KEY` no vacía.
+
+def gemini_models(env: Mapping[str, str]) -> tuple[str, ...]:
+    """Modelos de Gemini (AI Studio) que van primero en todas las listas; vacío si está apagado.
+
+    Se activa con `GEMINI_ENABLED=true` y una `GEMINI_API_KEY` no vacía. `GEMINI_MODEL` acepta uno
+    o varios separados por coma: si uno está saturado (503) se prueba el siguiente antes que NVIDIA.
     """
     if not _flag(env.get("GEMINI_ENABLED"), False) or not (env.get("GEMINI_API_KEY") or "").strip():
-        return None
-    return (env.get("GEMINI_MODEL") or "gemini-2.5-flash").strip()
+        return ()
+    raw = env.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODELS
+    return tuple(dict.fromkeys(m.strip() for m in raw.split(",") if m.strip()))
 
 
-def _with_first(model: str | None, models: tuple[str, ...]) -> tuple[str, ...]:
-    if not model:
-        return models
-    return (model, *(m for m in models if m != model))
+def _with_first(first: tuple[str, ...], models: tuple[str, ...]) -> tuple[str, ...]:
+    return (*first, *(m for m in models if m not in first))
 
 
 def _split_csv(raw: str | None, fallback: tuple[str, ...]) -> tuple[str, ...]:
@@ -96,7 +99,7 @@ class EnvSettingsProvider:
                 admin_email=e.get("NOTIFY_ADMIN_EMAIL", "").strip(),
                 frontend_url=e.get("FRONTEND_URL", "http://localhost:8080").strip().rstrip("/"),
             )
-            first = gemini_model(e)
+            first = gemini_models(e)
             models = {
                 "default": _with_first(first, _split_csv(e.get("AGENT_MODELS"), DEFAULT_MODELS)),
                 "cv": _with_first(first, _split_csv(e.get("AGENT_MODELS_CV"), DEFAULT_MODELS_CV)),
