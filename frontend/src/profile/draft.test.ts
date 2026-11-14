@@ -98,6 +98,34 @@ describe('[UT-FE-02] Perfil de Estudiante y Sanitización de CV', () => {
       expect(merged.summary).toBe('Resumen guardado');
     });
 
+    it('al reimportar un CV gana lo nuevo en título y resumen', () => {
+      const saved = {
+        ...profile,
+        headline: 'Título viejo',
+        languages: [{ name: 'Inglés', level: 'B2' }],
+      } as unknown as ProfileView;
+      const merged = mergeDraft(saved, {
+        headline: 'Profesional IT · Desarrollo web',
+        summary: 'Resumen nuevo del CV',
+        personal: { name: PLACEHOLDER, email: 'nuevo@example.com' },
+        languages: [],
+      });
+      expect(merged.headline).toBe('Profesional IT · Desarrollo web');
+      expect(merged.summary).toBe('Resumen nuevo del CV');
+      // Lo que el CV no trajo (marcado o lista vacía) conserva lo guardado.
+      expect(merged.personal).toEqual({ name: '', email: 'nuevo@example.com' });
+      expect(merged.languages).toEqual([{ name: 'Inglés', level: 'B2' }]);
+    });
+
+    it('un dato marcado para completar no pisa lo guardado', () => {
+      const merged = mergeDraft(
+        { ...profile, headline: 'Título guardado' } as unknown as ProfileView,
+        { headline: PLACEHOLDER, summary: '' },
+      );
+      expect(merged.headline).toBe('Título guardado');
+      expect(merged.summary).toBe('Resumen guardado');
+    });
+
     it('sin borrador devuelve lo guardado', () => {
       expect(mergeDraft(profile, null).skills).toEqual([{ name: 'Git', level: 3 }]);
     });

@@ -78,9 +78,20 @@ export function firstIncompleteStep(completion: Completion | undefined): Profile
  * Datos iniciales del paso 1: lo que sugirió la IA (sin placeholders) pisa a lo guardado
  * sólo en las secciones que trae el borrador. El perfil guardado nunca se modifica acá.
  */
+/** El CV trajo un dato: no está vacío ni marcado como COMPLETAR_MANUALMENTE. */
+const hasValue = (value: unknown): boolean =>
+  value !== undefined &&
+  value !== null &&
+  value !== '' &&
+  value !== PLACEHOLDER &&
+  !(Array.isArray(value) && value.length === 0);
+
 /**
- * Combina datos guardados y sugerencias de IA recursivamente.
- * Los datos persistidos tienen prioridad, excepto cuando están vacíos.
+ * Combina los datos guardados con lo que se leyó del CV, campo por campo.
+ * Gana lo que trae el CV (el estudiante lo acaba de subir y nada se guarda sin que lo
+ * confirme); lo guardado se conserva sólo donde el CV no trajo nada (vacío, `[]` o
+ * COMPLETAR_MANUALMENTE). Antes ganaba lo guardado en los textos (título, resumen…) y al
+ * reimportar un CV no se veía lo nuevo, y una lista vacía del CV borraba la guardada.
  */
 function mergeValues(profile: unknown, draft: unknown): unknown {
   if (draft === undefined) return profile;
@@ -89,9 +100,9 @@ function mergeValues(profile: unknown, draft: unknown): unknown {
     return stripPlaceholders(draft);
   }
 
-  // Los arrays del borrador reemplazan a los guardados.
+  // Listas: las del CV reemplazan a las guardadas, salvo que el CV no traiga ninguna.
   if (Array.isArray(draft)) {
-    return stripPlaceholders(draft);
+    return hasValue(draft) ? stripPlaceholders(draft) : profile;
   }
 
   // Combinar objetos campo por campo.
@@ -112,7 +123,8 @@ function mergeValues(profile: unknown, draft: unknown): unknown {
     return result;
   }
 
-  return profile;
+  // Textos y números: gana el del CV si trajo uno.
+  return hasValue(draft) ? draft : profile;
 }
 
 export function mergeDraft(
