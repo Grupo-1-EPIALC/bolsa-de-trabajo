@@ -73,6 +73,7 @@
 | P-061 | 2026-11-13 | Andres | Claude Code (`mcp-agent`, `n8n-agent`) | `feature/mcp/v0.10.0-llm-timeout-modelos-rapidos` → `fix/n8n/v0.9.1-llm-timeout` | Revisar por qué la importación del CV tardaba tanto; que corte a los 60 s y cambie de modelo si no contesta, empezando por los rápidos | NVIDIA lento y modelos que razonan miles de tokens; el timeout del nodo LLM de n8n no corta: proxy `/llm/v1` en mcp-tools que corta sin respuesta en 60 s o sin terminar en 120 s (WF-0R pasa al siguiente), sin razonamiento y modelos rápidos primero; la importación bajó de colgada a 15–24 s | aceptado |
 | P-062 | 2026-11-13 | Andres | Claude Code (`mcp-agent`, `n8n-agent`) | `feature/mcp/v0.10.0-llm-timeout-modelos-rapidos` → `fix/n8n/v0.9.1-llm-timeout` | Usar una API key de Gemini (AI Studio) como primera opción de LLM, activable desde el `.env`; hacer menos riguroso el anti-alucinación para que no sea un cuello de botella | Gemini opcional primero (`gemini-3.5-flash`, `gemini-3.1-flash-lite`) vía el proxy de mcp-tools, probado con la clave real (sin incluirla); el verificador corrige el formato solo y toma el grounding como advertencia: sin reintentos | aceptado |
 | P-063 | 2026-11-13 | Andres | Claude Code (`frontend-agent`) | `fix/frontend/v0.13.1-reimportar-cv-titulo-resumen` | Al importar el CV no aparecían la sugerencia de título ni el resumen | El backend los mandaba bien; `mergeDraft` del front daba prioridad a lo ya guardado en los textos: ahora gana lo que trae el CV y lo guardado queda sólo donde el CV no trajo nada | aceptado |
+| P-064 | 2026-11-13 | Andres | Claude Code (`profile-agent`) | `fix/profile/v0.6.1-experiencia-sin-superposiciones` | La sugerencia de diseño del CV decía "más de 60 años de experiencia" para alguien que trabaja hace 30 | La experiencia total sumaba los meses de trabajos simultáneos; ahora une los períodos (también en `years_experience` para matching) | aceptado |
 
 ---
 
@@ -906,4 +907,15 @@
   - **Arreglo:** gana lo que trae el CV (el estudiante lo acaba de subir y nada se guarda sin su confirmación); lo guardado se conserva sólo donde el CV no trajo nada (vacío, `[]` o `COMPLETAR_MANUALMENTE`), también en las listas. Tests nuevos en `draft.test.ts`. frontend 0.13.1.
   - **Probado:** 70 tests de Vitest, `tsc` y prettier limpios; en la pantalla real, "Ver datos detectados" muestra el título sugerido con el aviso "Sugerido por la IA con el contenido de tu CV" y el resumen del CV.
 - **Archivos afectados:** `frontend/src/profile/draft.ts`, `frontend/src/profile/draft.test.ts`, `frontend/package.json`, `frontend/package-lock.json`, `PROMPTS.md`.
+- **Decisión:** aceptado (pendiente revisión del equipo).
+
+### P-064 — Experiencia total sin contar dos veces los trabajos simultáneos
+- **Fecha:** 2026-11-13 · **Autor:** Andres · **Agente:** Claude Code (`profile-agent`) · **Rama:** `fix/profile/v0.6.1-experiencia-sin-superposiciones`
+- **Prompt (textual):**
+  > me da este texto en la sugerencia de cv "Tenés una trayectoria extensa de más de 60 años de experiencia laboral acumulada, por lo que el formato cronológico es el ideal…" seguramente esta tomando la ausencia de alguna fecha mal porque tengo 51 años y trabajo hace 30
+- **Resumen de la respuesta:**
+  - **Diagnóstico:** no era una fecha mal leída. El perfil tenía seis experiencias con períodos superpuestos (dos trabajos en 1996–1998 y tres en paralelo desde 1998 hasta hoy) y profile-service **sumaba** los meses de cada una: 730 meses (60,8 años). Ese total va a la IA del diseño del CV (`experience_months`) y a matching como `years_experience`, así que también inflaba el criterio de Experiencia (25 puntos) de cualquiera con trabajos simultáneos.
+  - **Arreglo (profile-service 0.6.1):** `total_experience_months` (`app/domain/experience.py`, dominio puro) une los períodos (inicio + `months` de cada experiencia) y cuenta cada mes una vez. Lo usan `service_view` (`years_experience`) y `summarize_content` (resumen para WF-07). UT-PROF-10.
+  - **Probado:** 126 tests, ruff/black/mypy limpios; con el perfil real, `years_experience` pasó de 60,83 a 32,92 (1994 a hoy). La sugerencia de diseño ya guardada no cambia sola: se actualiza al volver a pedirla.
+- **Archivos afectados:** `services/profile-service/app/domain/experience.py`, `services/profile-service/app/application/views.py`, `services/profile-service/app/domain/cv_design.py`, `services/profile-service/tests/test_experience_total.py`, `services/profile-service/pyproject.toml`, `services/profile-service/app/main.py`, `contracts/profile.md`, `AGENTS.md`, `PROMPTS.md`.
 - **Decisión:** aceptado (pendiente revisión del equipo).

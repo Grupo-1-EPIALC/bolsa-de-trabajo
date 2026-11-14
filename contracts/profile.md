@@ -384,7 +384,7 @@ Hay tres diseños. Todos son ATS-friendly: una columna, texto real y títulos es
 **Pedir la sugerencia a la IA** (`POST /me/cv-design/requests` → `202`):
 - Requiere `consents.ai_processing = true` (si no, `409 AI_CONSENT_REQUIRED`) y el paso 1 completo (si no, `409 PROFILE_INCOMPLETE`).
 - Corre en segundo plano. El front consulta `GET /me/cv-design` hasta que `ai_recommendation.status` deje de ser `processing`. Si ya hay un pedido en curso no se repite; un pedido que sigue en curso a los 10 min se muestra como `failed`.
-- La IA recibe sólo un **resumen sin datos personales**: cantidad y meses de experiencia, puestos, cantidad de proyectos, certificaciones y estudios, competencias principales, carrera y puestos buscados. Nunca recibe nombre, contacto, empresas, fechas exactas ni sueldo.
+- La IA recibe sólo un **resumen sin datos personales**: cantidad y meses de experiencia (los períodos superpuestos se cuentan una vez), puestos, cantidad de proyectos, certificaciones y estudios, competencias principales, carrera y puestos buscados. Nunca recibe nombre, contacto, empresas, fechas exactas ni sueldo.
 - profile-service vuelve a validar la respuesta: un diseño fuera del catálogo queda como `failed` y las secciones desconocidas o repetidas se descartan.
 
 **`CvDesignView`:**
@@ -755,7 +755,7 @@ Formato común `{"error": {"code", "message", "details"}}`.
 | `languages[].name / normalized / level` | Idiomas (`A1`…`C2`, `native`) |
 | `education[].level / status / degree / field` | Educación |
 | `experience[]` (`start`, `end`, `months`) | Años de experiencia si no viene `years_experience` |
-| **`years_experience`** | **Nuevo, calculado por reglas**: suma de `experience[].months` / 12. matching lo usa directo (campo `explicit_years` del mapper) |
+| **`years_experience`** | **Calculado por reglas**: meses trabajados / 12, **uniendo los períodos superpuestos** (desde 0.6.1; antes se sumaban los `months` de cada experiencia y dos trabajos simultáneos contaban doble). matching lo usa directo (campo `explicit_years` del mapper) |
 | `academic_status.career / current_year / progress_percent / student_shift` | `AcademicStatus` |
 | `target.roles` | `target_roles` |
 | **`contact_by_email`** | **Nuevo (v0.4.0).** `true` si el estudiante aceptó recibir mails. matching no lo usa; n8n (WF-02/WF-03) no le manda mails a quien tenga `false` |

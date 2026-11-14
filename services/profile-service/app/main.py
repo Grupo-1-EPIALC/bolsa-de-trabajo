@@ -16,7 +16,7 @@ from app.api.routes_internal import router as internal_router
 from app.api.routes_profiles import router as profiles_router
 
 SERVICE_NAME = "profile-service"
-SERVICE_VERSION = "0.6.0"
+SERVICE_VERSION = "0.6.1"
 
 
 @asynccontextmanager

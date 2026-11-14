@@ -147,7 +147,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Autenticar con el JWT RS256 de auth-service (JWKS) y servicios sólo con `X-Service-Token`. Sólo `student` tiene `/me`; un perfil ajeno da 404. Exponer el pool para matching (`GET /profiles`, sólo perfiles buscables) con vistas que minimizan datos (sin teléfono, inclusión ni consentimientos). Contratos: `contracts/profile.md` (parte A) y `contracts/profile.md` (parte C).
 - Perfil de empresa (`/api/v1/profiles/companies/...`): marca empleadora (nombre comercial, logo PNG/JPEG/WebP ≤ 1 MB validado por firma y servido público, rubro, tamaño, sede, descripción, links, beneficios, contacto), con razón social/CUIT/actividad como copia de sólo lectura de auth-service y `snapshot` con la forma de `company_snapshot` para jobs-service. **Las búsquedas no van en profile-service**: son de jobs-service y el front las pide ahí. Contratos: `contracts/profile.md` (parte B) y `contracts/profile.md` (parte E).
 - Recibir los eventos de cuenta de auth-service (`POST /api/v1/profiles/internal/account-events`, sólo `X-Service-Token`, idempotente): `account.deleted` archiva el perfil de estudiante o empresa (sale del pool, de los listados y de `/me`; el JWT vigente recibe `401 ACCOUNT_DELETED`) y `account.updated` refresca la copia de los datos legales de la empresa. Contrato: `contracts/profile.md` (parte C) §8.
-**Tests mínimos:** UT-PROF-01 a UT-PROF-07 y UT-PROF-09 (eventos de cuenta).
+**Tests mínimos:** UT-PROF-01 a UT-PROF-07, UT-PROF-09 (eventos de cuenta) y UT-PROF-10 (experiencia total sin contar dos veces los períodos superpuestos).
 
 ### 4.3 Agente `jobs-agent` — jobs-service (FastAPI)
 **Debe:**
