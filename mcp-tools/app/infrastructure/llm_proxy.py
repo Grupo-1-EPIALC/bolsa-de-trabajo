@@ -14,7 +14,9 @@ bucle de WF-0R reporta el fallo al router y elige otro modelo.
 Además le pide a NVIDIA que no razone (`chat_template_kwargs`), salvo `AGENT_LLM_THINKING=true`:
 los modelos "piensan" miles de tokens antes de contestar y eso es lo que más tarda.
 
-El proxy no agrega credenciales: reenvía el `Authorization` que manda n8n (la clave de NVIDIA).
+Para NVIDIA el proxy no agrega credenciales: reenvía el `Authorization` que manda n8n. Si está
+activo Gemini (AI Studio, endpoint compatible con OpenAI), los pedidos de su modelo van a Google con
+`GEMINI_API_KEY`, que sólo vive en el entorno de mcp-tools.
 """
 
 import asyncio
@@ -22,6 +24,7 @@ import json
 import logging
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -30,6 +33,20 @@ from starlette.responses import JSONResponse, Response
 logger = logging.getLogger(__name__)
 
 _FORWARDED_HEADERS = ("authorization", "content-type", "accept")
+
+
+@dataclass(frozen=True)
+class GeminiProvider:
+    """Gemini por su API compatible con OpenAI (`GEMINI_*`)."""
+
+    model: str
+    api_key: str
+    base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    # "none" apaga el razonamiento de los modelos Flash; vacío = no se manda.
+    reasoning_effort: str = "none"
+
+    def handles(self, model: str) -> bool:
+        return model == self.model
 
 
 class LlmTimeoutError(Exception):
@@ -117,6 +134,7 @@ class LlmProxy:
         client_factory: Callable[[], httpx.AsyncClient] | None = None,
         max_seconds: float | None = None,
         thinking: bool = False,
+        gemini: GeminiProvider | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = float(timeout_seconds)
@@ -125,6 +143,7 @@ class LlmProxy:
         # Sin razonamiento por defecto: los modelos de NVIDIA "piensan" miles de tokens antes de
         # contestar y eso es lo que más tarda. Para extraer o recomendar no hace falta.
         self._thinking = thinking
+        self._gemini = gemini
         self._client_factory = client_factory or (
             lambda: httpx.AsyncClient(timeout=httpx.Timeout(self._timeout, connect=10.0))
         )
@@ -136,9 +155,25 @@ class LlmProxy:
     def _headers(self, headers: dict[str, str]) -> dict[str, str]:
         return {k: v for k, v in headers.items() if k.lower() in _FORWARDED_HEADERS}
 
-    def _payload(self, data: dict[str, Any]) -> bytes:
-        """Siempre en streaming hacia NVIDIA (para medir si contesta) y sin razonamiento."""
+    def _target(self, model: str, headers: dict[str, str]) -> tuple[str, dict[str, str], bool]:
+        """URL, headers y si el destino es Gemini."""
+        if self._gemini is not None and self._gemini.handles(model):
+            forwarded = {
+                k: v for k, v in self._headers(headers).items() if k.lower() != "authorization"
+            }
+            forwarded["Authorization"] = f"Bearer {self._gemini.api_key}"
+            return f"{self._gemini.base_url.rstrip('/')}/chat/completions", forwarded, True
+        return f"{self._base_url}/chat/completions", self._headers(headers), False
+
+    def _payload(self, data: dict[str, Any], gemini: bool = False) -> bytes:
+        """Siempre en streaming (para medir si contesta) y sin razonamiento."""
         payload = {**data, "stream": True}
+        if gemini:
+            # Gemini no acepta `chat_template_kwargs`; apaga el razonamiento con reasoning_effort.
+            payload.pop("chat_template_kwargs", None)
+            if not self._thinking and self._gemini and self._gemini.reasoning_effort:
+                payload.setdefault("reasoning_effort", self._gemini.reasoning_effort)
+            return json.dumps(payload).encode()
         if not self._thinking:
             kwargs = dict(payload.get("chat_template_kwargs") or {})
             kwargs.setdefault("enable_thinking", False)  # nemotron, minimax, qwen
@@ -154,20 +189,23 @@ class LlmProxy:
         if data is None:
             return _error(400, "INVALID_REQUEST", "El cuerpo tiene que ser un objeto JSON")
         model = str(data.get("model") or "?")
+        url, forwarded, is_gemini = self._target(model, headers)
         started = time.monotonic()
         try:
             async with self._client_factory() as client:
                 request = client.build_request(
-                    "POST",
-                    f"{self._base_url}/chat/completions",
-                    content=self._payload(data),
-                    headers=self._headers(headers),
+                    "POST", url, content=self._payload(data, is_gemini), headers=forwarded
                 )
                 upstream = await self._wait(client.send(request, stream=True), started)
                 try:
                     if upstream.status_code != 200:
                         content = await upstream.aread()
-                        logger.warning("LLM %s: NVIDIA respondió %s", model, upstream.status_code)
+                        logger.warning(
+                            "LLM %s: %s respondió %s",
+                            model,
+                            "Gemini" if is_gemini else "NVIDIA",
+                            upstream.status_code,
+                        )
                         return Response(
                             content=content,
                             status_code=upstream.status_code,

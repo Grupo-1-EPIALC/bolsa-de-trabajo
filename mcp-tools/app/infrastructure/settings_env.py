@@ -38,6 +38,22 @@ def _flag(raw: str | None, default: bool) -> bool:
     return raw.strip().lower() in ("1", "true", "yes", "si", "sí")
 
 
+def gemini_model(env: Mapping[str, str]) -> str | None:
+    """Modelo de Gemini (AI Studio) que va primero en todas las listas, o None si está apagado.
+
+    Se activa con `GEMINI_ENABLED=true` y una `GEMINI_API_KEY` no vacía.
+    """
+    if not _flag(env.get("GEMINI_ENABLED"), False) or not (env.get("GEMINI_API_KEY") or "").strip():
+        return None
+    return (env.get("GEMINI_MODEL") or "gemini-2.5-flash").strip()
+
+
+def _with_first(model: str | None, models: tuple[str, ...]) -> tuple[str, ...]:
+    if not model:
+        return models
+    return (model, *(m for m in models if m != model))
+
+
 def _split_csv(raw: str | None, fallback: tuple[str, ...]) -> tuple[str, ...]:
     if not raw or not raw.strip():
         return fallback
@@ -80,10 +96,13 @@ class EnvSettingsProvider:
                 admin_email=e.get("NOTIFY_ADMIN_EMAIL", "").strip(),
                 frontend_url=e.get("FRONTEND_URL", "http://localhost:8080").strip().rstrip("/"),
             )
+            first = gemini_model(e)
             models = {
-                "default": _split_csv(e.get("AGENT_MODELS"), DEFAULT_MODELS),
-                "cv": _split_csv(e.get("AGENT_MODELS_CV"), DEFAULT_MODELS_CV),
-                "verifier": _split_csv(e.get("AGENT_MODELS_VERIFIER"), DEFAULT_MODELS_VERIFIER),
+                "default": _with_first(first, _split_csv(e.get("AGENT_MODELS"), DEFAULT_MODELS)),
+                "cv": _with_first(first, _split_csv(e.get("AGENT_MODELS_CV"), DEFAULT_MODELS_CV)),
+                "verifier": _with_first(
+                    first, _split_csv(e.get("AGENT_MODELS_VERIFIER"), DEFAULT_MODELS_VERIFIER)
+                ),
             }
             return AgentSettings(
                 nvidia_base_url=e.get(
@@ -94,6 +113,7 @@ class EnvSettingsProvider:
                 llm_timeout_seconds=int(e.get("AGENT_LLM_TIMEOUT_SECONDS", "60")),
                 temperature=float(e.get("AGENT_TEMPERATURE", "0.2")),
                 max_verify_retries=int(e.get("AGENT_MAX_VERIFY_RETRIES", "1")),
+                verify_strict=_flag(e.get("AGENT_VERIFY_STRICT"), False),
                 recommendations=reco,
                 cv=cv,
                 notifications=notifications,
@@ -149,6 +169,7 @@ class PanelSettingsProvider:
             llm_timeout_seconds=int(data.get("llm_timeout_seconds", 60)),
             temperature=float(data.get("temperature", 0.2)),
             max_verify_retries=int(data.get("max_verify_retries", 1)),
+            verify_strict=bool(data.get("verify_strict", False)),
             recommendations=RecommendationSettings(
                 max_jobs_per_student=int(reco_raw.get("max_jobs_per_student", 5)),
                 max_profiles_per_job=int(reco_raw.get("max_profiles_per_job", 10)),

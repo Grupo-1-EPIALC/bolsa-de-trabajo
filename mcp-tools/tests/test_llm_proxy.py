@@ -204,3 +204,53 @@ def test_ut_mcp_06_rutas_del_servidor_sin_token_de_servicio(
     assert client.post("/llm/v1/chat/completions", content=body(), headers=AUTH).status_code == 200
     assert client.get("/llm/v1/models", headers=AUTH).status_code == 200
     assert client.post("/router/status").status_code == 401
+
+
+GEMINI_URL = "https://gemini.example.test/v1beta/openai/chat/completions"
+
+
+async def test_ut_mcp_06_gemini_va_a_google_con_su_clave_y_sin_kwargs_de_nvidia() -> None:
+    from app.infrastructure.llm_proxy import GeminiProvider
+
+    gemini = GeminiProvider(
+        model="gemini-2.5-flash",
+        api_key="clave-gemini-ficticia",
+        base_url="https://gemini.example.test/v1beta/openai",
+    )
+    proxy = LlmProxy(BASE, timeout_seconds=5, gemini=gemini)
+    with respx.mock() as mock:
+        google = mock.post(GEMINI_URL).respond(200, content=sse(delta(content="hola")), headers=SSE)
+        nvidia = mock.post(URL).respond(200, content=sse(delta(content="nv")), headers=SSE)
+        res = await proxy.chat_completions(body("gemini-2.5-flash"), AUTH)
+        other = await proxy.chat_completions(body(), AUTH)
+    assert res.status_code == 200 and other.status_code == 200
+    sent = google.calls.last.request
+    assert sent.headers["authorization"] == "Bearer clave-gemini-ficticia"
+    payload = json.loads(sent.content)
+    assert "chat_template_kwargs" not in payload
+    assert payload["reasoning_effort"] == "none"
+    # Los demás modelos siguen yendo a NVIDIA con la clave que manda n8n.
+    assert nvidia.calls.last.request.headers["authorization"] == "Bearer clave-ficticia"
+
+
+def test_ut_mcp_06_gemini_primero_solo_si_esta_activo() -> None:
+    from app.infrastructure.settings_env import EnvSettingsProvider, gemini_model
+
+    assert gemini_model({"GEMINI_API_KEY": "k"}) is None
+    assert gemini_model({"GEMINI_ENABLED": "true"}) is None
+    env = {"GEMINI_ENABLED": "true", "GEMINI_API_KEY": "k", "GEMINI_MODEL": "gemini-x"}
+    assert gemini_model(env) == "gemini-x"
+    settings = asyncio.run(EnvSettingsProvider(env).get())
+    for role in ("default", "cv", "verifier"):
+        assert settings.models[role][0] == "gemini-x"
+        assert settings.models[role].count("gemini-x") == 1
+    off = asyncio.run(EnvSettingsProvider({"GEMINI_ENABLED": "false", "GEMINI_API_KEY": "k"}).get())
+    assert "gemini" not in off.models["cv"][0]
+
+
+def test_ut_mcp_06_verificador_tolerante_por_defecto() -> None:
+    from app.infrastructure.settings_env import EnvSettingsProvider
+
+    assert asyncio.run(EnvSettingsProvider({}).get()).to_dict()["verify_strict"] is False
+    strict = asyncio.run(EnvSettingsProvider({"AGENT_VERIFY_STRICT": "true"}).get())
+    assert strict.verify_strict is True
