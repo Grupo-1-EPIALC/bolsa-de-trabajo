@@ -225,7 +225,7 @@ services:
       AGENT_LLM_THINKING: ${AGENT_LLM_THINKING:-false}
       GEMINI_ENABLED: ${GEMINI_ENABLED:-false}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash,gemini-3.1-flash-lite}
       GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai}
       GEMINI_REASONING_EFFORT: ${GEMINI_REASONING_EFFORT:-none}
       AGENT_TEMPERATURE: ${AGENT_TEMPERATURE}

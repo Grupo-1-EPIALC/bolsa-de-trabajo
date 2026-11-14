@@ -39,14 +39,14 @@ _FORWARDED_HEADERS = ("authorization", "content-type", "accept")
 class GeminiProvider:
     """Gemini por su API compatible con OpenAI (`GEMINI_*`)."""
 
-    model: str
+    models: tuple[str, ...]
     api_key: str
     base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
     # "none" apaga el razonamiento de los modelos Flash; vacío = no se manda.
     reasoning_effort: str = "none"
 
     def handles(self, model: str) -> bool:
-        return model == self.model
+        return model in self.models
 
 
 class LlmTimeoutError(Exception):
