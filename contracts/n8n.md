@@ -65,8 +65,9 @@ También se acepta `X-Webhook-Token` con `N8N_WEBHOOK_TOKEN`. Sin token válido:
 ## 5. Salidas de IA y verificación
 
 - Los agentes responden **sólo JSON** que cumpla su schema: `cv_standard`, `cv_design`, `match_student_recommendations`, `match_company_recommendations`, `company_recommendations`, `student_recommendations` y `verifier_verdict`. Los schemas vigentes son los de `mcp-tools/app/data/schemas/` (los usa `validate_json_schema`); las copias anteriores quedaron en [`historico/`](historico/).
-- Antes de verificar, `WF-00` recorta la salida a los topes del schema (`maxItems`, `maxLength`, tomados de `mcp-tools/app/data/schemas/` al generar los workflows): un ítem de más no provoca un reintento. Los textos se cortan en una palabra con `…`.
-- `WF-0V` rechaza una salida si no cumple el schema, si menciona competencias que no están en la fuente (`check_grounding`) o si el score reportado no es el del motor. El orquestador reintenta con la instrucción del verificador.
+- Antes de verificar, `WF-00` y `WF-0V` corrigen el formato con `clampToSchema` (datos tomados de `mcp-tools/app/data/schemas/` al generar los workflows): recortan a los topes (`maxItems`, `maxLength`; los textos se cortan en una palabra con `…`), quitan campos que el schema no admite (`additionalProperties: false`, p. ej. un `origin` agregado por el modelo) y completan los obligatorios que faltan con un valor neutro (un enum → `media` o su primera opción; una lista → `[]`). Nada de eso provoca un reintento.
+- `WF-0V` rechaza una salida si sigue sin cumplir el schema o si el score reportado no es el del motor; el orquestador reintenta una vez con la instrucción del verificador.
+- **Grounding tolerante por defecto** (`verify_strict` de `get_agent_settings`, `AGENT_VERIFY_STRICT=false`): las competencias que no aparecen literales en el texto fuente (`check_grounding`) quedan en `advertencias` del veredicto y no disparan un reintento. Con `AGENT_VERIFY_STRICT=true` vuelven a ser motivo de rechazo.
 - Catálogo de agentes en `n8n/agentes/*.json` y prompts versionados en `n8n/prompts/*.md`. El `prompt_version` que se guarda con cada salida (WF-01, WF-06 y WF-07) sale del frontmatter del prompt al generar los workflows: no se escribe a mano.
 
 ### 5.1 Herramientas y reglas por agente

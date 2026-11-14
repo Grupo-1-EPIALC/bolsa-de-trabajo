@@ -792,15 +792,38 @@ const callMatching = async (method, path, body = null) => {
 """
 
 
+def _default_for(prop: Any) -> Any:
+    """Valor para un campo obligatorio que falta: el del medio de un enum (`media`) o lista vacía."""
+    if not isinstance(prop, dict):
+        return None
+    if "default" in prop:
+        return prop["default"]
+    enum = prop.get("enum")
+    if isinstance(enum, list) and enum:
+        return "media" if "media" in enum else enum[0]
+    if prop.get("type") == "array" and not prop.get("minItems"):
+        return []
+    return None
+
+
 def _limits(node: Any) -> dict[str, Any]:
-    """Sólo los topes de un JSON Schema (`maxItems`, `maxLength`) y dónde están."""
+    """Lo que se puede corregir sin rehacer la respuesta: topes (`maxItems`, `maxLength`),
+    campos permitidos (`additionalProperties: false`) y valores para obligatorios que faltan."""
     if not isinstance(node, dict):
         return {}
     out: dict[str, Any] = {}
     for key in ("maxItems", "maxLength"):
         if key in node:
             out[key] = node[key]
-    props = {k: _limits(v) for k, v in (node.get("properties") or {}).items()}
+    properties = node.get("properties") or {}
+    if properties and node.get("additionalProperties") is False:
+        out["allowed"] = sorted(properties)
+    defaults = {
+        k: d for k in node.get("required") or [] if (d := _default_for(properties.get(k))) is not None
+    }
+    if defaults:
+        out["defaults"] = defaults
+    props = {k: _limits(v) for k, v in properties.items()}
     props = {k: v for k, v in props.items() if v}
     if props:
         out["properties"] = props
@@ -811,10 +834,11 @@ def _limits(node: Any) -> dict[str, Any]:
 
 
 def _schema_limits_js() -> str:
-    """`clampToSchema(obj, schemaName)`: recorta listas y textos a los topes del schema.
+    """`clampToSchema(obj, schemaName)`: corrige el formato antes de verificar.
 
-    Un ítem de más (4 advertencias donde el schema acepta 3) no justifica rehacer toda la
-    respuesta del LLM: se descarta lo que sobra antes de verificar, sin tocar el resto.
+    Recorta listas y textos a los topes del schema, quita campos que el schema no admite y completa
+    los obligatorios que faltan con un valor neutro (`priority` → `media`, listas → `[]`). Un campo
+    de más o una prioridad faltante no justifican rehacer toda la respuesta del LLM.
     """
     limits = {}
     for f in sorted(SCHEMAS_DIR.glob("*.schema.json")):
@@ -842,9 +866,15 @@ const clampNode = (value, lim) => {
   if (typeof value === 'string') {
     return lim.maxLength !== undefined ? clampText(value, lim.maxLength) : value;
   }
-  if (value && typeof value === 'object' && lim.properties) {
+  if (value && typeof value === 'object') {
     const out = { ...value };
-    for (const [k, sub] of Object.entries(lim.properties)) {
+    if (lim.allowed) {
+      for (const k of Object.keys(out)) if (!lim.allowed.includes(k)) delete out[k];
+    }
+    for (const [k, d] of Object.entries(lim.defaults || {})) {
+      if (out[k] === undefined || out[k] === null || out[k] === '') out[k] = d;
+    }
+    for (const [k, sub] of Object.entries(lim.properties || {})) {
       if (out[k] !== undefined) out[k] = clampNode(out[k], sub);
     }
     return out;
@@ -1343,6 +1373,7 @@ def build_wf_verifier() -> dict[str, Any]:
     """WF-0V: Verificador determinístico (JSON Schema + Grounding + Score Lock) + Agente Doctor Strange (`WF-0R`)."""
     det_check_js = (
         MCP_HELPER_JS
+        + _schema_limits_js()
         + r"""
 const inp = $input.first().json;
 const schemaName = inp.schema_name || 'cv_standard';
@@ -1350,7 +1381,14 @@ const sourceText = String(inp.source_text || '');
 let candidateObj = inp.candidate || {};
 if (schemaName === 'cv_standard' && !candidateObj._raw_invalid_json) {
   candidateObj = normalizeCvCandidate(candidateObj, sourceText);
+} else if (candidateObj && typeof candidateObj === 'object' && !candidateObj._raw_invalid_json) {
+  // El formato se corrige solo (campos de más, prioridades faltantes, topes): no vale un reintento.
+  candidateObj = clampToSchema(candidateObj, schemaName);
 }
+// Tolerante por defecto (AGENT_VERIFY_STRICT=false en mcp-tools): las competencias que no aparecen
+// literales en el texto fuente quedan como advertencia y no disparan otro pedido al modelo.
+const settingsRes = await callMcpTool('get_agent_settings').catch(() => ({}));
+const verifyStrict = Boolean((settingsRes.data || settingsRes || {}).verify_strict);
 const candidateStr = typeof candidateObj === 'string' ? candidateObj : JSON.stringify(candidateObj);
 const expectedScore = inp.expected_score !== undefined && inp.expected_score !== null ? Number(inp.expected_score) : null;
 const reportedScore = inp.reported_score !== undefined && inp.reported_score !== null ? Number(inp.reported_score) : null;
@@ -1394,6 +1432,7 @@ const groundRes = await callMcpTool('check_grounding', {
 });
 
 const faltantes = [];
+const advertencias = [];
 if (!schemaRes.valid) {
   for (const err of (schemaRes.errors || [])) {
     faltantes.push(`Error de JSON Schema (${schemaName}): ${err}`);
@@ -1401,7 +1440,8 @@ if (!schemaRes.valid) {
 }
 if (!groundRes.grounded) {
   if ((groundRes.ungrounded_terms || []).length > 0) {
-    faltantes.push(`Competencias no respaldadas por el texto fuente (alucinación): ${groundRes.ungrounded_terms.join(', ')}`);
+    const msg = `Competencias no respaldadas por el texto fuente (alucinación): ${groundRes.ungrounded_terms.join(', ')}`;
+    (verifyStrict ? faltantes : advertencias).push(msg);
   }
   if (groundRes.score_tampered) {
     faltantes.push(`El score reportado (${reportedScore}) difiere del score calculado por reglas (${expectedScore})`);
@@ -1413,9 +1453,11 @@ const invokeLlmVerifier = detCumple && Boolean(inp.require_llm_verifier);
 return [{
   json: {
     ...inp,
+    candidate: candidateObj,
     det_cumple: detCumple,
     invoke_llm_verifier: invokeLlmVerifier,
     det_faltantes: faltantes,
+    det_advertencias: advertencias,
     agent: 'verificador',
     role: 'verifier',
     perfil_mcp: 'verificador',
@@ -1453,9 +1495,11 @@ if (!det.invoke_llm_verifier) {
     json: {
       cumple: true,
       faltantes: [],
+      advertencias: det.det_advertencias || [],
       instruccion: '',
       model: 'deterministic-mcp',
       deterministic: true,
+      candidate: det.candidate,
     },
   }];
 }
