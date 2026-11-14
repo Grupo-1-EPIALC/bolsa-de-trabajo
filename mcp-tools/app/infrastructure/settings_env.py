@@ -15,17 +15,18 @@ from app.domain.settings import (
     RecommendationSettings,
 )
 
+# Primero los modelos rápidos: los grandes (nemotron-3-ultra, deepseek) pueden tardar minutos
+# cuando NVIDIA está cargado. Si uno no responde en AGENT_LLM_TIMEOUT_SECONDS, se pasa al siguiente.
 DEFAULT_MODELS = (
-    "nvidia/nemotron-3-ultra-550b-a55b",
-    "deepseek-ai/deepseek-v4.1-flash",
     "minimaxai/minimax-m3.1-flash",
-)
-DEFAULT_MODELS_CV = (
+    "nvidia/nemotron-3.5-lightning-30b-a3b",
     "deepseek-ai/deepseek-v4.1-flash",
-    "minimaxai/minimax-m3.1-flash",
     "nvidia/nemotron-3-ultra-550b-a55b",
 )
+DEFAULT_MODELS_CV = DEFAULT_MODELS
 DEFAULT_MODELS_VERIFIER = (
+    "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "minimaxai/minimax-m3.1-flash",
     "deepseek-ai/deepseek-v4.1-flash",
     "nvidia/nemotron-3-ultra-550b-a55b",
 )
@@ -35,6 +36,25 @@ def _flag(raw: str | None, default: bool) -> bool:
     if raw is None or not raw.strip():
         return default
     return raw.strip().lower() in ("1", "true", "yes", "si", "sí")
+
+
+DEFAULT_GEMINI_MODELS = "gemini-3.5-flash,gemini-3.1-flash-lite"
+
+
+def gemini_models(env: Mapping[str, str]) -> tuple[str, ...]:
+    """Modelos de Gemini (AI Studio) que van primero en todas las listas; vacío si está apagado.
+
+    Se activa con `GEMINI_ENABLED=true` y una `GEMINI_API_KEY` no vacía. `GEMINI_MODEL` acepta uno
+    o varios separados por coma: si uno está saturado (503) se prueba el siguiente antes que NVIDIA.
+    """
+    if not _flag(env.get("GEMINI_ENABLED"), False) or not (env.get("GEMINI_API_KEY") or "").strip():
+        return ()
+    raw = env.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODELS
+    return tuple(dict.fromkeys(m.strip() for m in raw.split(",") if m.strip()))
+
+
+def _with_first(first: tuple[str, ...], models: tuple[str, ...]) -> tuple[str, ...]:
+    return (*first, *(m for m in models if m not in first))
 
 
 def _split_csv(raw: str | None, fallback: tuple[str, ...]) -> tuple[str, ...]:
@@ -79,10 +99,13 @@ class EnvSettingsProvider:
                 admin_email=e.get("NOTIFY_ADMIN_EMAIL", "").strip(),
                 frontend_url=e.get("FRONTEND_URL", "http://localhost:8080").strip().rstrip("/"),
             )
+            first = gemini_models(e)
             models = {
-                "default": _split_csv(e.get("AGENT_MODELS"), DEFAULT_MODELS),
-                "cv": _split_csv(e.get("AGENT_MODELS_CV"), DEFAULT_MODELS_CV),
-                "verifier": _split_csv(e.get("AGENT_MODELS_VERIFIER"), DEFAULT_MODELS_VERIFIER),
+                "default": _with_first(first, _split_csv(e.get("AGENT_MODELS"), DEFAULT_MODELS)),
+                "cv": _with_first(first, _split_csv(e.get("AGENT_MODELS_CV"), DEFAULT_MODELS_CV)),
+                "verifier": _with_first(
+                    first, _split_csv(e.get("AGENT_MODELS_VERIFIER"), DEFAULT_MODELS_VERIFIER)
+                ),
             }
             return AgentSettings(
                 nvidia_base_url=e.get(
@@ -93,6 +116,7 @@ class EnvSettingsProvider:
                 llm_timeout_seconds=int(e.get("AGENT_LLM_TIMEOUT_SECONDS", "60")),
                 temperature=float(e.get("AGENT_TEMPERATURE", "0.2")),
                 max_verify_retries=int(e.get("AGENT_MAX_VERIFY_RETRIES", "1")),
+                verify_strict=_flag(e.get("AGENT_VERIFY_STRICT"), False),
                 recommendations=reco,
                 cv=cv,
                 notifications=notifications,
@@ -148,6 +172,7 @@ class PanelSettingsProvider:
             llm_timeout_seconds=int(data.get("llm_timeout_seconds", 60)),
             temperature=float(data.get("temperature", 0.2)),
             max_verify_retries=int(data.get("max_verify_retries", 1)),
+            verify_strict=bool(data.get("verify_strict", False)),
             recommendations=RecommendationSettings(
                 max_jobs_per_student=int(reco_raw.get("max_jobs_per_student", 5)),
                 max_profiles_per_job=int(reco_raw.get("max_profiles_per_job", 10)),

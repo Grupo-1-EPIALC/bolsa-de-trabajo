@@ -92,6 +92,19 @@ La descripción de cada herramienta es lo que lee el LLM (docstring en `mcp-tool
 | `POST /router/failure` · `/router/fallo` | Registra el fallo de un modelo (cooldown exponencial) |
 | `POST /router/success` · `/router/exito` | Limpia los fallos de un modelo |
 | `GET /router/status` · `/router/estado` | Usos por minuto/día y cooldowns |
+| `POST /llm/v1/chat/completions` · `GET /llm/v1/models` | Proxy compatible con OpenAI hacia `NVIDIA_BASE_URL` con tiempo máximo (desde 0.10.0, §4.1) |
+
+### 4.1 Proxy del modelo con tiempo máximo (desde 0.10.0)
+
+El nodo `lmChatOpenAi` de n8n no respeta su opción `timeout`: cuando NVIDIA está cargado, la llamada queda colgada minutos y WF-0R nunca pasa al modelo siguiente. Por eso la credencial "OpenAI account" de n8n apunta a `http://mcp-tools:8000/llm/v1` y mcp-tools reenvía cada pedido a NVIDIA:
+
+- **Corta si NVIDIA no manda nada durante `AGENT_LLM_TIMEOUT_SECONDS`** (60 por defecto), ni el primer fragmento ni ninguno de los siguientes, **o si la respuesta no termina en `AGENT_LLM_MAX_SECONDS`** (120): un modelo puede mandar fragmentos sin parar y tardar minutos. Para medirlo, el proxy siempre pide la respuesta en streaming a NVIDIA y la junta entera antes de devolverla: armada (contenido, razonamiento, `tool_calls` y `usage`) si n8n la pidió entera, o como los mismos eventos SSE, todos al final, si la pidió en streaming. Así siempre puede responder un error limpio. Al cortar responde `504` con un error con forma de OpenAI: `{"error": {"code": "LLM_TIMEOUT", "message": "timeout: el modelo <id> no respondió en 60 s"}}`. El agente de n8n falla, WF-0R lo reporta a `/router/failure` (que lo clasifica como transitorio y le da cooldown) y pide otro modelo a `/router/reserve`.
+- **Sin razonamiento por defecto:** agrega `chat_template_kwargs: {"enable_thinking": false, "thinking": false}` (respeta lo que mande el pedido). Los modelos de NVIDIA "piensan" miles de tokens antes de contestar: medido, nemotron-3.5-lightning gastó 81 s y 27.700 caracteres sólo razonando ante un pedido largo; sin razonamiento, la importación de un CV bajó a 15–24 s. `AGENT_LLM_THINKING=true` lo vuelve a activar.
+- Los logs de mcp-tools dicen qué modelo respondió y en cuánto (`LLM <modelo>: respondió en streaming en 34.8 s`) o cuál se cortó.
+- Error de red con NVIDIA → `502 LLM_UPSTREAM_ERROR`. Las demás respuestas de NVIDIA (incluidos `429` y `4xx`) pasan tal cual.
+- **No agrega credenciales:** reenvía sólo `Authorization` (la clave de NVIDIA que manda n8n), `Content-Type` y `Accept`. Por eso queda fuera del `SERVICE_TOKEN`. No se publica en el host ni pasa por el gateway.
+- **Gemini (Google AI Studio) como primera opción**, opcional: con `GEMINI_ENABLED=true` y `GEMINI_API_KEY`, `GEMINI_MODEL` (uno o varios separados por coma; default `gemini-3.5-flash,gemini-3.1-flash-lite`) va primero en `models.default`, `models.cv` y `models.verifier`. El proxy manda los pedidos de ese modelo a `GEMINI_BASE_URL` (endpoint compatible con OpenAI) con `GEMINI_API_KEY`, sin `chat_template_kwargs` y con `reasoning_effort: GEMINI_REASONING_EFFORT` (`none` apaga el razonamiento; vacío no lo manda). La clave sólo está en el entorno de mcp-tools. Si un Gemini falla, está saturado (`503`), se pasa del cupo gratuito (`429`) o no contesta a tiempo, el router le da cooldown y sigue con el siguiente Gemini y después con NVIDIA. `gemini-2.5-flash` ya no está habilitado para claves nuevas (`404`).
+- Orden de modelos por defecto, de los rápidos a los grandes: `minimax-m3.1-flash`, `nemotron-3.5-lightning-30b-a3b`, `deepseek-v4.1-flash`, `nemotron-3-ultra-550b-a55b` (el verificador empieza por `nemotron-3.5-lightning`).
 
 ## 5. Configuración (`get_agent_settings`)
 
@@ -100,7 +113,7 @@ Devuelve `{ "ok": true, ... }` con:
 | Bloque | Campos | Variables |
 |---|---|---|
 | Modelos | `models.default`, `models.cv`, `models.verifier`, `nvidia_base_url` | `AGENT_MODELS`, `AGENT_MODELS_CV`, `AGENT_MODELS_VERIFIER`, `NVIDIA_BASE_URL` |
-| Límites | `rpm_limit`, `llm_timeout_seconds`, `temperature`, `max_verify_retries` | `NVIDIA_RPM_LIMIT`, `AGENT_LLM_TIMEOUT_SECONDS`, `AGENT_TEMPERATURE`, `AGENT_MAX_VERIFY_RETRIES` |
+| Límites | `rpm_limit`, `llm_timeout_seconds`, `temperature`, `max_verify_retries`, `verify_strict` | `NVIDIA_RPM_LIMIT`, `AGENT_LLM_TIMEOUT_SECONDS`, `AGENT_TEMPERATURE`, `AGENT_MAX_VERIFY_RETRIES`, `AGENT_VERIFY_STRICT` (desde 0.10.0, default `false`: WF-0V toma las competencias no respaldadas como advertencia, sin reintento) |
 | `recommendations` | `max_jobs_per_student`, `max_profiles_per_job`, `max_items_per_job`, `min_score` | `RECO_*` |
 | `cv` | `max_size_mb`, `allowed_extensions`, `max_text_chars` | `CV_MAX_SIZE_MB`, `CV_ALLOWED_EXTENSIONS`, `CV_MAX_TEXT_CHARS` |
 | `notifications` | `enabled`, `min_score`, `max_per_event`, `admin_email`, `frontend_url` | `NOTIFY_ENABLED`, `NOTIFY_MIN_SCORE`, `NOTIFY_MAX_PER_EVENT`, `NOTIFY_ADMIN_EMAIL`, `FRONTEND_URL` |

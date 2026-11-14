@@ -3,7 +3,9 @@
 # Arranque de n8n (entrypoint del servicio `n8n` de docker-compose.yml).
 # Corre en el mismo contenedor, antes de n8n, en cada arranque:
 #   1. Crea/actualiza la credencial "OpenAI account" (NVIDIA NIM, API compatible con
-#      OpenAI) con NVIDIA_API_KEY de .env. El id es fijo porque lo usa WF-0R.
+#      OpenAI) con NVIDIA_API_KEY de .env. El id es fijo porque lo usa WF-0R. La URL es
+#      el proxy de mcp-tools (LLM_BASE_URL), que corta a los AGENT_LLM_TIMEOUT_SECONDS
+#      para que WF-0R pase al modelo siguiente (el timeout del nodo de n8n no corta).
 #   2. Crea/actualiza la credencial "SMTP Bolsa" desde SMTP_HOST/SMTP_PORT (Mailpit en
 #      dev). La usan los mails de WF-02 a WF-05. Id fijo.
 #   3. Crea la tabla bolsa.notifications_sent en la base de n8n (avisos ya enviados por
@@ -34,7 +36,7 @@ if [ -n "${NVIDIA_API_KEY:-}" ]; then
       id: process.argv[1],
       name: process.argv[2],
       type: "openAiApi",
-      data: { apiKey: process.env.NVIDIA_API_KEY, url: process.env.NVIDIA_BASE_URL },
+      data: { apiKey: process.env.NVIDIA_API_KEY, url: process.env.LLM_BASE_URL || process.env.NVIDIA_BASE_URL },
     }]));
   ' "$CREDENTIAL_ID" "$CREDENTIAL_NAME"
   n8n import:credentials --input="$TMP_DIR/nvidia.json"

@@ -22,6 +22,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from app.domain.cv_design_state import AiDesignStatus, CvDesignState
+from app.domain.experience import total_experience_months
 from app.domain.profile import StudentProfile
 
 ENGINE_VERSION = "cv-layout-1.0.0"
@@ -184,7 +185,7 @@ def summarize_content(profile: StudentProfile) -> CvContentSummary:
         has_summary=bool((profile.summary or "").strip()),
         target_roles=tuple(profile.target.roles) if profile.target else (),
         experience_count=len(profile.experience),
-        experience_months=sum(e.months or 0 for e in profile.experience),
+        experience_months=total_experience_months(profile.experience),
         experience_roles=tuple(e.role for e in profile.experience[:_MAX_ROLES] if e.role),
         projects_count=len(profile.projects),
         skills_count=len(profile.skills),

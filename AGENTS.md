@@ -147,7 +147,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Autenticar con el JWT RS256 de auth-service (JWKS) y servicios sólo con `X-Service-Token`. Sólo `student` tiene `/me`; un perfil ajeno da 404. Exponer el pool para matching (`GET /profiles`, sólo perfiles buscables) con vistas que minimizan datos (sin teléfono, inclusión ni consentimientos). Contratos: `contracts/profile.md` (parte A) y `contracts/profile.md` (parte C).
 - Perfil de empresa (`/api/v1/profiles/companies/...`): marca empleadora (nombre comercial, logo PNG/JPEG/WebP ≤ 1 MB validado por firma y servido público, rubro, tamaño, sede, descripción, links, beneficios, contacto), con razón social/CUIT/actividad como copia de sólo lectura de auth-service y `snapshot` con la forma de `company_snapshot` para jobs-service. **Las búsquedas no van en profile-service**: son de jobs-service y el front las pide ahí. Contratos: `contracts/profile.md` (parte B) y `contracts/profile.md` (parte E).
 - Recibir los eventos de cuenta de auth-service (`POST /api/v1/profiles/internal/account-events`, sólo `X-Service-Token`, idempotente): `account.deleted` archiva el perfil de estudiante o empresa (sale del pool, de los listados y de `/me`; el JWT vigente recibe `401 ACCOUNT_DELETED`) y `account.updated` refresca la copia de los datos legales de la empresa. Contrato: `contracts/profile.md` (parte C) §8.
-**Tests mínimos:** UT-PROF-01 a UT-PROF-07 y UT-PROF-09 (eventos de cuenta).
+**Tests mínimos:** UT-PROF-01 a UT-PROF-07, UT-PROF-09 (eventos de cuenta) y UT-PROF-10 (experiencia total sin contar dos veces los períodos superpuestos).
 
 ### 4.3 Agente `jobs-agent` — jobs-service (FastAPI)
 **Debe:**
@@ -186,6 +186,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - Cada herramienta: docstring clara (es lo que lee el LLM), tipos de entrada/salida, manejo de errores con mensaje legible.
 - Autenticarse ante los servicios y proteger `/mcp` y `/router` con `X-Service-Token`, `X-API-Key`, `Bearer` o `?key=` (enmascarando `key=***` en logs).
 - Herramientas **de solo lectura** salvo `save_recommendation`.
+- Proxy del modelo `/llm/v1` (la credencial de NVIDIA de n8n apunta ahí): reenvía a `NVIDIA_BASE_URL` y corta a los `AGENT_LLM_TIMEOUT_SECONDS` con `504 LLM_TIMEOUT` para que WF-0R pase al modelo siguiente. No agrega credenciales. Contrato: `contracts/mcp_tools.md` §4.1.
 **Tests mínimos:** UT-MCP-01, UT-MCP-02 (cobertura ≥ 70 % en `domain/` y `application/`).
 
 ### 4.6 Agente `n8n-agent` — workflows y ejecución de IA
@@ -196,6 +197,7 @@ Cada sección es el “system prompt” que se le da al asistente de código cua
 - `WF-0R` Agente especialista y Router NVIDIA · `WF-0V` Verificador (JSON Schema + grounding + integridad de score + agente `Doctor Strange`) · `WF-00` Orquestador (`Captain America`, con lectura de adjunto MCP y reintento controlado) · `WF-01` Procesar CV (`POST /webhook/cv-extract`, `Natasha Romanoff`) · `WF-06` Recomendador postulantes/empresas (`POST /webhook/recommendations`: `mode=student|company` con `Jean Grey` / `match_advisor` sobre el ranking por reglas de `rank_jobs_for_student` / `rank_candidates_for_job`, `mode=training` con `Professor X`) · `WF-02` Oferta nueva (`POST /webhook/job-created`: detecta candidatos por reglas) · `WF-03` Mails a estudiantes (`POST /webhook/profile-updated` + `student-offer` interno) · `WF-04` Candidato nuevo → empresas (`company-alerts` interno, sin datos personales) · `WF-05` error workflow de todos los demás → admin · `WF-07` Diseño del CV (`POST /webhook/cv-design`, `Tony Stark` / `cv_designer` con la skill `diseno-cv`: elige un diseño del catálogo de profile-service sobre un resumen sin datos personales). Contrato: [`contracts/n8n.md`](contracts/n8n.md) (§7 y §8).
 - Usar variables de entorno de n8n (`$env.MCP_URL`, `$env.SERVICE_TOKEN`, `$env.N8N_WEBHOOK_TOKEN`, etc., definidas en `docker-compose.yml`) y consultar parámetros dinámicos con `get_agent_settings`; nunca valores fijos.
 - Separar siempre el bloque `"rule_based"` (`origin: "RULES"`) del bloque `"ai_recommendations"` (`origin: "AI"`).
+- Verificación sin cuellos de botella: el formato se corrige solo (`clampToSchema`) y el grounding es advertencia salvo `AGENT_VERIFY_STRICT=true`; sólo un schema inválido o un score adulterado provocan reintento. Contrato: [`contracts/n8n.md`](contracts/n8n.md) §5.
 - Idempotencia: no enviar mails duplicados. Cada mail reserva su `notification_key` en `bolsa.notifications_sent` (base de n8n) con `INSERT … ON CONFLICT DO NOTHING` antes de salir; no usar `staticData` (se pisa con ejecuciones simultáneas). Sólo a estudiantes con `contact_by_email = true`.
 
 ### 4.7 Agente `frontend-agent` — React

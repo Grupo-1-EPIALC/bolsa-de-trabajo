@@ -26,10 +26,10 @@
   },
   "modelos": {
     "nvidia": [
-      "nvidia/nemotron-3-ultra-550b-a55b",
-      "deepseek-ai/deepseek-v4.1-flash",
       "minimaxai/minimax-m3.1-flash",
-      "nvidia/nemotron-3.5-lightning-30b-a3b"
+      "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "deepseek-ai/deepseek-v4.1-flash",
+      "nvidia/nemotron-3-ultra-550b-a55b"
     ]
   }
 }

@@ -17,10 +17,12 @@ import uvicorn
 from mcp.server.fastmcp import FastMCP
 from mcp.types import Tool
 from starlette.requests import Request
-from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.responses import JSONResponse, PlainTextResponse, Response
 
 from app.domain.errors import DomainError
+from app.infrastructure.llm_proxy import GeminiProvider, LlmProxy
 from app.infrastructure.security import MaskKeyLogFilter, ServiceTokenMiddleware
+from app.infrastructure.settings_env import gemini_models
 from app.tools.registry import build_container, register_tools
 
 Transport = Literal["stdio", "sse", "streamable-http"]
@@ -148,7 +150,7 @@ async def health(_: Request) -> JSONResponse:
         {
             "status": "ok",
             "service": "mcp-tools",
-            "version": "0.9.0",
+            "version": "0.10.0",
             "tools": sorted(REGISTERED_TOOLS.keys()),
             "profiles": sorted(TOOL_PROFILES.keys()),
         }
@@ -220,6 +222,37 @@ async def http_router_status(_: Request) -> JSONResponse:
     return JSONResponse({"ok": True, **container.router.status()})
 
 
+# Proxy hacia NVIDIA con tiempo máximo (la credencial de n8n apunta a /llm/v1). Fuera de
+# /mcp y /router: n8n manda la clave de NVIDIA como Bearer y el proxy la reenvía tal cual.
+llm_proxy = LlmProxy(
+    os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+    float(os.getenv("AGENT_LLM_TIMEOUT_SECONDS", "60")),
+    max_seconds=float(os.getenv("AGENT_LLM_MAX_SECONDS", "120")),
+    thinking=os.getenv("AGENT_LLM_THINKING", "false").strip().lower() in ("1", "true", "yes"),
+    gemini=(
+        GeminiProvider(
+            models=_gemini,
+            api_key=os.environ["GEMINI_API_KEY"].strip(),
+            base_url=os.getenv("GEMINI_BASE_URL")
+            or "https://generativelanguage.googleapis.com/v1beta/openai",
+            reasoning_effort=os.getenv("GEMINI_REASONING_EFFORT", "none").strip(),
+        )
+        if (_gemini := gemini_models(os.environ))
+        else None
+    ),
+)
+
+
+@mcp.custom_route("/llm/v1/chat/completions", methods=["POST"])  # type: ignore[untyped-decorator]
+async def http_llm_chat(req: Request) -> Response:
+    return await llm_proxy.chat_completions(await req.body(), dict(req.headers))
+
+
+@mcp.custom_route("/llm/v1/models", methods=["GET"])  # type: ignore[untyped-decorator]
+async def http_llm_models(req: Request) -> Response:
+    return await llm_proxy.models(dict(req.headers))
+
+
 def create_http_app() -> ServiceTokenMiddleware:
     service_token = os.getenv("SERVICE_TOKEN", "")
     return ServiceTokenMiddleware(mcp.streamable_http_app(), expected_token=service_token)
@@ -231,6 +264,13 @@ def main() -> None:
         host = os.getenv("MCP_HOST", "0.0.0.0")  # noqa: S104
         port = int(os.getenv("MCP_PORT", "8000"))
         logging.getLogger("uvicorn.access").addFilter(MaskKeyLogFilter())
+        # Logs del proxy del modelo (qué modelo respondió, en cuánto, o si se cortó).
+        proxy_log = logging.getLogger("app.infrastructure.llm_proxy")
+        proxy_log.setLevel(logging.INFO)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(message)s"))
+        proxy_log.addHandler(handler)
+        proxy_log.propagate = False
         uvicorn.run(create_http_app(), host=host, port=port)
     else:
         mcp.run(transport=transport)

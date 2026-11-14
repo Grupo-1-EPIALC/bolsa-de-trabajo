@@ -65,8 +65,9 @@ También se acepta `X-Webhook-Token` con `N8N_WEBHOOK_TOKEN`. Sin token válido:
 ## 5. Salidas de IA y verificación
 
 - Los agentes responden **sólo JSON** que cumpla su schema: `cv_standard`, `cv_design`, `match_student_recommendations`, `match_company_recommendations`, `company_recommendations`, `student_recommendations` y `verifier_verdict`. Los schemas vigentes son los de `mcp-tools/app/data/schemas/` (los usa `validate_json_schema`); las copias anteriores quedaron en [`historico/`](historico/).
-- Antes de verificar, `WF-00` recorta la salida a los topes del schema (`maxItems`, `maxLength`, tomados de `mcp-tools/app/data/schemas/` al generar los workflows): un ítem de más no provoca un reintento. Los textos se cortan en una palabra con `…`.
-- `WF-0V` rechaza una salida si no cumple el schema, si menciona competencias que no están en la fuente (`check_grounding`) o si el score reportado no es el del motor. El orquestador reintenta con la instrucción del verificador.
+- Antes de verificar, `WF-00` y `WF-0V` corrigen el formato con `clampToSchema` (datos tomados de `mcp-tools/app/data/schemas/` al generar los workflows): recortan a los topes (`maxItems`, `maxLength`; los textos se cortan en una palabra con `…`), quitan campos que el schema no admite (`additionalProperties: false`, p. ej. un `origin` agregado por el modelo) y completan los obligatorios que faltan con un valor neutro (un enum → `media` o su primera opción; una lista → `[]`). Nada de eso provoca un reintento.
+- `WF-0V` rechaza una salida si sigue sin cumplir el schema o si el score reportado no es el del motor; el orquestador reintenta una vez con la instrucción del verificador.
+- **Grounding tolerante por defecto** (`verify_strict` de `get_agent_settings`, `AGENT_VERIFY_STRICT=false`): las competencias que no aparecen literales en el texto fuente (`check_grounding`) quedan en `advertencias` del veredicto y no disparan un reintento. Con `AGENT_VERIFY_STRICT=true` vuelven a ser motivo de rechazo.
 - Catálogo de agentes en `n8n/agentes/*.json` y prompts versionados en `n8n/prompts/*.md`. El `prompt_version` que se guarda con cada salida (WF-01, WF-06 y WF-07) sale del frontmatter del prompt al generar los workflows: no se escribe a mano.
 
 ### 5.1 Herramientas y reglas por agente
@@ -87,6 +88,7 @@ Cada agente declara en `herramientas` las herramientas MCP que usa. El generador
 
 - Variables de n8n (`docker-compose.yml`): `MCP_URL`, `PROFILE_SERVICE_URL`, `JOBS_SERVICE_URL`, `MATCHING_SERVICE_URL`, `SERVICE_TOKEN`, `N8N_WEBHOOK_TOKEN`, `SMTP_*`, `N8N_INTERNAL_WEBHOOK_URL`. Los parámetros dinámicos se leen con `get_agent_settings` ([`mcp_tools.md`](mcp_tools.md) §5), nunca con valores fijos.
 - Antes de arrancar, el contenedor de n8n corre `n8n/init/bootstrap.sh`, que crea las credenciales "OpenAI account" (NVIDIA NIM, desde `NVIDIA_API_KEY`), "SMTP Bolsa" y "Postgres n8n (avisos)", y la tabla `bolsa.notifications_sent`. Después importa y publica los workflows. El repo es la fuente de verdad: los cambios hechos sólo en la UI se pisan al reiniciar.
+- La credencial "OpenAI account" apunta al proxy de mcp-tools (`LLM_BASE_URL`, por defecto `http://mcp-tools:8000/llm/v1`), no directo a NVIDIA: el `timeout` del nodo `NVIDIA LLM` no corta, y el proxy sí. Si un modelo no manda nada en `AGENT_LLM_TIMEOUT_SECONDS` (60) o no termina en `AGENT_LLM_MAX_SECONDS` (120), el agente recibe `504 LLM_TIMEOUT` y WF-0R pasa al modelo siguiente de la lista (`AGENT_MODELS*`, de los rápidos a los grandes). El proxy además pide que los modelos no razonen (`AGENT_LLM_THINKING=false`). Detalle en [`mcp_tools.md`](mcp_tools.md) §4.1.
 
 ## 7. Notificaciones por mail (WF-02 a WF-05)
 

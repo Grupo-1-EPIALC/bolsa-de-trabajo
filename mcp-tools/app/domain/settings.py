@@ -64,6 +64,9 @@ class AgentSettings:
     recommendations: RecommendationSettings
     cv: CvSettings
     notifications: NotificationSettings = field(default_factory=NotificationSettings)
+    # False (default): una competencia que no aparece literal en el texto fuente es advertencia,
+    # no rechazo. True: el verificador rechaza y se reintenta (más lento).
+    verify_strict: bool = False
     source: str = field(default="env")
 
     def __post_init__(self) -> None:

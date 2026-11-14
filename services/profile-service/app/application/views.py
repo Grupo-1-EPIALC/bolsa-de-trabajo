@@ -11,6 +11,7 @@ from typing import Any
 
 from app.domain.completion import COMPLETION_ENGINE_VERSION, Completion
 from app.domain.enums import SalaryVisibility
+from app.domain.experience import total_experience_months
 from app.domain.profile import StudentProfile
 from app.domain.serialization import drop_none, to_plain
 
@@ -60,8 +61,9 @@ def service_view(profile: StudentProfile) -> dict[str, Any]:
     personal = body.get("personal", {})
     personal.pop("phone", None)
     personal.pop("birth_year", None)
-    # Años de experiencia calculados por reglas (matching-service los usa tal cual).
-    months = sum(e.months or 0 for e in profile.experience)
+    # Años de experiencia calculados por reglas (matching-service los usa tal cual), sin contar
+    # dos veces los períodos en que tuvo trabajos simultáneos.
+    months = total_experience_months(profile.experience)
     body["years_experience"] = round(months / 12, 2)
     # Sólo el permiso de contacto (no el resto de los consentimientos): n8n lo usa para no
     # mandar mails a quien no los aceptó (WF-02/WF-03, contracts/n8n.md §7).
