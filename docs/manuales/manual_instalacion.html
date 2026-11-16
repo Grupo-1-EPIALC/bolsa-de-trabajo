@@ -199,11 +199,20 @@
       </tr>
       <tr>
         <td>Memoria, disco y CPU</td>
-        <td><strong>8 GB de RAM y 10 GB libres de disco.</strong> Medido con todo levantado en una notebook Intel i3-1025G1 (4 hilos, 16 GB): los contenedores usan ~1,4 GB de RAM y el host ~2,5 GB sumando la VM de Docker, con un pico de ~3,1 GB durante el build. En disco ocupa ~7 GB: 4,2 GB de imágenes, 2,7 GB de caché de build (se libera con <code>docker builder prune</code>) y ~140 MB de contenedores y volúmenes. Con 4 núcleos alcanza.</td>
+        <td><strong>Mínimo:</strong> 6 GB de RAM y 7 GB libres de disco. <strong>Recomendado:</strong> 8 GB de RAM y 10 GB libres. Con 4 núcleos alcanza.</td>
       </tr>
       <tr><td>Fuera de Docker (opcional)</td><td>Python 3.12 y Node 22 (sección 3.8).</td></tr>
     </tbody>
   </table>
+  <div class="nota">
+    <p><strong>De dónde salen esos números.</strong> Medidos con todo levantado en una notebook Intel i3-1025G1 (4 hilos, 16 GB de RAM):</p>
+    <ul>
+      <li><strong>RAM:</strong> los 10 contenedores usan ~1,4 GB entre todos, y el host ~2,5 GB sumando la VM de Docker, con un pico de ~3,1 GB durante el build.</li>
+      <li><strong>Disco:</strong> ~7 GB en total: 4,2 GB de imágenes, 2,7 GB de caché de build (se libera con <code>docker builder prune</code>) y ~140 MB de contenedores y volúmenes.</li>
+      <li><strong>CPU:</strong> con 4 núcleos, el primer build completo desde cero tardó 3 min 30 s.</li>
+    </ul>
+    <p>En Windows, WSL 2 le asigna a la VM hasta la mitad de la RAM del equipo: con 6 GB queda justo contra el pico del build y conviene subir el límite en <code>.wslconfig</code>; desde 8 GB entra sin tocar nada. El mínimo de 6 GB sale de la medición, no de una prueba en una máquina de 6 GB.</p>
+  </div>
   <p>Puertos que usa en la máquina (se cambian en <code>.env</code> si están ocupados): <code>8080</code> la aplicación, <code>5678</code> n8n, <code>8025</code> Mailpit y <code>5432</code> PostgreSQL (sólo en desarrollo).</p>
 </section>
 
