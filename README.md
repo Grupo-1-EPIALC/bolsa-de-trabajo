@@ -40,7 +40,7 @@ El front **siempre muestra separados** el resultado por reglas (badge verde) y l
 - `openssl` para generar las claves JWT (viene con Git Bash en Windows, macOS y Linux).
 - **API key gratuita de NVIDIA NIM** para los agentes de IA: crear una cuenta en <https://build.nvidia.com>, entrar a *API Keys* y generar una. Sin la key funciona todo lo demás (cuentas, perfiles, búsquedas, puntaje por reglas, avisos), pero la lectura de CVs y las recomendaciones de IA no responden.
 - `GEMINI_API_KEY` es **opcional**: sólo se usa con `GEMINI_ENABLED=true` en `.env` y, en ese caso, Gemini se intenta antes que NVIDIA. Son las dos únicas variables que `.env.example` deja vacías.
-- 8 GB de RAM como mínimo (16 recomendado) y unos 10 GB libres de disco para las imágenes.
+- **8 GB de RAM y 10 GB libres de disco.** Medido con todo levantado en una notebook Intel i3-1025G1 (4 hilos, 16 GB): los contenedores usan ~1,4 GB de RAM y el host ~2,5 GB sumando la VM de Docker, con un pico de ~3,1 GB durante el build. En disco ocupa ~7 GB: 4,2 GB de imágenes, 2,7 GB de caché de build (se libera con `docker builder prune`) y ~140 MB de contenedores y volúmenes. Con 4 núcleos alcanza: el primer build completo tardó 3 min 30 s.
 - Para trabajar fuera de Docker: Python 3.12 y Node 22.
 
 ## Levantar el entorno
@@ -62,7 +62,7 @@ docker desktop start            # si `docker info` todavía no responde
 docker info                     # no seguir hasta que este comando funcione
 
 sh infra/scripts/create-volumes.sh   # una sola vez: volúmenes externos con los datos
-docker compose up -d --build    # modo desarrollo (hot reload); la primera vez tarda varios minutos
+docker compose up -d --build    # modo desarrollo (hot reload); el primer build tarda ~3-4 min
 docker compose ps               # ver "Estado esperado" abajo
 ```
 

@@ -197,7 +197,10 @@
         <td>API key de Gemini (opcional)</td>
         <td>Sólo se usa con <code>GEMINI_ENABLED=true</code> en <code>.env</code>; en ese caso Gemini se intenta antes que NVIDIA y, si falla o se pasa del cupo, el router sigue con los modelos de NVIDIA. <code>NVIDIA_API_KEY</code> y <code>GEMINI_API_KEY</code> son las dos únicas variables que <code>.env.example</code> deja vacías.</td>
       </tr>
-      <tr><td>Memoria y disco</td><td>8 GB de RAM como mínimo (16 GB recomendado) y unos 10 GB libres para las imágenes.</td></tr>
+      <tr>
+        <td>Memoria, disco y CPU</td>
+        <td><strong>8 GB de RAM y 10 GB libres de disco.</strong> Medido con todo levantado en una notebook Intel i3-1025G1 (4 hilos, 16 GB): los contenedores usan ~1,4 GB de RAM y el host ~2,5 GB sumando la VM de Docker, con un pico de ~3,1 GB durante el build. En disco ocupa ~7 GB: 4,2 GB de imágenes, 2,7 GB de caché de build (se libera con <code>docker builder prune</code>) y ~140 MB de contenedores y volúmenes. Con 4 núcleos alcanza.</td>
+      </tr>
       <tr><td>Fuera de Docker (opcional)</td><td>Python 3.12 y Node 22 (sección 3.8).</td></tr>
     </tbody>
   </table>
@@ -275,7 +278,10 @@ docker info               # no seguir hasta que este comando funcione</code></pr
   <h3>3.6 Levantar todo</h3>
 <pre><code>docker compose up -d --build
 docker compose ps</code></pre>
-  <p>La primera vez tarda varios minutos en construir las imágenes. n8n tarda un poco más: antes de arrancar importa sus credenciales y publica los 10 workflows.</p>
+  <p>La primera vez tarda varios minutos en construir las 6 imágenes: en una notebook Intel i3-1025G1 de 4 hilos tardó 3 min 30 s, y los contenedores quedaron listos unos 2 min después. n8n es el que más demora: antes de arrancar importa sus credenciales y publica los 10 workflows.</p>
+  <div class="nota">
+    <p><strong>Cuánto consume una vez levantado.</strong> Los 10 contenedores en reposo usan ~1,4 GB de RAM entre todos: n8n 578 MB y <code>auth-service</code> 328 MB son los más pesados, los cuatro servicios FastAPI y PostgreSQL rondan los 90-100 MB cada uno, y <code>gateway</code> y <code>mail</code> no llegan a 15 MB.</p>
+  </div>
   <p><strong>Estado esperado.</strong> Los 8 servicios que definen <code>healthcheck</code> tienen que quedar <code>healthy</code>. <code>auth-service</code> y <code>frontend</code> no definen healthcheck, así que quedan en <code>Up</code> sin estado de salud: es lo correcto, no hay que esperar un <code>healthy</code> que no va a llegar.</p>
 <pre><code>auth-service       Up 2 minutes
 frontend           Up 2 minutes
