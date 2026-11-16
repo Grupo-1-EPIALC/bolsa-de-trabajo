@@ -35,14 +35,20 @@ El front **siempre muestra separados** el resultado por reglas (badge verde) y l
 
 ## Requisitos
 
-- Docker Desktop (Compose v2). Es lo único obligatorio.
+- Docker Desktop (Compose v2). Es lo único obligatorio. En Windows usa el backend **WSL 2**: hace falta la virtualización habilitada en el firmware (BIOS/UEFI) y los componentes «Plataforma de máquina virtual» y WSL. Si `wsl --status` avisa que WSL 2 no puede iniciar, habilitarlos **como administrador** con `wsl --install --no-distribution` y reiniciar.
+- `git` para clonar el repositorio.
 - `openssl` para generar las claves JWT (viene con Git Bash en Windows, macOS y Linux).
 - **API key gratuita de NVIDIA NIM** para los agentes de IA: crear una cuenta en <https://build.nvidia.com>, entrar a *API Keys* y generar una. Sin la key funciona todo lo demás (cuentas, perfiles, búsquedas, puntaje por reglas, avisos), pero la lectura de CVs y las recomendaciones de IA no responden.
+- `GEMINI_API_KEY` es **opcional**: sólo se usa con `GEMINI_ENABLED=true` en `.env` y, en ese caso, Gemini se intenta antes que NVIDIA. Son las dos únicas variables que `.env.example` deja vacías.
+- 8 GB de RAM como mínimo (16 recomendado) y unos 10 GB libres de disco para las imágenes.
 - Para trabajar fuera de Docker: Python 3.12 y Node 22.
 
 ## Levantar el entorno
 
 ```bash
+git clone https://github.com/Grupo-1-EPIALC/bolsa-de-trabajo.git
+cd bolsa-de-trabajo
+
 cp .env.example .env            # completar NVIDIA_API_KEY (el resto de los valores de ejemplo sirven en dev)
 
 # Claves RSA con las que auth-service firma los JWT (no se suben al repo)
@@ -50,12 +56,34 @@ mkdir -p secrets
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out secrets/jwt_private.pem
 openssl rsa -in secrets/jwt_private.pem -pubout -out secrets/jwt_public.pem
 
+# El daemon de Docker tiene que estar corriendo: tenerlo instalado no alcanza
+docker compose version          # confirma Compose v2+
+docker desktop start            # si `docker info` todavía no responde
+docker info                     # no seguir hasta que este comando funcione
+
 sh infra/scripts/create-volumes.sh   # una sola vez: volúmenes externos con los datos
-docker compose up -d --build    # modo desarrollo (hot reload)
-docker compose ps               # todos deben quedar "healthy"
+docker compose up -d --build    # modo desarrollo (hot reload); la primera vez tarda varios minutos
+docker compose ps               # ver "Estado esperado" abajo
 ```
 
 Sin `sh` (PowerShell): `docker volume create bolsa_pg_data; docker volume create bolsa_n8n_data; docker volume create bolsa_cv_storage`.
+
+### Estado esperado
+
+Los 8 servicios con `healthcheck` tienen que quedar `healthy`; `auth-service` y `frontend` no definen healthcheck, así que quedan en `Up` sin estado de salud. n8n tarda un poco más: antes de arrancar importa sus credenciales y publica los 10 workflows.
+
+```
+auth-service       Up 2 minutes
+frontend           Up 2 minutes
+gateway            Up 2 minutes (healthy)
+jobs-service       Up 2 minutes (healthy)
+mail               Up 2 minutes (healthy)
+matching-service   Up 2 minutes (healthy)
+mcp-tools          Up 2 minutes (healthy)
+n8n                Up 2 minutes (healthy)
+postgres           Up 2 minutes (healthy)
+profile-service    Up 2 minutes (healthy)
+```
 
 Modo tipo producción (sin `docker-compose.override.yml`):
 
@@ -107,7 +135,7 @@ Para importarlos:
    PROFILE_SEED_DEMO=false
    JOBS_SEED_DEMO=false
    ```
-2. Levantá el entorno y esperá a que todo quede `healthy`. Los servicios crean las tablas al arrancar:
+2. Levantá el entorno y esperá a que quede en el [estado esperado](#estado-esperado). Los servicios crean las tablas al arrancar:
    ```bash
    docker compose up -d --build
    docker compose ps

@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual de instalación</title>
+<!--
+  Fuente del PDF docs/manuales/manual_instalacion.pdf.
+  Para regenerarlo:  python docs/manuales/generar_pdf.py
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --magenta: #ba3995;
+    --magenta-dark: #9c2e7d;
+    --magenta-darker: #7d2464;
+    --magenta-soft: #fbf0f7;
+    --pink: #e3b0d5;
+    --dark: #303235;
+    --text: #55575c;
+    --line: #e5e1e6;
+  }
+
+  @page { size: A4; margin: 18mm 16mm 16mm; }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 10.2pt;
+    line-height: 1.55;
+    color: var(--text);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  h1, h2, h3 { color: var(--magenta-darker); font-weight: 700; line-height: 1.25; }
+
+  h2 {
+    font-size: 15pt;
+    margin: 0 0 0.9em;
+    padding-bottom: 0.35em;
+    border-bottom: 2px solid var(--pink);
+    break-after: avoid;
+  }
+
+  h3 {
+    font-size: 11.5pt;
+    color: var(--magenta-dark);
+    margin: 1.5em 0 0.5em;
+    break-after: avoid;
+  }
+
+  p { margin: 0 0 0.75em; }
+  ul { margin: 0 0 0.8em; padding-left: 1.2em; }
+  li { margin-bottom: 0.3em; }
+  a { color: var(--magenta-dark); text-decoration: none; word-break: break-word; }
+
+  code {
+    font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.88em;
+    background: var(--magenta-soft);
+    color: var(--magenta-darker);
+    padding: 0.08em 0.34em;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  pre {
+    background: #2d2733;
+    color: #f3eef5;
+    border-radius: 6px;
+    padding: 0.85em 1em;
+    margin: 0 0 0.9em;
+    font-size: 8.6pt;
+    line-height: 1.5;
+    overflow-x: auto;
+    break-inside: avoid;
+  }
+  pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 1em;
+    font-size: 9.2pt;
+    break-inside: auto;
+  }
+  th {
+    background: var(--magenta);
+    color: #fff;
+    text-align: left;
+    font-weight: 600;
+    padding: 0.5em 0.65em;
+  }
+  td { padding: 0.5em 0.65em; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr { break-inside: avoid; }
+  tbody tr:nth-child(even) { background: #faf7fb; }
+
+  figure { margin: 1.2em 0; break-inside: avoid; text-align: center; }
+  figure img { width: 100%; border: 1px solid var(--line); border-radius: 6px; }
+  figcaption { font-size: 8.6pt; color: #8a858d; margin-top: 0.5em; font-style: italic; }
+
+  .nota {
+    background: var(--magenta-soft);
+    border-left: 3px solid var(--magenta);
+    border-radius: 0 5px 5px 0;
+    padding: 0.7em 0.9em;
+    margin: 0 0 1em;
+    font-size: 9.4pt;
+    break-inside: avoid;
+  }
+  .nota p:last-child { margin-bottom: 0; }
+  .nota strong { color: var(--magenta-darker); }
+
+  section { break-before: page; }
+
+  /* ---- Portada ---- */
+  .portada {
+    break-before: avoid;
+    height: 247mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .portada .eyebrow {
+    font-size: 10pt;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--magenta);
+    margin-bottom: 0.8em;
+  }
+  .portada h1 { font-size: 30pt; margin: 0 0 0.35em; }
+  .portada .bajada { font-size: 12pt; color: var(--text); max-width: 125mm; margin-bottom: 2.4em; }
+  .portada .meta { font-size: 9.4pt; color: #7b767e; border-top: 2px solid var(--pink); padding-top: 1em; }
+  .portada .meta strong { color: var(--magenta-darker); font-weight: 600; }
+
+  /* ---- Índice ---- */
+  .indice { break-before: page; }
+  .indice ol { margin: 0; padding-left: 1.4em; font-size: 11pt; }
+  .indice li { margin-bottom: 0.55em; color: var(--dark); }
+</style>
+</head>
+<body>
+
+<div class="portada">
+  <div class="eyebrow">Bolsa de Trabajo · MVP</div>
+  <h1>Manual de instalación</h1>
+  <p class="bajada">Cómo instalar, configurar y poner en marcha la Bolsa de Trabajo con Docker, e importar los datos de prueba.</p>
+  <div class="meta">
+    <p><strong>TP2 · Elementos de Programación IA y LowCode · 2.º cuatrimestre 2026 · Grupo 1</strong></p>
+    <p>Proyecto A: Plataforma de vinculación y desarrollo profesional · Noviembre de 2026</p>
+  </div>
+</div>
+
+<div class="indice">
+  <h2>Contenido</h2>
+  <ol>
+    <li>Qué se necesita</li>
+    <li>Cómo está armada</li>
+    <li>Instalación paso a paso</li>
+    <li>Datos de configuración y de prueba</li>
+    <li>Comprobar que funciona</li>
+    <li>Problemas frecuentes</li>
+    <li>Seguridad</li>
+    <li>Más documentación</li>
+  </ol>
+</div>
+
+<section>
+  <h2>1. Qué se necesita</h2>
+  <p>La aplicación corre completa en contenedores Docker: no hace falta instalar Python, Node ni PostgreSQL en la máquina.</p>
+  <table>
+    <thead><tr><th style="width:27%">Requisito</th><th>Detalle</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Docker Desktop</td>
+        <td>Con Docker Compose v2 (<code>docker compose version</code>). Es lo único obligatorio. En Windows usa el backend <strong>WSL 2</strong>: hace falta la virtualización habilitada en el firmware (BIOS/UEFI) y los componentes «Plataforma de máquina virtual» y WSL. Si <code>wsl --status</code> avisa que WSL 2 no puede iniciar, habilitarlos <strong>como administrador</strong> con <code>wsl --install --no-distribution</code> y reiniciar la máquina.</td>
+      </tr>
+      <tr><td>Git</td><td>Para clonar el repositorio.</td></tr>
+      <tr><td>OpenSSL</td><td>Para generar las claves JWT. Viene con Git Bash en Windows, y con macOS y Linux.</td></tr>
+      <tr>
+        <td>API key de NVIDIA NIM (gratuita)</td>
+        <td>Para los agentes de IA: creá una cuenta en <a href="https://build.nvidia.com">https://build.nvidia.com</a>, entrá a <em>API Keys</em> y generá una. Sin la key funciona todo lo demás (cuentas, perfiles, búsquedas, puntaje por reglas, avisos), pero la lectura de CVs y las recomendaciones de IA no responden.</td>
+      </tr>
+      <tr>
+        <td>API key de Gemini (opcional)</td>
+        <td>Sólo se usa con <code>GEMINI_ENABLED=true</code> en <code>.env</code>; en ese caso Gemini se intenta antes que NVIDIA y, si falla o se pasa del cupo, el router sigue con los modelos de NVIDIA. <code>NVIDIA_API_KEY</code> y <code>GEMINI_API_KEY</code> son las dos únicas variables que <code>.env.example</code> deja vacías.</td>
+      </tr>
+      <tr><td>Memoria y disco</td><td>8 GB de RAM como mínimo (16 GB recomendado) y unos 10 GB libres para las imágenes.</td></tr>
+      <tr><td>Fuera de Docker (opcional)</td><td>Python 3.12 y Node 22 (sección 3.8).</td></tr>
+    </tbody>
+  </table>
+  <p>Puertos que usa en la máquina (se cambian en <code>.env</code> si están ocupados): <code>8080</code> la aplicación, <code>5678</code> n8n, <code>8025</code> Mailpit y <code>5432</code> PostgreSQL (sólo en desarrollo).</p>
+</section>
+
+<section>
+  <h2>2. Cómo está armada</h2>
+  <p>Todo entra por un único punto, el gateway Nginx (<code>http://localhost:8080</code>), que sirve el frontend y deriva <code>/api/v1/*</code> a cada microservicio.</p>
+  <table>
+    <thead><tr><th style="width:27%">Contenedor</th><th>Para qué sirve</th></tr></thead>
+    <tbody>
+      <tr><td>gateway</td><td>Nginx: entrada única a la aplicación y a la API.</td></tr>
+      <tr><td>frontend</td><td>React: las pantallas de estudiantes, empresas y administradores.</td></tr>
+      <tr><td>auth-service</td><td>Cuentas, inicio de sesión (JWT) y administración de cuentas.</td></tr>
+      <tr><td>profile-service</td><td>Perfiles de estudiantes y empresas, CV y logos.</td></tr>
+      <tr><td>jobs-service</td><td>Búsquedas (ofertas) de las empresas.</td></tr>
+      <tr><td>matching-service</td><td>Puntaje de compatibilidad por reglas y recomendaciones guardadas.</td></tr>
+      <tr><td>n8n</td><td>Workflows de IA y avisos por mail. Al arrancar importa sus credenciales y workflows.</td></tr>
+      <tr><td>mcp-tools</td><td>Herramientas que usan los agentes de IA de n8n (sólo red interna).</td></tr>
+      <tr><td>postgres</td><td>Base de datos: un schema por servicio y una base propia para n8n.</td></tr>
+      <tr><td>mail</td><td>Mailpit: recibe todos los mails para verlos sin enviarlos a internet (SMTP 1025, pantalla 8025).</td></tr>
+      <tr><td>IA externa</td><td>NVIDIA NIM (API gratuita). Sólo n8n la llama, por HTTPS.</td></tr>
+    </tbody>
+  </table>
+  <p>El diagrama de componentes, las redes y los recorridos de datos están en <code>docs/ARQUITECTURA.md</code>.</p>
+  <div class="nota">
+    <p><strong>Reglas e IA separadas.</strong> El puntaje de compatibilidad lo calcula siempre el motor de reglas. La IA sólo sugiere y explica; nunca cambia el puntaje.</p>
+  </div>
+</section>
+
+<section>
+  <h2>3. Instalación paso a paso</h2>
+
+  <h3>3.1 Clonar el repositorio</h3>
+<pre><code>git clone https://github.com/Grupo-1-EPIALC/bolsa-de-trabajo.git
+cd bolsa-de-trabajo</code></pre>
+
+  <h3>3.2 Crear el archivo de configuración</h3>
+  <p>Copiá el ejemplo. En desarrollo sólo hace falta completar <code>NVIDIA_API_KEY</code>: el resto de los valores de ejemplo sirven.</p>
+<pre><code>cp .env.example .env</code></pre>
+  <p>En un servidor real cambiá además todas las claves y tokens:</p>
+  <table>
+    <thead><tr><th style="width:35%">Variable</th><th>Qué poner</th></tr></thead>
+    <tbody>
+      <tr><td><code>POSTGRES_PASSWORD</code> y las <code>*_DB_PASSWORD</code></td><td>Claves de la base y de cada servicio.</td></tr>
+      <tr><td><code>SERVICE_TOKEN</code></td><td>Token entre servicios: <code>openssl rand -hex 32</code></td></tr>
+      <tr><td><code>N8N_ENCRYPTION_KEY</code></td><td><code>openssl rand -hex 24</code>. No cambiarla después: cifra las credenciales de n8n.</td></tr>
+      <tr><td><code>N8N_WEBHOOK_TOKEN</code></td><td><code>openssl rand -hex 32</code></td></tr>
+      <tr><td><code>NVIDIA_API_KEY</code></td><td>La clave de NVIDIA NIM para los agentes de IA (nunca va al repositorio).</td></tr>
+      <tr><td><code>GEMINI_ENABLED</code> y <code>GEMINI_API_KEY</code></td><td>Opcionales. Con <code>GEMINI_ENABLED=true</code> y una clave, Gemini va primero en las listas de modelos y NVIDIA queda de respaldo.</td></tr>
+      <tr><td><code>PROFILE_SEED_DEMO</code> / <code>JOBS_SEED_DEMO</code></td><td><code>false</code> si vas a importar los datos de prueba (sección 4).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.3 Generar las claves del inicio de sesión</h3>
+<pre><code>mkdir -p secrets
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out secrets/jwt_private.pem
+openssl rsa -in secrets/jwt_private.pem -pubout -out secrets/jwt_public.pem</code></pre>
+  <p>La carpeta <code>secrets/</code> está en <code>.gitignore</code>: las claves no se suben nunca.</p>
+
+  <h3>3.4 Comprobar que Docker está corriendo</h3>
+  <p>Tener Docker Desktop <em>instalado</em> no alcanza: el daemon tiene que estar levantado, o los pasos siguientes fallan. Abrir la aplicación no siempre arranca el motor, así que conviene forzarlo y verificar:</p>
+<pre><code>docker compose version    # confirma Compose v2+
+docker desktop start      # si `docker info` todavía no responde
+docker info               # no seguir hasta que este comando funcione</code></pre>
+  <div class="nota">
+    <p>Si <code>docker info</code> falla con <code>cannot find the file ... dockerDesktopLinuxEngine</code>, el daemon todavía no está listo: esperá a que <code>docker desktop start</code> termine y volvé a probar.</p>
+  </div>
+
+  <h3>3.5 Crear los volúmenes de datos (una sola vez)</h3>
+<pre><code>sh infra/scripts/create-volumes.sh</code></pre>
+  <p>En PowerShell: <code>docker volume create bolsa_pg_data; docker volume create bolsa_n8n_data; docker volume create bolsa_cv_storage</code>. Los datos viven en esos volúmenes y sobreviven a recrear los contenedores.</p>
+
+  <h3>3.6 Levantar todo</h3>
+<pre><code>docker compose up -d --build
+docker compose ps</code></pre>
+  <p>La primera vez tarda varios minutos en construir las imágenes. n8n tarda un poco más: antes de arrancar importa sus credenciales y publica los 10 workflows.</p>
+  <p><strong>Estado esperado.</strong> Los 8 servicios que definen <code>healthcheck</code> tienen que quedar <code>healthy</code>. <code>auth-service</code> y <code>frontend</code> no definen healthcheck, así que quedan en <code>Up</code> sin estado de salud: es lo correcto, no hay que esperar un <code>healthy</code> que no va a llegar.</p>
+<pre><code>auth-service       Up 2 minutes
+frontend           Up 2 minutes
+gateway            Up 2 minutes (healthy)
+jobs-service       Up 2 minutes (healthy)
+mail               Up 2 minutes (healthy)
+matching-service   Up 2 minutes (healthy)
+mcp-tools          Up 2 minutes (healthy)
+n8n                Up 2 minutes (healthy)
+postgres           Up 2 minutes (healthy)
+profile-service    Up 2 minutes (healthy)</code></pre>
+  <p>Modo tipo producción (sin recarga automática del código): <code>docker compose -f docker-compose.yml up -d --build</code>.</p>
+
+  <h3>3.7 Iniciar, detener y reiniciar</h3>
+  <table>
+    <thead><tr><th style="width:45%">Acción</th><th>Comando</th></tr></thead>
+    <tbody>
+      <tr><td>Levantar todo</td><td><code>docker compose up -d --build</code></td></tr>
+      <tr><td>Ver el estado</td><td><code>docker compose ps</code></td></tr>
+      <tr><td>Ver los logs de un servicio</td><td><code>docker compose logs -f matching-service</code></td></tr>
+      <tr><td>Detener sin borrar contenedores</td><td><code>docker compose stop</code></td></tr>
+      <tr><td>Volver a arrancar lo detenido</td><td><code>docker compose start</code></td></tr>
+      <tr><td>Reiniciar un servicio</td><td><code>docker compose restart profile-service</code></td></tr>
+      <tr><td>Reiniciar n8n y volver a cargar los workflows</td><td><code>docker compose up -d --force-recreate n8n</code></td></tr>
+      <tr><td>Reconstruir un servicio después de cambiar dependencias</td><td><code>docker compose up -d --build jobs-service</code></td></tr>
+      <tr><td>Apagar y borrar contenedores (los datos quedan)</td><td><code>docker compose down</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.8 Trabajar sin Docker (opcional)</h3>
+  <p>Cada servicio Python declara sus dependencias en <code>pyproject.toml</code> (las usan los Dockerfiles) y en un <code>requirements.txt</code> equivalente. El <code>requirements.txt</code> de la raíz los incluye a todos:</p>
+<pre><code>python -m venv .venv &amp;&amp; source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -r requirements.txt</code></pre>
+  <p>Los servicios Node (<code>auth-service</code> y <code>frontend</code>) usan <code>package.json</code> y <code>package-lock.json</code> (<code>npm ci</code>).</p>
+</section>
+
+<section>
+  <h2>4. Datos de configuración y de prueba</h2>
+  <p>En <code>infra/datos-prueba/</code> hay un juego de datos ficticio para probar la aplicación sin cargar nada a mano:</p>
+  <ul>
+    <li><code>bolsa_datos_prueba.sql</code>: 2 administradores, 10 empresas con perfil, logo y 5 búsquedas cada una, 50 estudiantes con perfil completo (Administración, IT, Educación y Administración pública) y la configuración de matching.</li>
+    <li><code>usuarios_prueba.xlsx</code>: todas las cuentas con su clave, los perfiles, las empresas y las búsquedas.</li>
+  </ul>
+  <p>Pasos:</p>
+  <ol>
+    <li>En <code>.env</code>: <code>PROFILE_SEED_DEMO=false</code> y <code>JOBS_SEED_DEMO=false</code>.</li>
+    <li>Levantá el entorno y esperá a que quede en el estado esperado de la sección 3.6 (los servicios crean las tablas al arrancar).</li>
+    <li>Importá el dump. Reemplaza las cuentas, perfiles, búsquedas y recomendaciones que haya:</li>
+  </ol>
+<pre><code>docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' \
+  &lt; infra/datos-prueba/bolsa_datos_prueba.sql</code></pre>
+  <p>En PowerShell:</p>
+<pre><code>Get-Content infra/datos-prueba/bolsa_datos_prueba.sql -Raw |
+  docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q'</code></pre>
+  <table>
+    <thead><tr><th style="width:55%">Cuenta de prueba</th><th>Rol</th></tr></thead>
+    <tbody>
+      <tr><td><code>admin.prueba@example.test</code></td><td>Administrador</td></tr>
+      <tr><td><code>rrhh@nubeteca.example.test</code> (y las otras 9 <code>rrhh@…</code>)</td><td>Empresa</td></tr>
+      <tr><td><code>lucia.gonzalez00@example.test</code> (y los otros 49)</td><td>Estudiante</td></tr>
+    </tbody>
+  </table>
+  <p>Todas usan la clave <code>BolsaPrueba2026!</code>. La configuración de n8n no va en el dump: la arma el propio contenedor en cada arranque desde <code>.env</code> y <code>n8n/workflows/</code>.</p>
+
+  <h3>Si no importás el dump</h3>
+  <p>Mientras <code>PROFILE_SEED_DEMO</code> y <code>JOBS_SEED_DEMO</code> estén en <code>true</code>, los servicios cargan solos un juego de demo (15 perfiles y 12 ofertas), pero no hay cuentas de administrador. Las cuentas <code>admin</code> no se crean desde la pantalla de registro: registrate como estudiante, cambiale el rol (con los valores de <code>POSTGRES_USER</code> y <code>POSTGRES_DB</code> de <code>.env</code>) y volvé a iniciar sesión:</p>
+<pre><code>docker compose exec postgres psql -U postgres -d bolsa \
+  -c "UPDATE auth.users SET role='admin' WHERE email='admin@bolsa.local';"</code></pre>
+  <p>Todos los datos del repositorio son ficticios.</p>
+</section>
+
+<section>
+  <h2>5. Comprobar que funciona</h2>
+
+  <h3>5.1 La aplicación</h3>
+  <p>Abrí <code>http://localhost:8080</code> e ingresá con una cuenta de prueba.</p>
+  <figure>
+    <img src="img/inicio.jpg" alt="Pantalla de inicio de la Bolsa de Trabajo">
+    <figcaption>Pantalla de inicio en http://localhost:8080.</figcaption>
+  </figure>
+
+  <h3>5.2 La documentación de la API</h3>
+  <p>Cada servicio publica su documentación en <code>http://localhost:8080/api/v1/&lt;recurso&gt;/docs</code> (Swagger UI), <code>/redoc</code> y <code>/openapi.json</code>, con <code>&lt;recurso&gt;</code> = <code>auth</code>, <code>profiles</code>, <code>jobs</code> o <code>matches</code>. El panel de administración tiene los enlaces.</p>
+  <figure>
+    <img src="img/swagger-jobs.jpg" alt="Swagger UI de jobs-service">
+    <figcaption>Swagger UI de jobs-service.</figcaption>
+  </figure>
+
+  <h3>5.3 Los mails</h3>
+  <p>Todos los mails (avisos de ofertas y candidatos nuevos, recuperación de clave, errores) llegan a Mailpit: <code>http://localhost:8025</code>.</p>
+  <figure>
+    <img src="img/mailpit.jpg" alt="Bandeja de Mailpit">
+    <figcaption>Bandeja de Mailpit con los avisos de candidatos compatibles.</figcaption>
+  </figure>
+
+  <h3>5.4 n8n</h3>
+  <p>Los workflows de IA se ven en <code>http://localhost:5678</code>. La primera vez n8n pide crear la cuenta de dueño. Los workflows se cargan solos: lo que se cambie sólo en la pantalla de n8n se pisa en el próximo arranque, porque el repositorio es la fuente de verdad.</p>
+  <figure>
+    <img src="img/n8n-ingreso.jpg" alt="Pantalla de ingreso a n8n">
+    <figcaption>Ingreso a n8n.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>6. Problemas frecuentes</h2>
+  <table>
+    <thead><tr><th style="width:38%">Síntoma</th><th>Qué hacer</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>docker</code> falla con <code>cannot find the file ... dockerDesktopLinuxEngine</code></td>
+        <td>El daemon no está corriendo. Abrir Docker Desktop no siempre alcanza: ejecutá <code>docker desktop start</code> y esperá a que <code>docker info</code> responda antes de seguir (sección 3.4).</td>
+      </tr>
+      <tr>
+        <td>En Windows, <code>wsl --status</code> avisa que WSL 2 no puede iniciar</td>
+        <td>Falta la virtualización o el componente «Plataforma de máquina virtual». Habilitalos <strong>como administrador</strong> con <code>wsl --install --no-distribution</code>, reiniciá la máquina y verificá que la virtualización esté activa en el firmware (BIOS/UEFI).</td>
+      </tr>
+      <tr>
+        <td><code>auth-service</code> y <code>frontend</code> nunca llegan a <code>healthy</code></td>
+        <td>Es lo esperado: no definen <code>healthcheck</code> y quedan en <code>Up</code>. Comparalo con el estado esperado de la sección 3.6.</td>
+      </tr>
+      <tr><td>Un puerto está ocupado</td><td>Cambiá <code>GATEWAY_PORT</code>, <code>N8N_PORT</code>, <code>MAIL_UI_PORT</code> o <code>POSTGRES_HOST_PORT</code> en <code>.env</code> y volvé a levantar.</td></tr>
+      <tr><td>La IA no responde o da error</td><td>Revisá <code>NVIDIA_API_KEY</code> en <code>.env</code> y recreá n8n: <code>docker compose up -d --force-recreate n8n</code>.</td></tr>
+      <tr>
+        <td>n8n se reinicia en bucle con <em>You do not have permission to deactivate this workflow</em></td>
+        <td>La base quedó con workflows activados por otra versión de n8n. Una vez: <code>docker compose stop n8n</code>, <code>docker compose run --rm --no-deps --entrypoint n8n n8n unpublish:workflow --all</code> y <code>docker compose up -d n8n</code>.</td>
+      </tr>
+      <tr><td>Cambié un workflow y no se ve</td><td><code>python n8n/generate_workflows.py</code> y <code>docker compose up -d --force-recreate n8n</code>.</td></tr>
+      <tr><td>Aparecen perfiles y ofertas de demo (<code>stu-001</code>, <code>job-001</code>…)</td><td>Poné <code>PROFILE_SEED_DEMO=false</code> y <code>JOBS_SEED_DEMO=false</code> y volvé a importar el dump.</td></tr>
+      <tr><td>Quiero empezar de cero</td><td>Se pierde todo: <code>docker compose down</code>, <code>docker volume rm bolsa_pg_data bolsa_n8n_data bolsa_cv_storage</code> y <code>sh infra/scripts/create-volumes.sh</code>.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>7. Seguridad</h2>
+  <ul>
+    <li>No se suben contraseñas, tokens ni claves: <code>.env</code>, <code>secrets/</code> y <code>*.pem</code> están en <code>.gitignore</code>.</li>
+    <li>Los workflows exportados de n8n no llevan credenciales: la de NVIDIA la crea <code>bootstrap.sh</code> desde <code>.env</code> en cada arranque.</li>
+    <li>Las cuentas de <code>usuarios_prueba.xlsx</code> son ficticias y sólo sirven para el entorno local.</li>
+    <li>Todos los mails salen a Mailpit: en desarrollo no llega nada a casillas reales.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>8. Más documentación</h2>
+  <table>
+    <thead><tr><th style="width:35%">Documento</th><th>Contenido</th></tr></thead>
+    <tbody>
+      <tr><td><code>README.md</code></td><td>Instalación, ejecución, funcionalidades y recorrido sugerido para la demo</td></tr>
+      <tr><td><code>docs/ARQUITECTURA.md</code></td><td>Diagrama de arquitectura, redes, puertos y recorrido de los datos</td></tr>
+      <tr><td><code>docs/BITACORA_IA.md</code></td><td>Bitácora de uso de IA: herramientas, decisiones, modelo elegido y sus límites</td></tr>
+      <tr><td><code>docs/RESPONSABILIDADES.md</code></td><td>Responsabilidades de cada integrante</td></tr>
+      <tr><td><code>docs/ENTREGA.md</code></td><td>Correspondencia entre la consigna y el repositorio</td></tr>
+      <tr><td><code>PROMPTS.md</code> y <code>AGENTS.md</code></td><td>Historial de prompts y reglas de arquitectura y de agentes</td></tr>
+      <tr><td><code>contracts/</code></td><td>Un contrato por servicio (endpoints, JSON y errores)</td></tr>
+      <tr><td><code>n8n/workflows/</code></td><td>Workflows de n8n exportados en JSON</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</body>
+</html>
