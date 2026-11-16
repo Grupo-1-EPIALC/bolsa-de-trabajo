@@ -345,6 +345,9 @@ pip install -r requirements.txt</code></pre>
   <p>En PowerShell:</p>
 <pre><code>Get-Content infra/datos-prueba/bolsa_datos_prueba.sql -Raw |
   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q'</code></pre>
+  <p>Comprobá que se importó: tienen que aparecer 62 cuentas (2 <code>admin</code>, 10 <code>company</code> y 50 <code>student</code>).</p>
+<pre><code>docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "SELECT role, count(*) FROM auth.users GROUP BY role"'</code></pre>
   <table>
     <thead><tr><th style="width:55%">Cuenta de prueba</th><th>Rol</th></tr></thead>
     <tbody>
@@ -353,7 +356,7 @@ pip install -r requirements.txt</code></pre>
       <tr><td><code>lucia.gonzalez00@example.test</code> (y los otros 49)</td><td>Estudiante</td></tr>
     </tbody>
   </table>
-  <p>Todas usan la clave <code>BolsaPrueba2026!</code>. La configuración de n8n no va en el dump: la arma el propio contenedor en cada arranque desde <code>.env</code> y <code>n8n/workflows/</code>.</p>
+  <p>Todas usan la clave <code>BolsaPrueba2026!</code>, salvo <code>admin@bolsa.local</code>, que conserva la que ya tenía. La configuración de n8n no va en el dump: la arma el propio contenedor en cada arranque desde <code>.env</code> y <code>n8n/workflows/</code>.</p>
 
   <h3>Si no importás el dump</h3>
   <p>Mientras <code>PROFILE_SEED_DEMO</code> y <code>JOBS_SEED_DEMO</code> estén en <code>true</code>, los servicios cargan solos un juego de demo (15 perfiles y 12 ofertas), pero no hay cuentas de administrador. Las cuentas <code>admin</code> no se crean desde la pantalla de registro: registrate como estudiante, cambiale el rol (con los valores de <code>POSTGRES_USER</code> y <code>POSTGRES_DB</code> de <code>.env</code>) y volvé a iniciar sesión:</p>
@@ -412,12 +415,13 @@ pip install -r requirements.txt</code></pre>
         <td>Es lo esperado: no definen <code>healthcheck</code> y quedan en <code>Up</code>. Comparalo con el estado esperado de la sección 3.6.</td>
       </tr>
       <tr><td>Un puerto está ocupado</td><td>Cambiá <code>GATEWAY_PORT</code>, <code>N8N_PORT</code>, <code>MAIL_UI_PORT</code> o <code>POSTGRES_HOST_PORT</code> en <code>.env</code> y volvé a levantar.</td></tr>
-      <tr><td>La IA no responde o da error</td><td>Revisá <code>NVIDIA_API_KEY</code> en <code>.env</code> y recreá n8n: <code>docker compose up -d --force-recreate n8n</code>.</td></tr>
+      <tr><td>La IA no responde o da error</td><td>Revisá <code>NVIDIA_API_KEY</code> (y <code>GEMINI_API_KEY</code> si usás Gemini) en <code>.env</code>. Si las cargaste con el entorno levantado, los contenedores todavía no las tienen: Docker lee <code>.env</code> sólo al crear el contenedor. Recreá los dos servicios que las usan: <code>docker compose up -d --force-recreate mcp-tools n8n</code>.</td></tr>
       <tr>
         <td>n8n se reinicia en bucle con <em>You do not have permission to deactivate this workflow</em></td>
         <td>La base quedó con workflows activados por otra versión de n8n. Una vez: <code>docker compose stop n8n</code>, <code>docker compose run --rm --no-deps --entrypoint n8n n8n unpublish:workflow --all</code> y <code>docker compose up -d n8n</code>.</td>
       </tr>
       <tr><td>Cambié un workflow y no se ve</td><td><code>python n8n/generate_workflows.py</code> y <code>docker compose up -d --force-recreate n8n</code>.</td></tr>
+      <tr><td>Con una cuenta de prueba aparece «Email o contraseña incorrectos»</td><td>El dump no se importó: la base sólo tiene las cuentas creadas desde la pantalla de registro. Seguí los pasos de la sección 4 y comprobá que haya 62 cuentas.</td></tr>
       <tr><td>Aparecen perfiles y ofertas de demo (<code>stu-001</code>, <code>job-001</code>…)</td><td>Poné <code>PROFILE_SEED_DEMO=false</code> y <code>JOBS_SEED_DEMO=false</code> y volvé a importar el dump.</td></tr>
       <tr><td>Quiero empezar de cero</td><td>Se pierde todo: <code>docker compose down</code>, <code>docker volume rm bolsa_pg_data bolsa_n8n_data bolsa_cv_storage</code> y <code>sh infra/scripts/create-volumes.sh</code>.</td></tr>
     </tbody>

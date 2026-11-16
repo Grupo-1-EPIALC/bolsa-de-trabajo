@@ -110,6 +110,21 @@ docker compose -f docker-compose.yml up -d --build
 | Reconstruir un servicio después de cambiar dependencias | `docker compose up -d --build jobs-service` |
 | Apagar y borrar contenedores (los datos quedan) | `docker compose down` |
 
+**Si cambiás `.env` con el entorno levantado** (por ejemplo, para cargar `NVIDIA_API_KEY` o `GEMINI_API_KEY`), los contenedores no se enteran: Docker lee `.env` sólo cuando crea el contenedor, y ni `restart` ni `start` lo vuelven a leer. Hay que recrear los servicios que usan esas variables. Para las keys de IA son `n8n` (arma la credencial de NVIDIA al arrancar) y `mcp-tools` (el proxy que llama a NVIDIA y a Gemini):
+
+```bash
+docker compose up -d --force-recreate mcp-tools n8n
+```
+
+Si no los recreás, los agentes de IA fallan aunque las keys ya estén en `.env`. Para comprobar que entraron:
+
+```bash
+docker compose exec n8n sh -c 'echo "NVIDIA: ${#NVIDIA_API_KEY} caracteres"'
+docker compose exec mcp-tools sh -c 'echo "Gemini: ${#GEMINI_API_KEY} caracteres"'
+```
+
+Con `0 caracteres` la key no llegó al contenedor. `mcp-tools` no recibe `NVIDIA_API_KEY`, y está bien: n8n se la manda en cada pedido.
+
 ### Datos persistentes
 
 Los datos viven en **volúmenes externos**, fuera de los contenedores y de compose: sobreviven a recrear contenedores o imágenes y también a `docker compose down -v`.
@@ -150,7 +165,13 @@ Para importarlos:
    docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' < infra/datos-prueba/bolsa_datos_prueba.sql
    ```
    En PowerShell: `Get-Content infra/datos-prueba/bolsa_datos_prueba.sql -Raw | docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q'`.
-4. Entrá en http://localhost:8080 con cualquier cuenta de `usuarios_prueba.xlsx`.
+4. Comprobá que se importó: tiene que mostrar 62 cuentas (2 `admin`, 10 `company` y 50 `student`).
+   ```bash
+   docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT role, count(*) FROM auth.users GROUP BY role"'
+   ```
+5. Entrá en http://localhost:8080 con cualquier cuenta de `usuarios_prueba.xlsx` (todas, salvo `admin@bolsa.local`, usan la clave `BolsaPrueba2026!`).
+
+Si al entrar con una cuenta de prueba aparece **«Email o contraseña incorrectos»**, el dump no se importó: la base sólo tiene las cuentas creadas desde la pantalla de registro. Repetí los pasos 1 a 4.
 
 Los mails de prueba (`@example.test`) no salen a internet: llegan a Mailpit. Los manuales de instalación y de uso están en [`docs/manuales/`](docs/manuales/).
 
