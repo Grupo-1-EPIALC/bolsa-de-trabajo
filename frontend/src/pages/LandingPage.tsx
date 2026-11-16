@@ -102,7 +102,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onAuth }) => (
     {/* Cómo funciona */}
     <section className="py-5">
       <div className="container py-lg-4">
-        <div className="row align-items-center g-5">
+        <div className="row align-items-center g-4 g-lg-5">
           <div className="col-lg-5">
             <span className="eyebrow mb-2">Cómo funciona</span>
             <h2 className="section-title display-6 mb-4">Tres pasos para empezar</h2>

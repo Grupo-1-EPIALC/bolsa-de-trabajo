@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminUserDetail } from './AdminUserDetail';
 import { Pagination } from '../jobs/Pagination';
 import { SelectField, Switch } from '../form/Fields';
@@ -7,6 +7,7 @@ import { ROLE_LABELS, adminErrorMessage, displayName } from '../../admin/users';
 import { RoleBadge, StatusBadge } from './AdminBadges';
 import { dateLabel } from '../../jobs/format';
 import type { Role } from '../../services/session';
+import { latestRequest } from '../../services/latestRequest';
 import type { AdminUser, AdminUserList } from '../../types/admin';
 
 interface AdminUsersProps {
@@ -28,7 +29,11 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ currentUserId, initialRo
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<AdminUser | null>(null);
 
+  // La carga inicial puede llegar después de una búsqueda: sólo vale la última respuesta.
+  const latest = useRef(latestRequest()).current;
+
   const load = useCallback(async () => {
+    const isCurrent = latest.next();
     setLoading(true);
     setError(null);
     try {
@@ -38,15 +43,16 @@ export const AdminUsers: React.FC<AdminUsersProps> = ({ currentUserId, initialRo
         include_deleted: includeDeleted,
         page,
       });
+      if (!isCurrent()) return;
       // Si un borrado dejó la página vacía, volver a la anterior.
       if (result.items.length === 0 && page > 1) setPage(page - 1);
       else setData(result);
     } catch (err) {
-      setError(adminErrorMessage(err, 'No pudimos cargar las cuentas.'));
+      if (isCurrent()) setError(adminErrorMessage(err, 'No pudimos cargar las cuentas.'));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [role, q, includeDeleted, page]);
+  }, [latest, role, q, includeDeleted, page]);
 
   useEffect(() => {
     if (!selected) load();
