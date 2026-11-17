@@ -22,6 +22,9 @@ const FALLBACK_MESSAGES: Record<number, string> = {
   401: 'Tu sesión venció. Volvé a ingresar.',
   403: 'No tenés acceso a esta sección.',
   404: 'No encontramos lo que buscabas.',
+  // Rate limit del gateway (login, token, recuperación de clave). El gateway ya responde con
+  // el formato común; esto cubre una respuesta sin JSON.
+  429: 'Demasiados intentos. Esperá un minuto y volvé a probar.',
   502: 'El servicio no está respondiendo. Probá de nuevo en unos minutos.',
   503: 'El servicio no está disponible. Probá de nuevo en unos minutos.',
   504: 'El servicio tardó demasiado en responder. Probá de nuevo.',

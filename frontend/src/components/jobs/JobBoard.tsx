@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { JobSummary } from './JobSummary';
 import { JobDetail } from './JobDetail';
 import { Pagination } from './Pagination';
@@ -6,6 +6,7 @@ import { ApplyButton } from './ApplyButton';
 import { useApplications } from './useApplications';
 import { jobsService } from '../../services/jobsService';
 import { ApiError, errorMessage } from '../../services/api';
+import { latestRequest } from '../../services/latestRequest';
 import type { JobList, JobOpportunity } from '../../types/jobs';
 
 /** "Todas las ofertas" del estudiante (GET /jobs, sólo activas): listado, detalle y postulación. */
@@ -16,14 +17,19 @@ export const JobBoard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<JobOpportunity | null>(null);
 
+  // Paginar rápido: sólo vale la última respuesta.
+  const latest = useRef(latestRequest()).current;
+
   const load = useCallback(async () => {
+    const isCurrent = latest.next();
     setError(null);
     try {
-      setData(await jobsService.list(page));
+      const result = await jobsService.list(page);
+      if (isCurrent()) setData(result);
     } catch (err) {
-      setError(errorMessage(err));
+      if (isCurrent()) setError(errorMessage(err));
     }
-  }, [page]);
+  }, [latest, page]);
 
   useEffect(() => {
     load();

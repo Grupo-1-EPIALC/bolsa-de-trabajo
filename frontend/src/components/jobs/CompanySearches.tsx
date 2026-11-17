@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { JobSummary } from './JobSummary';
 import { JobDetail } from './JobDetail';
 import { JobForm } from './JobForm';
@@ -6,6 +6,7 @@ import { JobCandidates } from './JobCandidates';
 import { Pagination } from './Pagination';
 import { jobsService } from '../../services/jobsService';
 import { ApiError, errorMessage } from '../../services/api';
+import { latestRequest } from '../../services/latestRequest';
 import { JOB_STATUS_FILTER } from '../../profile/labels';
 import type { JobList, JobOpportunity, JobStatusFilter } from '../../types/jobs';
 
@@ -31,17 +32,22 @@ export const CompanySearches: React.FC<CompanySearchesProps> = ({ startWithNew, 
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Cambiar de pestaña o de página rápido: sólo vale la última respuesta.
+  const latest = useRef(latestRequest()).current;
+
   const load = useCallback(async () => {
+    const isCurrent = latest.next();
     setError(null);
     try {
       const result = await jobsService.mySearches(status, page);
+      if (!isCurrent()) return;
       // Si cerrar/reabrir dejó la página vacía, volver a la anterior.
       if (result.items.length === 0 && page > 1) setPage(page - 1);
       else setData(result);
     } catch (err) {
-      setError(errorMessage(err));
+      if (isCurrent()) setError(errorMessage(err));
     }
-  }, [status, page]);
+  }, [latest, status, page]);
 
   useEffect(() => {
     if (mode.kind === 'list') load();

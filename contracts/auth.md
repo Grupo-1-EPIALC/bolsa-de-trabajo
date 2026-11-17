@@ -193,6 +193,7 @@ En los errores de validación `message` es **una lista** y se repite en `details
 | 403 | `FORBIDDEN` | Un usuario que no es admin usa `/admin/...` · un admin intenta borrar su propia cuenta |
 | 404 | `NOT_FOUND` | `/admin/users/{id}` inexistente o borrado |
 | 409 | `CONFLICT` | Email o CUIT ya registrado (entre cuentas no borradas) · email pendiente de confirmación en otra cuenta |
+| 429 | `TOO_MANY_REQUESTS` | Lo responde el **gateway**, no auth-service: más de 10 pedidos por minuto por IP (ráfaga de 5) a `login`, `token` o `password/reset`. Esperar un minuto y reintentar |
 | 503 | `SERVICE_UNAVAILABLE` | No se pudo enviar el mail de confirmación de email |
 
 Los mensajes de validación vienen en inglés (class-validator). No dependas del texto: usá el HTTP y `error.code`.
